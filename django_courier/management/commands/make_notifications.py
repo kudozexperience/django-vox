@@ -10,7 +10,7 @@ from django.apps import apps
 
 class Command(BaseCommand):
     args = ''
-    help = 'Creates notifications based on NotifyMeta instances in classes'
+    help = 'Creates notifications based on CourierMeta instances in classes'
 
     def handle(self, *args, **options):
         for app in apps.get_app_configs():
@@ -25,7 +25,7 @@ def make_notifications(app_config, verbosity=2, dry_run=False, using=DEFAULT_DB_
     try:
         app_config = apps.get_app_config(app_label)
         contenttype_class = apps.get_model('contenttypes', 'ContentType')
-        notification_class = apps.get_model('django_notify', 'Notification')
+        notification_class = apps.get_model('django_courier', 'Notification')
     except LookupError:
         return
 
@@ -38,7 +38,7 @@ def make_notifications(app_config, verbosity=2, dry_run=False, using=DEFAULT_DB_
     # The code names and content types that should exist.
     content_types = set()
     for cls in app_config.get_models():
-        meta = getattr(cls, '_notify_meta', None)
+        meta = getattr(cls, '_courier_meta', None)
         if meta is not None:
             # Force looking up the content types in the current database
             # before creating foreign keys to them.

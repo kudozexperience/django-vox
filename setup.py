@@ -8,16 +8,16 @@ def read(filename):
 
 
 setup(
-    name='django-notify',
+    name='django-courier',
     version='0.1',
     description='A notification app for Django',
     long_description=read('README.rst'),
     author='Alan Trick',
     author_email='me@alantrick.ca',
-    url='https://bitbucket.org/alantrick/django-notify',
+    url='https://bitbucket.org/alantrick/django-courier',
     packages=[
-        'django_notify',
-        'django_notify.migrations',
+        'django_courier',
+        'django_courier.migrations',
     ],
     include_package_data=True,
     zip_safe=False,

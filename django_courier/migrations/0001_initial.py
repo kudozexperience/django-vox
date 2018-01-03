@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import django_notify.models
+import django_courier.models
 
 
 class Migration(migrations.Migration):
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                     verbose_name='content type')),
             ],
             managers=[
-                ('objects', django_notify.models.NotificationManager()),
+                ('objects', django_courier.models.NotificationManager()),
             ],
         ),
         migrations.CreateModel(
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
                 ('content', models.TextField()),
                 ('is_active', models.BooleanField(default=True)),
                 ('notification', models.ForeignKey(
-                    on_delete=django.db.models.deletion.CASCADE, to='django_notify.Notification',
+                    on_delete=django.db.models.deletion.CASCADE, to='django_courier.Notification',
                     verbose_name='notification')),
             ],
             options={

@@ -1,9 +1,9 @@
-=============
-Django Notify
-=============
+==============
+Django Courier
+==============
 
 
-Django notify is a django app that allow you to create and issue
+Django courier is a django app that allow you to create and issue
 different types of notifications. Notifications can have different
 kinds of parameters which allow for convenient editing in the admin.
 
@@ -14,13 +14,13 @@ First, install via pip (on Windows, replace ``pip3`` with ``pip``)
 
 ::
 
-  pip3 install django-notify
+  pip3 install django-courier
   
 Then, edit your ``settings.py``, adding this line to ``INSTALLED_APPS``
   
 ::
 
-      'django_notify',
+      'django_courier',
 
 Features
 --------
@@ -38,7 +38,7 @@ DEFAULT_FROM_EMAIL      Address to send emails from (standard django setting)
 TWILIO_ACCOUNT_SID      Twilio account ID (required for Twilio backend)
 TWILIO_AUTH_TOKEN       Twilio authentication token (required for Twilio backend)
 TWILIO_FROM_NUMBER      Phone # to send Twilio SMS from (required for Twilio backend)
-DJANGO_NOTIFY_BACKENDS  List of class names for backends that are in-use/enabled (not required)
+DJANGO_COURIER_BACKENDS  List of class names for backends that are in-use/enabled (not required)
 ======================  =======================================================================
 
 TODO

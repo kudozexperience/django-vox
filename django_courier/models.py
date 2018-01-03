@@ -21,9 +21,9 @@ PROTOCOLS = {
 }
 
 
-class NotifyOptions(object):
+class CourierOptions(object):
     """
-    Options for Notify extensions
+    Options for Courier extensions
     """
 
     ALL_OPTIONS = ('notifications',)
@@ -39,21 +39,21 @@ class NotifyOptions(object):
                 if key in self.ALL_OPTIONS:
                     setattr(self, key, value)
                 elif not key.startswith('_'):  # ignore private parts
-                    raise ValueError('class NotifyMeta has invalid attribute: {}'.format(key))
+                    raise ValueError('class CourierMeta has invalid attribute: {}'.format(key))
 
 
-class NotifyModelBase(models.base.ModelBase):
+class CourierModelBase(models.base.ModelBase):
     """
-    Metaclass for notify extensions. Deals with notifications on NotifyOptions
+    Metaclass for Courier extensions. Deals with notifications on CourierOptions
     """
     def __new__(mcs, name, bases, attributes):
-        new = super(NotifyModelBase, mcs).__new__(mcs, name, bases, attributes)
-        meta = attributes.pop('NotifyMeta', None)
-        setattr(new, '_notify_meta', NotifyOptions(meta))
+        new = super(CourierModelBase, mcs).__new__(mcs, name, bases, attributes)
+        meta = attributes.pop('CourierMeta', None)
+        setattr(new, '_courier_meta', CourierOptions(meta))
         return new
 
 
-class NotifyModel(models.Model, metaclass=NotifyModelBase):
+class CourierModel(models.Model, metaclass=CourierModelBase):
     """
     Base class for models that implement notifications
     """
@@ -180,7 +180,7 @@ class NotificationManager(models.Manager):
         )
 
 
-class NotifyParam:
+class CourierParam:
     REQUIRED_PARAMS = {'codename', 'description'}
     OPTIONAL_PARAMS = {'use_recipient': True, 'use_sender': True}
 
@@ -262,7 +262,7 @@ class Notification(models.Model):
             raise RuntimeError(
                 'Model specified "use_recipient" for notification but recipient missing on issue_notification ')
         elif recipient is not None:
-            raise RuntimeError('Recipient added to issue_notification, but is not specified in NotifyMeta')
+            raise RuntimeError('Recipient added to issue_notification, but is not specified in CourierMeta')
 
         if self.use_sender and (sender is not None):
             parameters['sender'] = sender
@@ -270,7 +270,7 @@ class Notification(models.Model):
             raise RuntimeError(
                 'Model specified "use_sender" for notification but sender missing on issue_notification ')
         elif sender is not None:
-            raise RuntimeError('Sender added to issue_notification, but is not specified in NotifyMeta')
+            raise RuntimeError('Sender added to issue_notification, but is not specified in CourierMeta')
 
         # TODO: implement site contacts
         if recipient is not None:
