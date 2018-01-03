@@ -33,13 +33,13 @@ Settings
 
 This app makes use of the following settings. They can be set in your app's ``settings.py``:
 
-======================  =======================================================================
-DEFAULT_FROM_EMAIL      Address to send emails from (standard django setting)
-TWILIO_ACCOUNT_SID      Twilio account ID (required for Twilio backend)
-TWILIO_AUTH_TOKEN       Twilio authentication token (required for Twilio backend)
-TWILIO_FROM_NUMBER      Phone # to send Twilio SMS from (required for Twilio backend)
+=======================  =======================================================================
+DEFAULT_FROM_EMAIL       Address to send emails from (standard django setting)
+TWILIO_ACCOUNT_SID       Twilio account ID (required for Twilio backend)
+TWILIO_AUTH_TOKEN        Twilio authentication token (required for Twilio backend)
+TWILIO_FROM_NUMBER       Phone # to send Twilio SMS from (required for Twilio backend)
 DJANGO_COURIER_BACKENDS  List of class names for backends that are in-use/enabled (not required)
-======================  =======================================================================
+=======================  =======================================================================
 
 TODO
 ----
