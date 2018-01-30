@@ -300,8 +300,7 @@ class Template(models.Model):
 
     def render(self, parameters: dict):
         template = templates.from_string(self.content)
-        context = django.template.Context(parameters)
-        return template.render(context)
+        return template.render(parameters)
 
 
 def get_backends_from_settings(protocol: str):
