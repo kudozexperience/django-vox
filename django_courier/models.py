@@ -1,6 +1,7 @@
 # temporary file for testing purposes
 
 import pydoc
+import itertools
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -88,19 +89,6 @@ class IContactable:
 
 
 IContactableN = TypeVar('IContactableN', IContactable, None)
-
-
-class Contact(models.Model):
-
-    class Meta:
-        default_permissions = ()
-        verbose_name = _('contact')
-        unique_together = (('user', 'address', 'backend'),)
-
-    user = models.ForeignKey(
-        django.conf.settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    address = models.CharField(max_length=500)
-    backend = models.CharField(max_length=100)
 
 
 class NotificationBackend:
@@ -272,18 +260,26 @@ class Notification(models.Model):
         elif sender is not None:
             raise RuntimeError('Sender added to issue_notification, but is not specified in CourierMeta')
 
-        # TODO: implement site contacts
-        if recipient is not None:
-            contacts = recipient.get_contacts_for_notification(self)
-            for contact in contacts:
-                backends = get_backends_from_settings(contact.protocol)
-                # now get all the templates for these backends
-                for backend in backends:
-                    template = Template.objects.filter(
-                        backend=backend.ID, notification=self, is_active=True).first()
-                    if template is not None:
-                        backend.send(template, contact, parameters)
-                        break
+        for contact in SiteContact.get_contacts_for_notification(self):
+            backends = get_backends_from_settings(contact.protocol)
+            # now get all the templates for these backends
+            for backend in backends:
+                template = Template.objects.filter(
+                    backend=backend.ID, notification=self,
+                    is_active=True, send_to_site_contacts=True).first()
+                if template is not None:
+                    backend.send(template, contact, parameters)
+                    break
+        for contact in recipient.get_contacts_for_notification(self):
+            backends = get_backends_from_settings(contact.protocol)
+            # now get all the templates for these backends
+            for backend in backends:
+                template = Template.objects.filter(
+                    backend=backend.ID, notification=self,
+                    is_active=True, send_to_site_contacts=False).first()
+                if template is not None:
+                    backend.send(template, contact, parameters)
+                    break
 
 
 class Template(models.Model):
@@ -296,6 +292,9 @@ class Template(models.Model):
         Notification, verbose_name=_('notification'))
     backend = models.CharField(max_length=100)
     content = models.TextField()
+    send_to_site_contacts = models.BooleanField(
+        help_text='Whether this message is sent to the site contacts or to'
+                  'the notification recipient.', default=False)
     is_active = models.BooleanField(default=True)
 
     def render(self, parameters: dict):
@@ -308,3 +307,28 @@ def get_backends_from_settings(protocol: str):
         cls = pydoc.locate(name)
         if cls.PROTOCOL == protocol:
             yield cls
+
+
+class SiteContact(models.Model):
+
+    class Meta:
+        default_permissions = ()
+        verbose_name = _('site contact')
+        unique_together = (('address', 'protocol'),)
+
+    address = models.CharField(max_length=500)
+    protocol = models.CharField(max_length=100)
+
+    @classmethod
+    def get_contacts_for_notification(cls, notification: 'Notification') -> List[IContact]:
+        queryset = SiteContactPreference.objects
+        for pref in queryset.filter(notification=notification, is_active=True):
+            yield pref.site_contact
+
+
+class SiteContactPreference(models.Model):
+
+    site_contact = models.ForeignKey(SiteContact, on_delete=models.CASCADE)
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
+    is_active = models.BooleanField()
+
