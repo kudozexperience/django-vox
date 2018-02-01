@@ -63,6 +63,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='sitecontact',
-            unique_together=set([('address', 'protocol')]),
+            unique_together={('address', 'protocol')},
         ),
     ]
