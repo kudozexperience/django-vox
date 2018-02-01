@@ -1,7 +1,7 @@
-# temporary file for testing purposes
-
 import pydoc
 import collections
+import requests
+import json
 
 from django.core.mail import send_mail
 import django.core.mail.backends.base
@@ -85,6 +85,21 @@ class TwilioBackend(NotificationBackend):
         # TODO: track result
         client.messages.create(
             to=contact.address, from_=from_number, body=template.render(parameters))
+
+
+class SlackWebhookBackend(NotificationBackend):
+
+    ID = 'slack-webhook'
+    PROTOCOL = 'slack-webhook'
+
+    @classmethod
+    def send(cls, template, contact, parameters):
+        data = json.dumps({
+            'text': template.render(parameters),
+        })
+        headers = {'Content-Type': 'application/json'}
+        requests.post(contact.address, data=data, headers=headers)
+        # TODO: check response from the last method
 
 
 def get_backends_from_settings(protocol: str):
