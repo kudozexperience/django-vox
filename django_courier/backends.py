@@ -106,8 +106,9 @@ class SlackWebhookBackend(NotificationBackend):
     def send_message(cls, contact, message):
         data = json.dumps({'text': message})
         headers = {'Content-Type': 'application/json'}
-        requests.post(contact.address, data=data, headers=headers)
-        # TODO: check response from the last method
+        result = requests.post(contact.address, data=data, headers=headers)
+        if not result.ok:
+            raise requests.HTTPError(result.text)
 
 
 def get_backends_from_settings(protocol: str):

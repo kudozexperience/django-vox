@@ -9,7 +9,7 @@ def read(filename):
 
 setup(
     name='django-courier',
-    version='0.4.0',
+    version='0.4.1',
     description='A notification app for Django',
     long_description=read('README.rst'),
     author='Alan Trick',
