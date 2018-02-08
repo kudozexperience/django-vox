@@ -2,6 +2,45 @@ import django.template
 import django.template.exceptions
 import django.conf
 from django.core import mail
+import json
+
+
+class MultipartMessage:
+
+    def __init__(self):
+        self.subject = ''
+        self.text = ''
+        self.html = ''
+
+    @classmethod
+    def from_dict(cls, obj):
+        result = cls()
+        result.subject = obj.get('subject')
+        result.text = obj.get('text')
+        result.html = obj.get('html')
+        return result
+
+    @classmethod
+    def from_string(cls, string):
+        return cls.from_dict(json.loads(string))
+
+    def to_dict(self):
+        return {'subject': self.subject, 'text': self.text, 'html': self.html}
+
+    def __str__(self):
+        return json.dumps(self.to_dict())
+
+    def to_mail(self) -> mail.EmailMultiAlternatives:
+        email = mail.EmailMultiAlternatives()
+        email.subject = self.subject
+        if self.text:
+            email.body = self.text
+            if self.html:
+                email.attach_alternative(self.html, 'text/html')
+        elif self.html:
+            email.body = self.html
+            email.content_subtype = 'html'
+        return email
 
 
 # from https://stackoverflow.com/questions/2167269/
@@ -25,10 +64,8 @@ def from_string(text: str, using=None) -> django.template.Template:
 
 
 # inspired by django-templated-mail
-def email_parts(
-        template: django.template.Template,
-        parameters: dict) -> mail.EmailMultiAlternatives:
-    email = mail.EmailMultiAlternatives()
+def email_parts(template: django.template.Template, parameters: dict) -> MultipartMessage:
+    message = MultipartMessage()
     context = django.template.Context(parameters)
     parts = {}
     for node in template.template.nodelist:
@@ -36,20 +73,20 @@ def email_parts(
         if name is not None:
             parts[name] = node.render(context).strip()
 
-    email.subject = parts.get('subject', '')
+    message.subject = parts.get('subject', '')
+    has_parts = False
     if 'text_body' in parts:
-        email.body = parts['text_body']
-        if 'html_body' in parts:
-            email.attach_alternative(parts['html_body'], 'text/html')
-    elif 'html_body' in parts:
-        email.body = parts['html_body']
-        email.content_subtype = 'html'
-    else:
-        email.body = template.template.render(context).strip()
-    return email
+        has_parts = True
+        message.text = parts['text_body']
+    if 'html_body' in parts:
+        has_parts = True
+        message.html = parts['html_body']
+    if not has_parts:
+        message.text = template.template.render(context).strip()
+    return message
 
 
-def parts_from_string(text: str, parameters: dict) -> mail.EmailMultiAlternatives:
+def parts_from_string(text: str, parameters: dict) -> MultipartMessage:
     template = from_string(text)
     return email_parts(template, parameters)
 

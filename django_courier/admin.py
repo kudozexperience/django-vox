@@ -18,5 +18,11 @@ class SiteContactAdmin(admin.ModelAdmin):
     list_display = ('address', 'protocol')
 
 
+class FailedMessageAdmin(admin.ModelAdmin):
+    list_display = ('backend', 'address', 'created_at')
+    list_filter = ('backend', 'address')
+
+
 admin.site.register(models.Template, TemplateAdmin)
 admin.site.register(models.SiteContact, SiteContactAdmin)
+admin.site.register(models.FailedMessage, FailedMessageAdmin)

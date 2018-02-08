@@ -24,7 +24,12 @@ __ALL_BACKENDS__ = collections.defaultdict(list)
 class NotificationBackend:
 
     @classmethod
-    def send(cls, template: 'Template', contact: 'django_courier.models.IContact', parameters: dict):
+    def build_message(cls, template, parameters) -> str:
+        return template.render(parameters)
+
+    @classmethod
+    def send_message(
+            cls, contact: 'django_courier.models.IContact', message: str):
         raise NotImplementedError
 
 
@@ -38,9 +43,14 @@ class EmailBackend(NotificationBackend):
         return django.core.mail.backends.smtp.EmailBackend()
 
     @classmethod
-    def send(cls, template, contact, parameters):
+    def build_message(cls, template, parameters) -> str:
+        return str(templates.parts_from_string(template.content, parameters))
+
+    @classmethod
+    def send_message(cls, contact, message):
+        mpm = templates.MultipartMessage.from_string(message)
         backend = cls.get_backend()
-        email = templates.parts_from_string(template.content, parameters)
+        email = mpm.to_mail()
         email.from_email = django.conf.settings.DEFAULT_FROM_EMAIL
         email.to = [contact.address]
         backend.send_messages([email])
@@ -52,8 +62,9 @@ class PostmarkTemplateBackend(EmailBackend):
 
     @staticmethod
     def get_backend():
-        import anymail.backends.postmark
-        return anymail.backends.postmark.EmailBackend()
+        pass
+        # import anymail.backends.postmark
+        # return anymail.backends.postmark.EmailBackend()
 
     @classmethod
     def send(cls, template, contact, parameters):
@@ -73,7 +84,7 @@ class TwilioBackend(NotificationBackend):
     PROTOCOL = 'sms'
 
     @classmethod
-    def send(cls, template, contact, parameters):
+    def send_message(cls, contact, message):
         from twilio.rest import Client
         if not hasattr(django.conf.settings, 'TWILIO_ACCOUNT_SID'):
             raise django.conf.ImproperlyConfigured(
@@ -82,9 +93,8 @@ class TwilioBackend(NotificationBackend):
         auth_token = django.conf.settings.TWILIO_AUTH_TOKEN
         from_number = django.conf.settings.TWILIO_FROM_NUMBER
         client = Client(account_sid, auth_token)
-        # TODO: track result
         client.messages.create(
-            to=contact.address, from_=from_number, body=template.render(parameters))
+            to=contact.address, from_=from_number, body=message)
 
 
 class SlackWebhookBackend(NotificationBackend):
@@ -93,10 +103,8 @@ class SlackWebhookBackend(NotificationBackend):
     PROTOCOL = 'slack-webhook'
 
     @classmethod
-    def send(cls, template, contact, parameters):
-        data = json.dumps({
-            'text': template.render(parameters),
-        })
+    def send_message(cls, contact, message):
+        data = json.dumps({'text': message})
         headers = {'Content-Type': 'application/json'}
         requests.post(contact.address, data=data, headers=headers)
         # TODO: check response from the last method

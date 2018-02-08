@@ -178,26 +178,45 @@ class Notification(models.Model):
         elif sender is not None:
             raise RuntimeError('Sender added to issue_notification, but is not specified in CourierMeta')
 
-        for contact in SiteContact.get_contacts_for_notification(self):
-            backends = get_backends_from_settings(contact.protocol)
+        self.send_messages(
+            SiteContact.get_contacts_for_notification(self),
+            parameters,
+            Template.objects.filter(send_to_site_contacts=True))
+        self.send_messages(
+            recipient.get_contacts_for_notification(self),
+            parameters,
+            Template.objects.filter(send_to_site_contacts=False))
+
+    def send_messages(self, contacts, parameters, template_queryset):
+        def _get_backend_message(protocol):
+            backends = get_backends_from_settings(protocol)
             # now get all the templates for these backends
-            for backend in backends:
-                template = Template.objects.filter(
-                    backend=backend.ID, notification=self,
-                    is_active=True, send_to_site_contacts=True).first()
+            for be in backends:
+                template = template_queryset.filter(
+                    backend=be.ID, notification=self, is_active=True).first()
                 if template is not None:
-                    backend.send(template, contact, parameters)
-                    break
-        for contact in recipient.get_contacts_for_notification(self):
-            backends = get_backends_from_settings(contact.protocol)
-            # now get all the templates for these backends
-            for backend in backends:
-                template = Template.objects.filter(
-                    backend=backend.ID, notification=self,
-                    is_active=True, send_to_site_contacts=False).first()
-                if template is not None:
-                    backend.send(template, contact, parameters)
-                    break
+                    return be, be.build_message(template, parameters)
+            return None
+
+        # per-protocol message cache
+        cache = {}
+        for contact in contacts:
+            if contact.protocol not in cache:
+                cache[contact.protocol] = _get_backend_message(contact.protocol)
+            if cache[contact.protocol] is not None:
+                backend, message = cache[contact.protocol]
+                # We're catching all exceptions here because some people
+                # are bad people and can't subclass properly
+                try:
+                    backend.send_message(contact, message)
+                except Exception as e:
+                    FailedMessage.objects.create(
+                        backend=backend.ID,
+                        protocol=contact.protocol,
+                        address=contact.address,
+                        message=message,
+                        error=str(e),
+                    )
 
 
 class Template(models.Model):
@@ -211,7 +230,7 @@ class Template(models.Model):
     backend = models.CharField(max_length=100)
     content = models.TextField()
     send_to_site_contacts = models.BooleanField(
-        help_text='Whether this message is sent to the site contacts or to'
+        help_text='Whether this message is sent to the site contacts or to '
                   'the notification recipient.', default=False)
     is_active = models.BooleanField(default=True)
 
@@ -242,4 +261,18 @@ class SiteContactPreference(models.Model):
     site_contact = models.ForeignKey(SiteContact, on_delete=models.CASCADE)
     notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
     is_active = models.BooleanField()
+
+
+class FailedMessage(models.Model):
+
+    class Meta:
+        default_permissions = ()
+        verbose_name = _('failed message')
+
+    backend = models.CharField(max_length=100)
+    address = models.CharField(max_length=500)
+    protocol = models.CharField(max_length=100)
+    message = models.TextField()
+    error = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
