@@ -2,9 +2,32 @@ from django.contrib import admin
 from . import models
 
 
+class TemplateInline(admin.TabularInline):
+    model = models.Template
+
+
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'description', 'use_sender', 'use_recipient', 'template_count')
+    list_filter = ('content_type',)
+    inlines = [TemplateInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        return ['codename', 'content_type', 'description', 'use_sender', 'use_recipient']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @staticmethod
+    def template_count(obj):
+        return obj.template_set.count()
+
+
 class TemplateAdmin(admin.ModelAdmin):
-    list_display = ('notification', 'backend', 'is_active')
-    list_filter = ('notification', 'backend', 'is_active')
+    list_display = ('notification', 'backend', 'is_active', 'target')
+    list_filter = ('notification', 'backend', 'is_active', 'target')
 
 
 class SiteContactPreferenceInline(admin.TabularInline):
@@ -26,3 +49,4 @@ class FailedMessageAdmin(admin.ModelAdmin):
 admin.site.register(models.Template, TemplateAdmin)
 admin.site.register(models.SiteContact, SiteContactAdmin)
 admin.site.register(models.FailedMessage, FailedMessageAdmin)
+admin.site.register(models.Notification, NotificationAdmin)

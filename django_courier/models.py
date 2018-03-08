@@ -133,9 +133,9 @@ class Notification(models.Model):
         models.CASCADE,
         verbose_name=_('content type'),
     )
-    description = models.TextField()
-    use_sender = models.BooleanField()
-    use_recipient = models.BooleanField()
+    description = models.TextField(_('description'))
+    use_sender = models.BooleanField(_('use sender'))
+    use_recipient = models.BooleanField(_('use recipient'))
 
     objects = NotificationManager()
 
@@ -178,14 +178,17 @@ class Notification(models.Model):
         elif sender is not None:
             raise RuntimeError('Sender added to issue_notification, but is not specified in CourierMeta')
 
-        self.send_messages(
-            SiteContact.get_contacts_for_notification(self),
-            parameters,
-            Template.objects.filter(send_to_site_contacts=True))
-        self.send_messages(
-            recipient.get_contacts_for_notification(self),
-            parameters,
-            Template.objects.filter(send_to_site_contacts=False))
+        contact_map = {
+            're': recipient,
+            'si': SiteContact,
+            'se': sender,
+        }
+        for key, value in contact_map.items():
+            if value is not None:
+                self.send_messages(
+                    value.get_contacts_for_notification(self),
+                    parameters,
+                    Template.objects.filter(target=key))
 
     def send_messages(self, contacts, parameters, template_queryset):
         def _get_backend_message(protocol):
@@ -221,6 +224,12 @@ class Notification(models.Model):
 
 class Template(models.Model):
 
+    TARGET_CHOICES = (
+        ('re', _('Recipient')),
+        ('si', _('Site Contacts')),
+        ('se', _('Sender')),
+    )
+
     class Meta:
         default_permissions = ()
         verbose_name = _('template')
@@ -229,9 +238,9 @@ class Template(models.Model):
         Notification, verbose_name=_('notification'))
     backend = models.CharField(max_length=100)
     content = models.TextField()
-    send_to_site_contacts = models.BooleanField(
-        help_text='Whether this message is sent to the site contacts or to '
-                  'the notification recipient.', default=False)
+    target = models.CharField(
+        choices=TARGET_CHOICES, max_length=2, default='re',
+        help_text=_('Who this message actually gets sent to.'))
     is_active = models.BooleanField(default=True)
 
     def render(self, parameters: dict):
@@ -246,8 +255,8 @@ class SiteContact(models.Model):
         verbose_name = _('site contact')
         unique_together = (('address', 'protocol'),)
 
-    address = models.CharField(max_length=500)
-    protocol = models.CharField(max_length=100)
+    address = models.CharField(_('address'), max_length=500)
+    protocol = models.CharField(_('protocol'), max_length=100)
 
     @classmethod
     def get_contacts_for_notification(cls, notification: 'Notification') -> List[IContact]:
@@ -260,7 +269,7 @@ class SiteContactPreference(models.Model):
 
     site_contact = models.ForeignKey(SiteContact, on_delete=models.CASCADE)
     notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
-    is_active = models.BooleanField()
+    is_active = models.BooleanField(_('is active'))
 
 
 class FailedMessage(models.Model):
@@ -269,10 +278,10 @@ class FailedMessage(models.Model):
         default_permissions = ()
         verbose_name = _('failed message')
 
-    backend = models.CharField(max_length=100)
-    address = models.CharField(max_length=500)
-    protocol = models.CharField(max_length=100)
-    message = models.TextField()
-    error = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    backend = models.CharField(_('backend'), max_length=100)
+    address = models.CharField(_('address'), max_length=500)
+    protocol = models.CharField(_('protocol'), max_length=100)
+    message = models.TextField(_('message'))
+    error = models.TextField(_('error'))
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
 
