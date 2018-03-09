@@ -148,20 +148,23 @@ class Notification(models.Model):
 
     natural_key.dependencies = ['contenttypes.contenttype']
 
-    def issue(self, subject, recipient: IContactableN=None, sender=None):
+    def issue(self, content, recipient: IContactableN=None, sender=None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template to send
         (and has the said notification). Send that template with the parameters
         with the backend.
 
-        :param subject: model object that the notification is about
+        :param content: model object that the notification is about
         :param recipient: either a user, or None if no logical recipient
         :param sender: user who initiated the notification
         :return: None
         """
         # check
-        parameters = {'subject': subject}
+        parameters = {
+            'subject': content,
+            'content': content,
+        }
         if self.use_recipient and (recipient is not None):
             parameters['recipient'] = recipient
         elif self.use_recipient:
