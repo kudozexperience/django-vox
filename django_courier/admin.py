@@ -1,9 +1,21 @@
 from django.contrib import admin
-from . import models
+from django import forms
+from . import models, backends
+
+
+class TemplateForm(forms.ModelForm):
+    backend = forms.ChoiceField(choices=backends.get_backend_choices())
+
+    class Meta:
+        model = models.Template
+        fields = ['backend', 'content', 'target', 'is_active']
 
 
 class TemplateInline(admin.TabularInline):
     model = models.Template
+    form = TemplateForm
+    min_num = 0
+    extra = 0
 
 
 class NotificationAdmin(admin.ModelAdmin):

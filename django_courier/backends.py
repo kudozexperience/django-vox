@@ -8,6 +8,8 @@ import django.core.mail.backends.base
 import django.core.mail.backends.smtp
 import django.conf
 import django.template
+from django.utils.translation import ugettext_lazy as _
+
 from . import templates, settings
 
 
@@ -37,6 +39,7 @@ class EmailBackend(NotificationBackend):
 
     ID = 'email'
     PROTOCOL = 'email'
+    verbose_name = _('Email')
 
     @staticmethod
     def get_backend() -> 'django.core.mail.backends.base.BaseEmailBackend':
@@ -59,6 +62,7 @@ class EmailBackend(NotificationBackend):
 class PostmarkTemplateBackend(EmailBackend):
 
     ID = 'postmark_template'
+    verbose_name = _('Postmark Email')
 
     @staticmethod
     def get_backend():
@@ -82,6 +86,7 @@ class TwilioBackend(NotificationBackend):
 
     ID = 'twilio'
     PROTOCOL = 'sms'
+    verbose_name = _('Twilio')
 
     @classmethod
     def send_message(cls, contact, message):
@@ -101,6 +106,7 @@ class SlackWebhookBackend(NotificationBackend):
 
     ID = 'slack-webhook'
     PROTOCOL = 'slack-webhook'
+    verbose_name = _('Slack')
 
     @classmethod
     def send_message(cls, contact, message):
@@ -111,13 +117,30 @@ class SlackWebhookBackend(NotificationBackend):
             raise requests.HTTPError(result.text)
 
 
+def _init_backends():
+    """
+    Intialize backend settings
+    """
+    for name in settings.BACKENDS:
+        cls = pydoc.locate(name)
+        __ALL_BACKENDS__[cls.PROTOCOL].append(cls)
+
+
 def get_backends_from_settings(protocol: str):
-    # let's try to only initialize this once
     if not __ALL_BACKENDS__:
-        for name in settings.BACKENDS:
-            cls = pydoc.locate(name)
-            __ALL_BACKENDS__[cls.PROTOCOL].append(cls)
+        _init_backends()
 
     for backend in __ALL_BACKENDS__[protocol]:
         yield backend
+
+
+def get_backend_choices():
+    if not __ALL_BACKENDS__:
+        _init_backends()
+    backends = []
+    for backend_list in __ALL_BACKENDS__.values():
+        for backend in backend_list:
+            backends.append(backend)
+
+    return ((bk.ID, bk.verbose_name) for bk in backends)
 
