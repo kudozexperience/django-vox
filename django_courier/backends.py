@@ -25,13 +25,15 @@ __ALL_BACKENDS__ = collections.defaultdict(list)
 
 class NotificationBackend:
 
+    ESCAPE_HTML = True
+
     @classmethod
-    def build_message(cls, template, parameters) -> str:
-        return template.render(parameters)
+    def build_message(cls, template: 'django_courier.models.Template', parameters: dict):
+        return template.render(parameters, autoescape=cls.ESCAPE_HTML)
 
     @classmethod
     def send_message(
-            cls, contact: 'django_courier.models.IContact', message: str):
+            cls, contact: 'django_courier.models.IContact', message):
         raise NotImplementedError
 
 
@@ -39,15 +41,15 @@ class EmailBackend(NotificationBackend):
 
     ID = 'email'
     PROTOCOL = 'email'
-    verbose_name = _('Email')
+    VERBOSE_NAME = _('Email')
 
     @staticmethod
     def get_backend() -> 'django.core.mail.backends.base.BaseEmailBackend':
         return django.core.mail.backends.smtp.EmailBackend()
 
     @classmethod
-    def build_message(cls, template, parameters) -> str:
-        return str(templates.parts_from_string(template.content, parameters))
+    def build_message(cls, template, parameters):
+        return str(templates.email_parts_from_string(template.content, parameters))
 
     @classmethod
     def send_message(cls, contact, message):
@@ -62,7 +64,7 @@ class EmailBackend(NotificationBackend):
 class PostmarkTemplateBackend(EmailBackend):
 
     ID = 'postmark_template'
-    verbose_name = _('Postmark Email')
+    VERBOSE_NAME = _('Postmark Email')
 
     @staticmethod
     def get_backend():
@@ -86,7 +88,8 @@ class TwilioBackend(NotificationBackend):
 
     ID = 'twilio'
     PROTOCOL = 'sms'
-    verbose_name = _('Twilio')
+    ESCAPE_HTML = False
+    VERBOSE_NAME = _('Twilio')
 
     @classmethod
     def send_message(cls, contact, message):
@@ -106,7 +109,8 @@ class SlackWebhookBackend(NotificationBackend):
 
     ID = 'slack-webhook'
     PROTOCOL = 'slack-webhook'
-    verbose_name = _('Slack')
+    ESCAPE_HTML = False
+    VERBOSE_NAME = _('Slack')
 
     @classmethod
     def send_message(cls, contact, message):
@@ -142,5 +146,5 @@ def get_backend_choices():
         for backend in backend_list:
             backends.append(backend)
 
-    return ((bk.ID, bk.verbose_name) for bk in backends)
+    return ((bk.ID, bk.VERBOSE_NAME) for bk in backends)
 

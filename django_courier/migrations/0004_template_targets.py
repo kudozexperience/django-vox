@@ -29,8 +29,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL('SET CONSTRAINTS ALL IMMEDIATE',
-                          reverse_sql=migrations.RunSQL.noop),
+        # uncomment to run on postgres
+        # migrations.RunSQL('SET CONSTRAINTS ALL IMMEDIATE',
+        #                   reverse_sql=migrations.RunSQL.noop),
         migrations.AddField(
             model_name='template',
             name='target',
@@ -105,6 +106,7 @@ class Migration(migrations.Migration):
             name='is_active',
             field=models.BooleanField(verbose_name='is active'),
         ),
-        migrations.RunSQL('SET CONSTRAINTS ALL IMMEDIATE',
-                          reverse_sql=migrations.RunSQL.noop),
+        # uncomment to run on postgres
+        # migrations.RunSQL('SET CONSTRAINTS ALL IMMEDIATE',
+        #                   reverse_sql=migrations.RunSQL.noop),
     ]

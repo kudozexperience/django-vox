@@ -66,27 +66,29 @@ def from_string(text: str, using=None) -> django.template.Template:
 # inspired by django-templated-mail
 def email_parts(template: django.template.Template, parameters: dict) -> MultipartMessage:
     message = MultipartMessage()
-    context = django.template.Context(parameters)
-    parts = {}
+    html_context = django.template.Context(parameters)
+    text_context = django.template.Context(parameters, autoescape=False)
+    node_parts = {}
     for node in template.template.nodelist:
         name = getattr(node, 'name', None)
         if name is not None:
-            parts[name] = node.render(context).strip()
+            node_parts[name] = node
 
-    message.subject = parts.get('subject', '')
+    if 'subject' in node_parts:
+        message.subject = node_parts['subject'].render(text_context).strip()
     has_parts = False
-    if 'text_body' in parts:
+    if 'text_body' in node_parts:
         has_parts = True
-        message.text = parts['text_body']
-    if 'html_body' in parts:
+        message.text = node_parts['text_body'].render(text_context).strip()
+    if 'html_body' in node_parts:
         has_parts = True
-        message.html = parts['html_body']
+        message.html = node_parts['html_body'].render(html_context).strip()
     if not has_parts:
-        message.text = template.template.render(context).strip()
+        message.text = template.template.render(text_context).strip()
     return message
 
 
-def parts_from_string(text: str, parameters: dict) -> MultipartMessage:
+def email_parts_from_string(text: str, parameters: dict) -> MultipartMessage:
     template = from_string(text)
     return email_parts(template, parameters)
 

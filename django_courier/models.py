@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 from typing import TypeVar, List
 from . import templates
@@ -220,7 +221,7 @@ class Notification(models.Model):
                         backend=backend.ID,
                         protocol=contact.protocol,
                         address=contact.address,
-                        message=message,
+                        message=str(message),
                         error=str(e),
                     )
 
@@ -246,9 +247,10 @@ class Template(models.Model):
         help_text=_('Who this message actually gets sent to.'))
     is_active = models.BooleanField(default=True)
 
-    def render(self, parameters: dict):
+    def render(self, parameters: dict, autoescape=True):
         template = templates.from_string(self.content)
-        return template.render(parameters)
+        context = Context(parameters, autoescape=autoescape)
+        return template.template.render(context)
 
 
 class SiteContact(models.Model):
