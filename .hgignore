@@ -2,6 +2,7 @@ syntax: glob
 *.pyc
 .project
 .pydevproject
+.pytest_cache
 .settings
 dist
 *.egg-info

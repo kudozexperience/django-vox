@@ -19,6 +19,7 @@ class TemplateRender(TestCase):
         template = models.Template(content='{{ param }}')
         assert 'A&amp;W' == template.render({'param': 'A&W'})
 
+
 class EmailRenderTests(TestCase):
 
     @staticmethod
@@ -37,9 +38,7 @@ class EmailRenderTests(TestCase):
         # subject = "Test subject"
         text = """Hi, John Doe, here is a message: There's a new burger at A&W"""
         html = """<p>Hi, John Doe, here is a message: There&#39;s a new burger at A&amp;W</p>"""
-        template = models.Template(content='{{ param }}')
         result = templates.email_parts_from_string(email, params)
         assert result.subject == 'Test subject'
         assert result.text == text
         assert result.html == html
-
