@@ -41,7 +41,6 @@ class MultipartMessageTests(TestCase):
         assert mail.body == dict['html']
 
 
-
 class TemplateRender(TestCase):
 
     @staticmethod
