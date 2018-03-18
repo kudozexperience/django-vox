@@ -43,7 +43,7 @@ setup(
         'requests',
     ],
     extras_require={
-        'dev': ['pytest', 'pytest-django', 'pytest-cov', 'tox'],
+        'dev': ['pytest', 'pytest-django', 'pytest-cov', 'pytest-pythonpath', 'tox'],
     },
     license='LGPL',
 
