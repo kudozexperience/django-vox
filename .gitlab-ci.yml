@@ -7,7 +7,7 @@ cache:
 
 before_script:
   - python -V
-  - python -m pip install --user -i .[test]
+  - python -m pip install --user -e .[test]
 
 test:
   script:
