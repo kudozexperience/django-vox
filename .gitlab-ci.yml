@@ -1,0 +1,15 @@
+image: python:latest
+
+
+cache:
+  paths:
+  - ~/.cache/pip/
+
+before_script:
+  - python -V
+  - ./setup.py install
+
+test:
+  script:
+  - make test
+  - make coverage
