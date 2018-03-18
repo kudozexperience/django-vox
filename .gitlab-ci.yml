@@ -1,15 +1,18 @@
 image: python:latest
 
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
 
 cache:
   paths:
-  - ~/.cache/pip/
+    - "$CI_PROJECT_DIR/pip-cache"
+  key: "$CI_PROJECT_ID"
 
 before_script:
   - python -V
-  - python -m pip install --user -e .[test]
 
 test:
   script:
-  - make test
-  - make coverage
+  - pip install -U pip setuptools
+  - pip install -e .[test]
+  - tox
