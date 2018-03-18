@@ -14,7 +14,7 @@ setup(
     long_description=read('README.rst'),
     author='Alan Trick',
     author_email='me@alantrick.ca',
-    url='https://bitbucket.org/alantrick/django-courier',
+    url='https://gitlab.com/alantrick/django-courier',
     packages=[
         'django_courier',
         'django_courier.migrations',
