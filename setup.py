@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def read(filename):
@@ -15,11 +15,7 @@ setup(
     author='Alan Trick',
     author_email='me@alantrick.ca',
     url='https://gitlab.com/alantrick/django-courier',
-    packages=[
-        'django_courier',
-        'django_courier.migrations',
-        'django_courier.management.commands',
-    ],
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     classifiers=[
@@ -43,7 +39,7 @@ setup(
         'requests',
     ],
     extras_require={
-        'dev': ['pytest', 'pytest-django', 'pytest-cov', 'pytest-pythonpath', 'tox'],
+        'test': ['pytest', 'pytest-django', 'pytest-cov', 'pytest-pythonpath', 'tox'],
     },
     license='LGPL',
 

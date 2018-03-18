@@ -1,4 +1,5 @@
 from django.test import TestCase
+
 from django_courier import models, templates
 
 
@@ -32,9 +33,6 @@ class EmailRenderTests(TestCase):
         <p>Hi, John Doe, here is a message: {{ message }}</p>
         {% endblock %}
         """
-        result = """
-        """
-        # subject = "Test subject"
         text = "Hi, John Doe, here is a message: There's a new burger at A&W"
         html = "<p>Hi, John Doe, here is a message: " \
                "There&#39;s a new burger at A&amp;W</p>"
