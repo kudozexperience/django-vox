@@ -2,6 +2,11 @@
 Django Courier
 ==============
 
+|pipeline-badge| |coverage-badge|
+
+.. |pipeline-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/pipeline.svg
+.. |coverage-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/coverage.svg
+
 
 Django courier is a django app that allow you to create and issue
 different types of notifications. Notifications can have different
