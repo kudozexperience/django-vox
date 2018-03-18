@@ -27,15 +27,19 @@ class CourierOptions(object):
                 if key in self.ALL_OPTIONS:
                     setattr(self, key, value)
                 elif not key.startswith('_'):  # ignore private parts
-                    raise ValueError('class CourierMeta has invalid attribute: {}'.format(key))
+                    raise ValueError(
+                        'CourierMeta has invalid attribute: {}'.format(key))
 
 
 class CourierModelBase(models.base.ModelBase):
     """
-    Metaclass for Courier extensions. Deals with notifications on CourierOptions
+    Metaclass for Courier extensions.
+
+    Deals with notifications on CourierOptions
     """
     def __new__(mcs, name, bases, attributes):
-        new = super(CourierModelBase, mcs).__new__(mcs, name, bases, attributes)
+        new = super(CourierModelBase, mcs).__new__(
+            mcs, name, bases, attributes)
         meta = attributes.pop('CourierMeta', None)
         setattr(new, '_courier_meta', CourierOptions(meta))
         return new
@@ -49,9 +53,11 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
     class Meta:
         abstract = True
 
-    def issue_notification(self, codename: str, recipient: 'IContactableN' = None, sender=None):
+    def issue_notification(self, codename: str,
+                           recipient: 'IContactableN' = None, sender=None):
         ct = ContentType.objects.get_for_model(self)
-        notification = Notification.objects.get(codename=codename, content_type=ct)
+        notification = Notification.objects.get(
+            codename=codename, content_type=ct)
         notification.issue(self, recipient, sender)
 
 
@@ -71,7 +77,8 @@ IContactN = TypeVar('IContactN', IContact, None)
 
 class IContactable:
 
-    def get_contacts_for_notification(self, notification: 'Notification') -> List[IContact]:
+    def get_contacts_for_notification(
+            self, notification: 'Notification') -> List[IContact]:
         raise NotImplemented
 
 
@@ -154,9 +161,9 @@ class Notification(models.Model):
     def issue(self, content, recipient: IContactableN=None, sender=None):
         """
         To send a notification to a user, get all the user's active methods.
-        Then get the backend for each method and find the relevant template to send
-        (and has the said notification). Send that template with the parameters
-        with the backend.
+        Then get the backend for each method and find the relevant template
+        to send (and has the said notification). Send that template with
+        the parameters with the backend.
 
         :param content: model object that the notification is about
         :param recipient: either a user, or None if no logical recipient
@@ -172,17 +179,21 @@ class Notification(models.Model):
             parameters['recipient'] = recipient
         elif self.use_recipient:
             raise RuntimeError(
-                'Model specified "use_recipient" for notification but recipient missing on issue_notification ')
+                'Model specified "use_recipient" for notification but '
+                'recipient missing on issue_notification ')
         elif recipient is not None:
-            raise RuntimeError('Recipient added to issue_notification, but is not specified in CourierMeta')
+            raise RuntimeError('Recipient added to issue_notification, '
+                               'but is not specified in CourierMeta')
 
         if self.use_sender and (sender is not None):
             parameters['sender'] = sender
         elif self.use_sender:
             raise RuntimeError(
-                'Model specified "use_sender" for notification but sender missing on issue_notification ')
+                'Model specified "use_sender" for notification but sender '
+                'missing on issue_notification ')
         elif sender is not None:
-            raise RuntimeError('Sender added to issue_notification, but is not specified in CourierMeta')
+            raise RuntimeError('Sender added to issue_notification, but is '
+                               'not specified in CourierMeta')
 
         contact_map = {
             're': recipient,
@@ -210,10 +221,11 @@ class Notification(models.Model):
         # per-protocol message cache
         cache = {}
         for contact in contacts:
-            if contact.protocol not in cache:
-                cache[contact.protocol] = _get_backend_message(contact.protocol)
-            if cache[contact.protocol] is not None:
-                backend, message = cache[contact.protocol]
+            protocol = contact.protocol
+            if protocol not in cache:
+                cache[protocol] = _get_backend_message(protocol)
+            if cache[protocol] is not None:
+                backend, message = cache[protocol]
                 # We're catching all exceptions here because some people
                 # are bad people and can't subclass properly
                 try:
@@ -221,7 +233,7 @@ class Notification(models.Model):
                 except Exception as e:
                     FailedMessage.objects.create(
                         backend=backend.ID,
-                        protocol=contact.protocol,
+                        protocol=protocol,
                         address=contact.address,
                         message=str(message),
                         error=str(e),
@@ -266,9 +278,11 @@ class SiteContact(models.Model):
     protocol = models.CharField(_('protocol'), max_length=100)
 
     @classmethod
-    def get_contacts_for_notification(cls, notification: 'Notification') -> List[IContact]:
+    def get_contacts_for_notification(
+            cls, notification: 'Notification') -> List[IContact]:
         queryset = SiteContactPreference.objects
-        for pref in queryset.filter(notification=notification, is_active=True):
+        for pref in queryset.filter(notification=notification,
+                                    is_active=True):
             yield pref.site_contact
 
 

@@ -55,8 +55,8 @@ class Migration(migrations.Migration):
             name='send_to_site_contacts',
             field=models.BooleanField(
                 default=False,
-                help_text='Whether this message is sent to the site contacts or '
-                          'to the notification recipient.'),
+                help_text='Whether this message is sent to the site contacts '
+                          'or to the notification recipient.'),
         ),
         migrations.DeleteModel(
             name='Contact',

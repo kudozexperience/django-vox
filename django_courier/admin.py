@@ -20,12 +20,14 @@ class TemplateInline(admin.TabularInline):
 
 
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'description', 'use_sender', 'use_recipient', 'template_count')
+    list_display = ('__str__', 'description', 'use_sender',
+                    'use_recipient', 'template_count')
     list_filter = ('content_type',)
     inlines = [TemplateInline]
 
     def get_readonly_fields(self, request, obj=None):
-        return ['codename', 'content_type', 'description', 'use_sender', 'use_recipient']
+        return ['codename', 'content_type', 'description',
+                'use_sender', 'use_recipient']
 
     def has_add_permission(self, request):
         return False

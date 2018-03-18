@@ -7,7 +7,6 @@ import django.core.mail.backends.base
 import django.core.mail.backends.smtp
 import django.template
 import requests
-from django.core.mail import send_mail
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, templates
@@ -18,7 +17,8 @@ PROTOCOLS = {
     'slack',
 }
 
-# a global that we initialize once, please use `get_backends_from_settings(str)`
+# a global that we initialize once, please use
+# `get_backends_from_settings(str)`
 __ALL_BACKENDS__ = collections.defaultdict(list)
 
 
@@ -27,7 +27,8 @@ class NotificationBackend:
     ESCAPE_HTML = True
 
     @classmethod
-    def build_message(cls, template: 'django_courier.models.Template', parameters: dict):
+    def build_message(
+            cls, template: 'django_courier.models.Template', parameters: dict):
         return template.render(parameters, autoescape=cls.ESCAPE_HTML)
 
     @classmethod
@@ -48,7 +49,8 @@ class EmailBackend(NotificationBackend):
 
     @classmethod
     def build_message(cls, template, parameters):
-        return str(templates.email_parts_from_string(template.content, parameters))
+        return str(templates.email_parts_from_string(
+            template.content, parameters))
 
     @classmethod
     def send_message(cls, contact, message):

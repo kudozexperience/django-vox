@@ -15,7 +15,8 @@ class Command(BaseCommand):
             make_notifications(app)
 
 
-def make_notifications(app_config, verbosity=2, dry_run=False, using=DEFAULT_DB_ALIAS):
+def make_notifications(app_config, verbosity=2, dry_run=False,
+                       using=DEFAULT_DB_ALIAS):
     if not app_config.models_module:
         return
 
@@ -40,7 +41,8 @@ def make_notifications(app_config, verbosity=2, dry_run=False, using=DEFAULT_DB_
         if meta is not None:
             # Force looking up the content types in the current database
             # before creating foreign keys to them.
-            content_type = contenttype_class.objects.db_manager(using).get_for_model(cls)
+            content_type = contenttype_class.objects.db_manager(
+                using).get_for_model(cls)
             content_types.add(content_type)
             for params in meta.notifications:
                 searched_notifications.append((content_type, params))
@@ -49,7 +51,8 @@ def make_notifications(app_config, verbosity=2, dry_run=False, using=DEFAULT_DB_
     # looking for.  We don't need to check for code names since we already have
     # a list of the ones we're going to create.
     all_notifications = {}
-    for item in notification_class.objects.using(using).filter(content_type__in=content_types):
+    for item in notification_class.objects.using(using).filter(
+            content_type__in=content_types):
         all_notifications[(item.content_type_id, item.codename)] = item
 
     new_notifications = []

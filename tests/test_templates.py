@@ -35,8 +35,9 @@ class EmailRenderTests(TestCase):
         result = """
         """
         # subject = "Test subject"
-        text = """Hi, John Doe, here is a message: There's a new burger at A&W"""
-        html = """<p>Hi, John Doe, here is a message: There&#39;s a new burger at A&amp;W</p>"""
+        text = "Hi, John Doe, here is a message: There's a new burger at A&W"
+        html = "<p>Hi, John Doe, here is a message: " \
+               "There&#39;s a new burger at A&amp;W</p>"
         result = templates.email_parts_from_string(email, params)
         assert result.subject == 'Test subject'
         assert result.text == text

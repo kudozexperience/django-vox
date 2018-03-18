@@ -22,11 +22,13 @@ class Migration(migrations.Migration):
             name='Contact',
             fields=[
                 ('id', models.AutoField(
-                    auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                    auto_created=True, primary_key=True, serialize=False,
+                    verbose_name='ID')),
                 ('address', models.CharField(max_length=500)),
                 ('backend', models.CharField(max_length=100)),
                 ('user', models.ForeignKey(
-                    on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                    on_delete=django.db.models.deletion.CASCADE,
+                    to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'default_permissions': (),
@@ -37,10 +39,13 @@ class Migration(migrations.Migration):
             name='Notification',
             fields=[
                 ('id', models.AutoField(
-                    auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('codename', models.CharField(max_length=100, verbose_name='codename')),
+                    auto_created=True, primary_key=True, serialize=False,
+                    verbose_name='ID')),
+                ('codename', models.CharField(max_length=100,
+                                              verbose_name='codename')),
                 ('content_type', models.ForeignKey(
-                    on_delete=django.db.models.deletion.CASCADE, to='contenttypes.ContentType',
+                    on_delete=django.db.models.deletion.CASCADE,
+                    to='contenttypes.ContentType',
                     verbose_name='content type')),
             ],
             managers=[
@@ -51,12 +56,14 @@ class Migration(migrations.Migration):
             name='Template',
             fields=[
                 ('id', models.AutoField(
-                    auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                    auto_created=True, primary_key=True, serialize=False,
+                    verbose_name='ID')),
                 ('backend', models.CharField(max_length=100)),
                 ('content', models.TextField()),
                 ('is_active', models.BooleanField(default=True)),
                 ('notification', models.ForeignKey(
-                    on_delete=django.db.models.deletion.CASCADE, to='django_courier.Notification',
+                    on_delete=django.db.models.deletion.CASCADE,
+                    to='django_courier.Notification',
                     verbose_name='notification')),
             ],
             options={

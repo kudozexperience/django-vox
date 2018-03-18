@@ -16,7 +16,8 @@ class Migration(migrations.Migration):
             name='FailedMessage',
             fields=[
                 ('id', models.AutoField(
-                    auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                    auto_created=True, primary_key=True, serialize=False,
+                    verbose_name='ID')),
                 ('backend', models.CharField(max_length=100)),
                 ('address', models.CharField(max_length=500)),
                 ('protocol', models.CharField(max_length=100)),
@@ -34,7 +35,7 @@ class Migration(migrations.Migration):
             name='send_to_site_contacts',
             field=models.BooleanField(
                 default=False,
-                help_text='Whether this message is sent to the site contacts or to '
-                          'the notification recipient.'),
+                help_text='Whether this message is sent to the site contacts '
+                          'or to the notification recipient.'),
         ),
     ]

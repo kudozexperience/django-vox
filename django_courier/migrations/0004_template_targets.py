@@ -36,8 +36,10 @@ class Migration(migrations.Migration):
             model_name='template',
             name='target',
             field=models.CharField(
-                choices=[('re', 'Recipient'), ('si', 'Site Contacts'), ('se', 'Sender')],
-                default='re', help_text='Who this message actually gets sent to.',
+                choices=[('re', 'Recipient'), ('si', 'Site Contacts'),
+                         ('se', 'Sender')],
+                default='re',
+                help_text='Who this message actually gets sent to.',
                 max_length=2),
         ),
         migrations.RunPython(forwards_func, reverse_func),
@@ -59,7 +61,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='failedmessage',
             name='created_at',
-            field=models.DateTimeField(auto_now_add=True, verbose_name='created at'),
+            field=models.DateTimeField(
+                auto_now_add=True, verbose_name='created at'),
         ),
         migrations.AlterField(
             model_name='failedmessage',

@@ -65,7 +65,8 @@ def from_string(text: str, using=None) -> django.template.Template:
 
 
 # inspired by django-templated-mail
-def email_parts(template: django.template.Template, parameters: dict) -> MultipartMessage:
+def email_parts(template: django.template.Template,
+                parameters: dict) -> MultipartMessage:
     message = MultipartMessage()
     html_context = django.template.Context(parameters)
     text_context = django.template.Context(parameters, autoescape=False)
