@@ -1,8 +1,9 @@
+import json
+
+import django.conf
 import django.template
 import django.template.exceptions
-import django.conf
 from django.core import mail
-import json
 
 
 class MultipartMessage:
@@ -91,4 +92,3 @@ def email_parts(template: django.template.Template, parameters: dict) -> Multipa
 def email_parts_from_string(text: str, parameters: dict) -> MultipartMessage:
     template = from_string(text)
     return email_parts(template, parameters)
-

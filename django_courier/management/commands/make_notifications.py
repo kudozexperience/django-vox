@@ -1,11 +1,9 @@
 """
 Creates permissions for all installed apps that need permissions.
 """
-from django.db import DEFAULT_DB_ALIAS, router
-
-
-from django.core.management.base import BaseCommand
 from django.apps import apps
+from django.core.management.base import BaseCommand
+from django.db import DEFAULT_DB_ALIAS, router
 
 
 class Command(BaseCommand):
@@ -78,4 +76,3 @@ def make_notifications(app_config, verbosity=2, dry_run=False, using=DEFAULT_DB_
                 notification.delete(using=using)
     if not dry_run:
         notification_class.objects.using(using).bulk_create(new_notifications)
-

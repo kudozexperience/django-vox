@@ -1,17 +1,16 @@
-import pydoc
 import collections
-import requests
 import json
+import pydoc
 
-from django.core.mail import send_mail
+import django.conf
 import django.core.mail.backends.base
 import django.core.mail.backends.smtp
-import django.conf
 import django.template
+import requests
+from django.core.mail import send_mail
 from django.utils.translation import ugettext_lazy as _
 
-from . import templates, settings
-
+from . import settings, templates
 
 PROTOCOLS = {
     'email',
@@ -147,4 +146,3 @@ def get_backend_choices():
             backends.append(backend)
 
     return ((bk.ID, bk.VERBOSE_NAME) for bk in backends)
-

@@ -1,8 +1,10 @@
+from typing import List, TypeVar
+
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
-from typing import TypeVar, List
+
 from . import templates
 from .backends import get_backends_from_settings
 
@@ -289,4 +291,3 @@ class FailedMessage(models.Model):
     message = models.TextField(_('message'))
     error = models.TextField(_('error'))
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
-

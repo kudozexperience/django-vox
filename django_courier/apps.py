@@ -7,4 +7,3 @@ class CourierConfig(AppConfig):
 
     def ready(self):
         pass
-
