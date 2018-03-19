@@ -40,6 +40,7 @@ setup(
     ],
     extras_require={
         'test': ['pytest', 'pytest-django', 'pytest-cov', 'pytest-pythonpath', 'tox'],
+        'docs': ['sphinx'],
     },
     license='LGPL',
 
