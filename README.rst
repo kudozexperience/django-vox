@@ -2,11 +2,7 @@
 Django Courier
 ==============
 
-|pipeline-badge| |coverage-badge|
-
-.. |pipeline-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/pipeline.svg
-.. |coverage-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/coverage.svg
-
+|pipeline-badge| |coverage-badge| |docs-badge|
 
 Django courier is a django app that allow you to create and issue
 different types of notifications. Notifications can have different
@@ -20,9 +16,9 @@ First, install via pip (on Windows, replace ``pip3`` with ``pip``)
 ::
 
   pip3 install django-courier
-  
+
 Then, edit your ``settings.py``, adding this line to ``INSTALLED_APPS``
-  
+
 ::
 
       'django_courier',
@@ -50,3 +46,16 @@ TODO
 ----
 
   * Show model parameters in admin
+
+
+.. |pipeline-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/pipeline.svg
+   :target: https://gitlab.com/alantrick/django-courier/
+   :alt: Documentation Status
+
+.. |coverage-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/coverage.svg
+   :target: https://gitlab.com/alantrick/django-courier/
+   :alt: Documentation Status
+
+.. |docs-badge| image:: https://readthedocs.org/projects/djangocourier/badge/?version=latest
+   :target: http://djangocourier.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
