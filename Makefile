@@ -13,7 +13,7 @@ test:
 	pytest tests/
 
 demo:
-	DJANGO_SETTINGS_MODULE=tests.settings \
+	DJANGO_SETTINGS_MODULE=tests.demo_settings \
 	PYTHONPATH="${PYTHONPATH}:." \
 	django-admin runserver
 

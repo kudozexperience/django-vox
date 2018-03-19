@@ -1,0 +1,31 @@
+- model: tests.user
+  pk: 1
+  fields:
+    name: Author
+    email: author@example.org
+    password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
+    is_superuser: true
+    is_staff: true
+    is_active: true
+- model: tests.article
+  pk: 1
+  fields:
+    author: 1
+    title: Why are there so many blog demos
+    content: There are just too many
+- model: tests.follower
+  pk: 1
+  fields:
+    name: Follower
+- model: django_courier.template
+  pk: 1
+  fields:
+    notification: [tests, article, created]
+    backend: email
+    content: "Hi {{ recipient.name }},\r\n\r\n
+      A new article, <a href='http://127.0.0.1/{{ article.id }}/?secret={{ recip
+      ient.secret }}'>{{ article.name }}</a>, has been published at the awsome b
+      log."
+    target: re
+    is_active: true
+

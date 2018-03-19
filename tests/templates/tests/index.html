@@ -1,0 +1,21 @@
+<h1>My lovely demo blog</h1>
+{% if articles %}
+    <ul>
+    {% for article in articles %}
+        <li><a href="{% url 'tests:detail' article.id %}">{{ article.title }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No articles available.</p>
+{% endif %}
+
+<h2>Subscribe to blog</h2>
+{% if error_message %}
+    <p>Error: {{ error_message }}</p>
+{% endif %}
+<form action="{% url 'tests:subscribe' %}" method="post">
+    {% csrf_token %}
+    <label for="name">Name</label><input type="text" id="name" name="name"/>
+    <label for="email">Email</label><input type="email" id="email" name="email"/>
+    <input type="submit" value="Subscribe"/>
+</form>

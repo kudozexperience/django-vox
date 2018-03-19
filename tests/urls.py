@@ -4,12 +4,12 @@ URL patterns for testing app.
 We don't have any fore now.
 """
 from django.conf.urls import url
-from django.contrib import admin
-from django.contrib.staticfiles import views
 
+from . import views
+
+app_name = 'tests'
 urlpatterns = [
-    url('^admin/', admin.site.urls),
-] + [
-    url(r'^static/(?P<path>.*)$', views.serve),
+    url(r'^$', views.article_list, name='index'),
+    url(r'^(?P<article_id>[0-9]+)/$', views.article_detail, name='detail'),
+    url(r'^subscribe$', views.subscribe, name='subscribe'),
 ]
-

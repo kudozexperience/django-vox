@@ -88,7 +88,7 @@ IContactableN = TypeVar('IContactableN', IContactable, None)
 class NotificationManager(models.Manager):
     use_in_migrations = True
 
-    def get_by_natural_key(self, codename, app_label, model):
+    def get_by_natural_key(self, app_label, model, codename):
         return self.get(
             codename=codename,
             content_type=ContentType.objects.db_manager(

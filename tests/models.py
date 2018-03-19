@@ -72,7 +72,6 @@ class User(IContactable, CourierModel, AbstractBaseUser, PermissionsMixin):
         verbose_name=_('active'), default=True,
         help_text=_('Designates whether this user should be treated as '
                     'active. Un-select this instead of deleting accounts.'))
-    date_joined = models.DateTimeField(_('date joined'), auto_now_add=True)
 
     objects = UserManager()
 
@@ -92,15 +91,34 @@ class User(IContactable, CourierModel, AbstractBaseUser, PermissionsMixin):
         yield UserContact('email', self.email)
 
 
-class Article(models.Model):
+class Article(CourierModel):
+
+    class CourierMeta:
+        notifications = (
+            CourierParam(
+                'created', _('Notification to followers that a new article '
+                             'was created.'),
+            ),
+        )
 
     author = models.ForeignKey(
         to=User, on_delete=models.CASCADE, related_name='+')
-    content = models.TextField()
-    published_at = models.DateTimeField(null=True, blank=True)
+    title = models.CharField(_('title'), max_length=254)
+    content = models.TextField(_('content'))
+
+    def save(self, *args, **kwargs):
+        new = self.id is None
+        super().save(*args, **kwargs)
+        if new:
+            for follower in Follower.objects.all():
+                self.issue_notification('created', sender=self.author,
+                                        recipient=follower)
 
 
 class Follower(CourierModel, IContactable):
+
+    class Meta:
+        unique_together = (('email',),)
 
     class CourierMeta:
         notifications = (
@@ -170,7 +188,6 @@ class Comment(CourierModel):
     content = models.TextField(_('content'))
     poster = models.ForeignKey(to=Follower)
     article = models.ForeignKey(to=Article)
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
 
     def save(self, *args, **kwargs):
         new = self.id is None

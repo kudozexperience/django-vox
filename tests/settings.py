@@ -32,6 +32,8 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'tests.User'
 
+FIXTURE_DIRS = ['fixtures']
+
 MEDIA_URL = '/media/'   # Avoids https://code.djangoproject.com/ticket/21451
 
 MIDDLEWARE = [
@@ -44,7 +46,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'tests.urls'
+ROOT_URLCONF = 'tests.root_urls'
 
 TEMPLATES = [
     {
