@@ -13,10 +13,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 SECRET_KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
 
 INTERNAL_IPS = ['127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1']
 
 LOGGING_CONFIG = None   # avoids spurious output in tests
 DEBUG = True
-
 
 # Application definition
 
@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     'django_courier',
     'tests',
 ]
+
+AUTH_USER_MODEL = 'tests.User'
 
 MEDIA_URL = '/media/'   # Avoids https://code.djangoproject.com/ticket/21451
 

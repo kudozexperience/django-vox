@@ -65,11 +65,11 @@ class IContact:
 
     @property
     def address(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError()
 
     @property
     def protocol(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError()
 
 
 IContactN = TypeVar('IContactN', IContact, None)
@@ -79,7 +79,7 @@ class IContactable:
 
     def get_contacts_for_notification(
             self, notification: 'Notification') -> List[IContact]:
-        raise NotImplemented
+        raise NotImplementedError()
 
 
 IContactableN = TypeVar('IContactableN', IContactable, None)

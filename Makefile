@@ -12,6 +12,11 @@ isort_check_only:
 test:
 	pytest tests/
 
+demo:
+	DJANGO_SETTINGS_MODULE=tests.settings \
+	PYTHONPATH="${PYTHONPATH}:." \
+	django-admin runserver
+
 coverage:
 	pytest --cov=django_courier tests/
 
