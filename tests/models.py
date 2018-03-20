@@ -5,23 +5,8 @@ from django.db import models
 from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
-from django_courier.models import (CourierModel, CourierParam, IContact,
+from django_courier.models import (Contact, CourierModel, CourierParam,
                                    IContactable)
-
-
-class UserContact(IContact):
-
-    def __init__(self, protocol: str, address: str):
-        self._protocol = protocol
-        self._address = address
-
-    @property
-    def address(self):
-        return self._address
-
-    @property
-    def protocol(self):
-        return self._protocol
 
 
 class UserManager(BaseUserManager):
@@ -88,7 +73,7 @@ class User(IContactable, CourierModel, AbstractBaseUser, PermissionsMixin):
         return self.name
 
     def get_contacts_for_notification(self, notification):
-        yield UserContact('email', self.email)
+        yield Contact('email', self.email)
 
 
 class Article(CourierModel):
@@ -105,6 +90,9 @@ class Article(CourierModel):
         to=User, on_delete=models.CASCADE, related_name='+')
     title = models.CharField(_('title'), max_length=254)
     content = models.TextField(_('content'))
+
+    def __str__(self):
+        return self.title
 
     def save(self, *args, **kwargs):
         new = self.id is None
@@ -176,7 +164,7 @@ class Follower(CourierModel, IContactable):
         return signer.sign(' | '.join(parts))
 
     def get_contacts_for_notification(self, notification):
-        yield UserContact('email', self.email)
+        yield Contact('email', self.email)
 
 
 class Comment(CourierModel):

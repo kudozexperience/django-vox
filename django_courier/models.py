@@ -75,6 +75,26 @@ class IContact:
 IContactN = TypeVar('IContactN', IContact, None)
 
 
+class Contact(IContact):
+    """A generic contact object
+
+    This is probably what you want to return most of the time unless its
+    convenient to implement the IContact interface right on your models.
+    """
+
+    def __init__(self, protocol: str, address: str):
+        self._protocol = protocol
+        self._address = address
+
+    @property
+    def address(self):
+        return self._address
+
+    @property
+    def protocol(self):
+        return self._protocol
+
+
 class IContactable:
 
     def get_contacts_for_notification(

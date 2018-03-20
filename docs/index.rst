@@ -11,9 +11,12 @@ Django Courier Documentation
    :caption: Contents:
 
    installation
+   getting_started
    backends
    protocols
    templates
+   demo
+   comparison
 
 
 Indices and tables

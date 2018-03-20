@@ -1,0 +1,2 @@
+global-exclude .gitignore
+exclude .gitlab-ci.yml isort.cfg requirements.txt
