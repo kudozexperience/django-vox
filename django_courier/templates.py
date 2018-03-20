@@ -76,17 +76,22 @@ def email_parts(template: django.template.Template,
         if name is not None:
             node_parts[name] = node
 
-    if 'subject' in node_parts:
-        message.subject = node_parts['subject'].render(text_context).strip()
-    has_parts = False
-    if 'text_body' in node_parts:
-        has_parts = True
-        message.text = node_parts['text_body'].render(text_context).strip()
-    if 'html_body' in node_parts:
-        has_parts = True
-        message.html = node_parts['html_body'].render(html_context).strip()
-    if not has_parts:
-        message.text = template.template.render(text_context).strip()
+    with html_context.bind_template(template.template):
+        with text_context.bind_template(template.template):
+            if 'subject' in node_parts:
+                message.subject = node_parts['subject'].render(
+                    text_context).strip()
+            has_parts = False
+            if 'text_body' in node_parts:
+                has_parts = True
+                message.text = node_parts['text_body'].render(
+                    text_context).strip()
+            if 'html_body' in node_parts:
+                has_parts = True
+                message.html = node_parts['html_body'].render(
+                    html_context).strip()
+            if not has_parts:
+                message.text = template.template.render(text_context).strip()
     return message
 
 

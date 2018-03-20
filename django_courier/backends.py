@@ -43,10 +43,6 @@ class EmailBackend(NotificationBackend):
     PROTOCOL = 'email'
     VERBOSE_NAME = _('Email')
 
-    @staticmethod
-    def get_backend() -> 'django.core.mail.backends.base.BaseEmailBackend':
-        return django.core.mail.backends.smtp.EmailBackend()
-
     @classmethod
     def build_message(cls, template, parameters):
         return str(templates.email_parts_from_string(
@@ -55,11 +51,11 @@ class EmailBackend(NotificationBackend):
     @classmethod
     def send_message(cls, contact, message):
         mpm = templates.MultipartMessage.from_string(message)
-        backend = cls.get_backend()
         email = mpm.to_mail()
         email.from_email = django.conf.settings.DEFAULT_FROM_EMAIL
         email.to = [contact.address]
-        backend.send_messages([email])
+        connection = django.core.mail.get_connection()
+        connection.send_messages([email])
 
 
 class PostmarkTemplateBackend(EmailBackend):
@@ -67,16 +63,10 @@ class PostmarkTemplateBackend(EmailBackend):
     ID = 'postmark_template'
     VERBOSE_NAME = _('Postmark Email')
 
-    @staticmethod
-    def get_backend():
-        pass
-        # import anymail.backends.postmark
-        # return anymail.backends.postmark.EmailBackend()
-
     @classmethod
     def send(cls, template, contact, parameters):
         from anymail.message import AnymailMessage
-        backend = cls.get_backend()
+        backend = None
         from_email = django.conf.settings.DEFAULT_FROM_EMAIL
         to_email = [contact.address]
         email = AnymailMessage('', '', from_email, to_email)

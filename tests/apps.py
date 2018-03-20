@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 from django.core.management import call_command
-from django.test.utils import setup_databases, setup_test_environment
+from django.test.utils import setup_databases
 
 
 class CourierTestConfig(AppConfig):
@@ -16,7 +16,6 @@ class CourierDemoConfig(AppConfig):
     verbose_name = 'Courier Demo'
 
     def ready(self):
-        setup_test_environment()
         setup_databases(verbosity=3, interactive=False)
         # add notification objects
         from django_courier.management.commands.make_notifications \

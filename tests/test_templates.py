@@ -6,15 +6,16 @@ from django_courier import models, templates
 
 class MultipartMessageTests(TestCase):
 
-    def test_all(self):
-        dict = {
+    @staticmethod
+    def test_all():
+        mpm_dict = {
             'subject': 'foo',
             'text': 'A message about foo',
             'html': 'A <blink>message</blink> about foo',
         }
-        mpm = templates.MultipartMessage.from_dict(dict)
+        mpm = templates.MultipartMessage.from_dict(mpm_dict)
         new_dict = mpm.to_dict()
-        assert new_dict == dict
+        assert new_dict == mpm_dict
         serialized = str(mpm)
         new_mpm = templates.MultipartMessage.from_string(serialized)
         assert new_mpm.subject == mpm.subject
@@ -22,23 +23,23 @@ class MultipartMessageTests(TestCase):
         assert new_mpm.html == mpm.html
         # test to mail with both text & html
         mail = mpm.to_mail()
-        assert mail.body == dict['text']
-        assert mail.subject == dict['subject']
+        assert mail.body == mpm_dict['text']
+        assert mail.subject == mpm_dict['subject']
         assert len(mail.alternatives) == 1
         content, mime = mail.alternatives[0]
-        assert content == dict['html']
+        assert content == mpm_dict['html']
         assert mime == 'text/html'
         # test to mail with text only
         mpm.html = ''
         mail = mpm.to_mail()
         assert mail.content_subtype == 'plain'
-        assert mail.body == dict['text']
+        assert mail.body == mpm_dict['text']
         # test to mail with html only
-        mpm.html = dict['html']
+        mpm.html = mpm_dict['html']
         mpm.text = ''
         mail = mpm.to_mail()
         assert mail.content_subtype == 'html'
-        assert mail.body == dict['html']
+        assert mail.body == mpm_dict['html']
 
 
 class TemplateRender(TestCase):

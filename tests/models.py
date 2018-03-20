@@ -135,6 +135,9 @@ class Follower(CourierModel, IContactable):
         _('secret'), max_length=32, default='', blank=True,
         help_text=_('Used for resetting passwords'))
 
+    def __str__(self):
+        return '{} <{}>'.format(self.name, self.email)
+
     def save(self, *args, **kwargs):
         new = self.id is None
         super().save(*args, **kwargs)
@@ -142,10 +145,10 @@ class Follower(CourierModel, IContactable):
             self.issue_notification('created', sender=self)
 
     @classmethod
-    def load_from_token(cls, key):
+    def load_from_token(cls, token):
         signer = signing.Signer()
         try:
-            unsigned = signer.unsign(key)
+            unsigned = signer.unsign(token)
         except signing.BadSignature:
             raise ValueError("Bad Signature")
 
@@ -153,8 +156,8 @@ class Follower(CourierModel, IContactable):
         if len(parts) < 2:
             raise ValueError("Missing secret or key")
         secret = parts[0]
-        natural_key = parts[1:]
-        user = cls.objects.get_by_natural_key(*natural_key)
+        email = parts[1]
+        user = cls.objects.get(email=email)
         if user.secret != secret:
             raise LookupError("Wrong secret")
         return user
@@ -169,7 +172,7 @@ class Follower(CourierModel, IContactable):
             self.secret = crypto.get_random_string(32)
             self.save()
         signer = signing.Signer()
-        parts = (self.secret,) + self.natural_key()
+        parts = (self.secret, self.email)
         return signer.sign(' | '.join(parts))
 
     def get_contacts_for_notification(self, notification):

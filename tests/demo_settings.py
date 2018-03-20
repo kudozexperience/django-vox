@@ -13,3 +13,5 @@ INSTALLED_APPS = [
     'django_courier',
     'tests.apps.CourierDemoConfig',
 ]
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

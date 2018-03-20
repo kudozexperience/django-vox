@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from . import models
 
@@ -10,9 +10,25 @@ def article_list(request):
     return render(request, 'tests/index.html', context)
 
 
-def article_detail(request, article_id, follower_secret=None):
+def article_detail(request, article_id):
     article = get_object_or_404(models.Article, pk=article_id)
-    return render(request, 'tests/detail.html', {'article': article})
+    comments = models.Comment.objects.filter(article=article).order_by('id')
+    token = request.GET.get('token')
+    return render(request, 'tests/detail.html', {
+        'article': article, 'comments': comments, 'token': token})
+
+
+def comment(request, article_id):
+    token = request.POST.get('token', '')
+    content = request.POST.get('content', '')
+    article = get_object_or_404(models.Article, pk=article_id)
+    follower = models.Follower.load_from_token(token)
+    models.Comment.objects.create(
+        content=content,
+        poster=follower,
+        article=article,
+    )
+    return redirect('tests:detail', article.id)
 
 
 def subscribe(request):
