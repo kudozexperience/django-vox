@@ -8,6 +8,8 @@ Django courier is a django app that allow you to create and issue
 different types of notifications. Notifications can have different
 kinds of parameters which allow for convenient editing in the admin.
 
+TODO: clean up readme and add pypi badge
+
 Installation
 ------------
 

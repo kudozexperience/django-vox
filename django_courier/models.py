@@ -64,12 +64,19 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
 class IContact:
 
     @property
+    def name(self) -> str:
+        raise NotImplementedError()
+
+    @property
     def address(self) -> str:
         raise NotImplementedError()
 
     @property
     def protocol(self) -> str:
         raise NotImplementedError()
+
+    def __str__(self):
+        return '{} <{}:{}>'.format(self.name, self.protocol, self.address)
 
 
 IContactN = TypeVar('IContactN', IContact, None)
@@ -82,9 +89,14 @@ class Contact(IContact):
     convenient to implement the IContact interface right on your models.
     """
 
-    def __init__(self, protocol: str, address: str):
+    def __init__(self, name: str, protocol: str, address: str):
+        self._name = name
         self._protocol = protocol
         self._address = address
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def address(self):
@@ -174,7 +186,7 @@ class Notification(models.Model):
             self.content_type.app_label, self.content_type, self.codename)
 
     def natural_key(self):
-        return (self.codename,) + self.content_type.natural_key()
+        return self.content_type.natural_key() + (self.codename,)
 
     natural_key.dependencies = ['contenttypes.contenttype']
 
@@ -217,7 +229,7 @@ class Notification(models.Model):
 
         contact_map = {
             're': recipient,
-            'si': SiteContact,
+            'si': SiteContact.objects,
             'se': sender,
         }
         for key, value in contact_map.items():
@@ -287,6 +299,17 @@ class Template(models.Model):
         return template.template.render(context)
 
 
+class SiteContactManager(models.Manager, IContactable):
+    use_in_migrations = True
+
+    def get_contacts_for_notification(
+            self, notification: 'Notification') -> List[IContact]:
+        for pref in SiteContactPreference.objects.filter(
+                notification=notification, is_active=True):
+            yield pref.site_contact
+
+
+# can't make this subclass IContact or fields become unsettable
 class SiteContact(models.Model):
 
     class Meta:
@@ -294,16 +317,11 @@ class SiteContact(models.Model):
         verbose_name = _('site contact')
         unique_together = (('address', 'protocol'),)
 
+    name = models.CharField(_('name'), blank=True, max_length=500)
     address = models.CharField(_('address'), max_length=500)
     protocol = models.CharField(_('protocol'), max_length=100)
 
-    @classmethod
-    def get_contacts_for_notification(
-            cls, notification: 'Notification') -> List[IContact]:
-        queryset = SiteContactPreference.objects
-        for pref in queryset.filter(notification=notification,
-                                    is_active=True):
-            yield pref.site_contact
+    objects = SiteContactManager()
 
 
 class SiteContactPreference(models.Model):

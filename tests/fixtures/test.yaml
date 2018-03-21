@@ -1,3 +1,33 @@
+- model: contenttypes.contenttype
+  fields: {app_label: tests, model: user}
+- model: contenttypes.contenttype
+  fields: {app_label: tests, model: article}
+- model: contenttypes.contenttype
+  fields: {app_label: tests, model: follower}
+- model: contenttypes.contenttype
+  fields: {app_label: tests, model: comment}
+- model: django_courier.notification
+  fields:
+    codename: created
+    content_type: [tests, article]
+    description: Notification to followers that a new article was created.
+    use_sender: true
+    use_recipient: true
+- model: django_courier.notification
+  fields:
+    codename: created
+    content_type: [tests, follower]
+    description: Notification from follower that a new follower was created. Intended
+      for site admins
+    use_sender: true
+    use_recipient: false
+- model: django_courier.notification
+  fields:
+    codename: created
+    content_type: [tests, comment]
+    description: Notification from follower to author that a comment was posted
+    use_sender: true
+    use_recipient: true
 - model: tests.user
   pk: 1
   fields:
@@ -54,10 +84,10 @@
     name: admin
     protocol: email
     address: admin@example.org
-- model: django_courier.sitecontactpreference
-  pk: 1
-  fields:
-    site_contact: 1
-    notification: [tests, follower, created]
-    is_active: true
+#- model: django_courier.sitecontactpreference
+#  pk: 1
+#  fields:
+#    site_contact: 1
+#    notification: [tests, follower, created]
+#    is_active: true
 

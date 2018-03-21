@@ -8,7 +8,7 @@ class CourierTestConfig(AppConfig):
     verbose_name = 'Courier Test'
 
     def ready(self):
-        pass
+        setup_databases(verbosity=3, interactive=False)
 
 
 class CourierDemoConfig(AppConfig):

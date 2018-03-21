@@ -112,7 +112,7 @@ class to look like this::
       email = models.EmailField(max_length=254, unique=True)
 
       def get_contacts_for_notification(notification):
-          return Contact('email', self.email)
+          return Contact(self.name, 'email', self.email)
 
 
 And there you have it. Now, in order for this to do anything useful,

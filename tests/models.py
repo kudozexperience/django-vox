@@ -73,7 +73,7 @@ class User(IContactable, CourierModel, AbstractBaseUser, PermissionsMixin):
         return self.name
 
     def get_contacts_for_notification(self, notification):
-        yield Contact('email', self.email)
+        yield Contact(self.name, 'email', self.email)
 
 
 class Article(CourierModel):
@@ -164,7 +164,7 @@ class Follower(CourierModel, IContactable):
         return signer.sign(' | '.join(parts))
 
     def get_contacts_for_notification(self, notification):
-        yield Contact('email', self.email)
+        yield Contact(self.name, 'email', self.email)
 
 
 class Comment(CourierModel):
