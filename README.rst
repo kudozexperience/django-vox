@@ -43,19 +43,8 @@ I want it, stat!
 ----------------
 
 Well, why don't you just head over to `the documentation`_ and we'll
-get yo
-
-First, install via pip (on Windows, replace ``pip3`` with ``pip``)
-
-::
-
-  pip3 install django-courier
-
-Then, edit your ``settings.py``, adding this line to ``INSTALLED_APPS``
-
-::
-
-      'django_courier',
+get you started. A word of warning, it's not super simple to setup, but
+it's worth it.
 
 
 .. |pipeline-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/pipeline.svg
