@@ -177,8 +177,8 @@ class Comment(CourierModel):
         )
 
     content = models.TextField(_('content'))
-    poster = models.ForeignKey(to=Follower)
-    article = models.ForeignKey(to=Article)
+    poster = models.ForeignKey(to=Follower, on_delete=models.CASCADE)
+    article = models.ForeignKey(to=Article, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         new = self.id is None

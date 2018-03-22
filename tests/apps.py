@@ -1,6 +1,9 @@
 from django.apps import AppConfig
 from django.core.management import call_command
-from django.test.utils import setup_databases
+try:
+    from django.test.utils import setup_databases
+except ImportError:  # workaround for django 1.10
+    from django.test.runner import setup_databases
 
 
 class CourierTestConfig(AppConfig):

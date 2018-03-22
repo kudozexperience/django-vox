@@ -64,5 +64,3 @@ texinfo_documents = [
      author, 'DjangoCourier', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-

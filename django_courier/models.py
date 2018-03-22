@@ -171,10 +171,8 @@ class Notification(models.Model):
 
     codename = models.CharField(_('codename'), max_length=100)
     content_type = models.ForeignKey(
-        ContentType,
-        models.CASCADE,
-        verbose_name=_('content type'),
-    )
+        to=ContentType, on_delete=models.CASCADE,
+        verbose_name=_('content type'))
     description = models.TextField(_('description'))
     use_sender = models.BooleanField(_('use sender'))
     use_recipient = models.BooleanField(_('use recipient'))
@@ -285,7 +283,8 @@ class Template(models.Model):
         verbose_name = _('template')
 
     notification = models.ForeignKey(
-        Notification, verbose_name=_('notification'))
+        to=Notification, on_delete=models.PROTECT,
+        verbose_name=_('notification'))
     backend = models.CharField(max_length=100)
     content = models.TextField()
     target = models.CharField(
