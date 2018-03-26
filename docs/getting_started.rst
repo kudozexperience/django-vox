@@ -12,8 +12,9 @@ Setting up the Models
 
 There's basically two parts to setting up the models. First, you have
 to add notifications to the models that you want notifications about;
-and second, you have to add implement the ``IContactable`` interface
-fo whatever you want to send to notifications too/from. If you only
+and second, you have to add implement the ``AbstractContactNetwork``
+and ``AbstractContactable`` interfaces for whatever you want to
+send to notifications too/from. If you only
 ever want to send the notifications to the site contacts, then there's
 nothing to do for step two, but that's not very fun, is it.
 
@@ -93,9 +94,9 @@ notifications table using the ``make_notifications`` management command::
 Adding Contact Info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now we have to implement the ``django_courier.models.IContactable`` interface
-for all the senders and recipients of our notifications. This means
-implementing the ``get_contacts_for_notification(notification)`` method.
+Now we have to implement the ``django_courier.models.AbstractContactNetwork``
+interface for all the senders and recipients of our notifications. This
+means implementing the ``get_contacts_for_notification(notification)`` method.
 This method takes a notification, and returns all of the contacts that the
 object has enabled for that notification. The idea behind this method is that
 it allows you to implement your own notification preferences on a per-contact
@@ -105,15 +106,18 @@ For now, we're just going to make an implementation that assumes every user
 will get email notifications for all notifications. We can alter the user
 class to look like this::
 
-  from django_courier.models import IContactable, Contact
+  from django_courier.models import ContactNetwork, Contact
 
-  class User(CourierModel, IContactable):
+  class User(CourierModel, ContactNetwork):
       ...
       email = models.EmailField(max_length=254, unique=True)
 
       def get_contacts_for_notification(notification):
           return Contact(self.name, 'email', self.email)
 
+
+.. note:: There's a lot more going on here than meets the eye, but this
+   example should be enough to get you started.
 
 And there you have it. Now, in order for this to do anything useful,
 you'll need to add some appropriate :doc:`templates <templates>`.

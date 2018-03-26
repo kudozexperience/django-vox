@@ -22,17 +22,24 @@ class DemoTests(TestCase):
             content='Whoever thought we\'d come this far',
         )
         # now a notification should be fired, check the outbox
-        assert len(mail.outbox) == 1
-        last_mail = mail.outbox[0]  # EmailMultiAlternatives
-        assert last_mail.content_subtype == 'html'
-        soup = BeautifulSoup(last_mail.body, 'html.parser')
+        # mail.outbox is a list of EmailMultiAlternatives
+        assert len(mail.outbox) == 2
+        mail_by_subject = {}
+        for message in mail.outbox:
+            mail_by_subject[message.subject] = message
+        site_mail = mail_by_subject['Site sub email']
+        assert site_mail.content_subtype == 'html'
+        soup = BeautifulSoup(site_mail.body, 'html.parser')
         anchors = soup.find_all('a')
         assert len(anchors) == 1
         url = anchors[0].get('href')
         assert url.startswith('http://127.0.0.1:8000/2/?token=')
+        assert len(url) > 31  # if less, token is blank
         client = Client()
         response = client.get(url)
         assert response.status_code == 200
         assert response['Content-Type'] == 'text/html; charset=utf-8'
+        author_mail = mail_by_subject['Author sub email']
+        assert author_mail.to[0] == 'authorsubscriber@example.org'
         # TODO: continue
         # soup = BeautifulSoup(response.body, 'html.parser')

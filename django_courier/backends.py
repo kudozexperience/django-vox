@@ -33,7 +33,7 @@ class NotificationBackend:
 
     @classmethod
     def send_message(
-            cls, contact: 'django_courier.models.IContact', message):
+            cls, contact: 'django_courier.models.Contact', message):
         raise NotImplementedError
 
 

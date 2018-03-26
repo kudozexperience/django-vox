@@ -1,4 +1,5 @@
 import django.conf
+from django.utils.translation import ugettext_lazy as _
 
 BACKENDS = getattr(django.conf.settings, 'DJANGO_COURIER_BACKENDS', None)
 if BACKENDS is None:
@@ -10,3 +11,9 @@ if BACKENDS is None:
         BACKENDS.append('django_courier.backends.TwilioBackend')
     except ImportError:
         pass
+
+CHANNELS = getattr(django.conf.settings, 'DJANGO_COURIER_CHANNELS', None)
+if CHANNELS is None:
+    CHANNELS = {
+        '': (_('Sender'), _('Recipient')),
+    }

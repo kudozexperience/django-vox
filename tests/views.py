@@ -22,10 +22,10 @@ def comment(request, article_id):
     token = request.POST.get('token', '')
     content = request.POST.get('content', '')
     article = get_object_or_404(models.Article, pk=article_id)
-    follower = models.Follower.load_from_token(token)
+    subscriber = models.Subscriber.load_from_token(token)
     models.Comment.objects.create(
         content=content,
-        poster=follower,
+        poster=subscriber,
         article=article,
     )
     return redirect('tests:detail', article.id)
@@ -38,5 +38,5 @@ def subscribe(request):
         return render(request, 'tests/index.html', {
             'error_message': 'You are missing an email or a name', })
 
-    models.Follower.objects.create(name=name, email=email)
+    models.Subscriber.objects.create(name=name, email=email)
     return render(request, 'tests/subscribed.html')

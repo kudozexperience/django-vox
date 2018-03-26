@@ -4,6 +4,7 @@ Django settings for django_courier tests
 # based of django-debug-toolbar
 # https://github.com/jazzband/django-debug-toolbar/blob/master/tests/settings.py
 import os
+from django.utils.translation import ugettext_lazy as _
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -87,4 +88,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
     }
+}
+
+DJANGO_COURIER_CHANNELS = {
+    '': (_('Sender'), _('Recipient')),
+    'sub': (_('Sender\'s Subscribers'), _('Recipient\'s Subscribers')),
 }

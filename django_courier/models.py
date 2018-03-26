@@ -1,11 +1,13 @@
-from typing import List, TypeVar
+import abc
+import collections
+from typing import List, TypeVar, cast, Mapping, Any, Set, Iterable
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
-from . import templates
+from . import templates, settings
 from .backends import get_backends_from_settings
 
 
@@ -54,67 +56,63 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
         abstract = True
 
     def issue_notification(self, codename: str,
-                           recipient: 'IContactableN' = None, sender=None):
+                           recipient: 'AbstractContactNetworkN' = None,
+                           sender: 'AbstractContactNetworkN' = None):
         ct = ContentType.objects.get_for_model(self)
         notification = Notification.objects.get(
             codename=codename, content_type=ct)
         notification.issue(self, recipient, sender)
 
 
-class IContact:
+class Contact:
+    """A generic contact object
 
-    @property
-    def name(self) -> str:
-        raise NotImplementedError()
+    If you want to return something that looks like this, make sure
+    to implement the __hash__ method the same, otherwise filtering
+    duplicate contacts won't work
+    """
 
-    @property
-    def address(self) -> str:
-        raise NotImplementedError()
-
-    @property
-    def protocol(self) -> str:
-        raise NotImplementedError()
+    def __init__(self, name: str, protocol: str, address: str, obj: Any=None):
+        self.name = name
+        self.protocol = protocol
+        self.address = address
+        self.object = obj
 
     def __str__(self):
         return '{} <{}:{}>'.format(self.name, self.protocol, self.address)
 
-
-IContactN = TypeVar('IContactN', IContact, None)
-
-
-class Contact(IContact):
-    """A generic contact object
-
-    This is probably what you want to return most of the time unless its
-    convenient to implement the IContact interface right on your models.
-    """
-
-    def __init__(self, name: str, protocol: str, address: str):
-        self._name = name
-        self._protocol = protocol
-        self._address = address
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def address(self):
-        return self._address
-
-    @property
-    def protocol(self):
-        return self._protocol
+    def __hash__(self):
+        return hash(str(self))
 
 
-class IContactable:
+class AbstractContactable(metaclass=abc.ABCMeta):
 
+    @abc.abstractmethod
     def get_contacts_for_notification(
-            self, notification: 'Notification') -> List[IContact]:
-        raise NotImplementedError()
+            self, notification: 'Notification') -> List[Contact]:
+        ...
 
 
-IContactableN = TypeVar('IContactableN', IContactable, None)
+class AbstractContactNetwork(metaclass=abc.ABCMeta):
+
+    def get_contactables(self, channel: str) -> List[AbstractContactable]:
+        ...
+
+
+class ContactNetwork:
+
+    def get_contactables(self, channel: str) -> Iterable[AbstractContactable]:
+        if channel == '':
+            return (self,)
+        raise ValueError('Channel {} not supported'.format(channel))
+
+
+AbstractContactable.register(ContactNetwork)
+AbstractContactNetwork.register(ContactNetwork)
+
+
+AbstractContactNetworkN = TypeVar('AbstractContactNetworkN',
+                                  AbstractContactNetwork, None)
 
 
 class NotificationManager(models.Manager):
@@ -188,7 +186,9 @@ class Notification(models.Model):
 
     natural_key.dependencies = ['contenttypes.contenttype']
 
-    def issue(self, content, recipient: IContactableN=None, sender=None):
+    def issue(self, content,
+              recipient: AbstractContactNetworkN=None,
+              sender: AbstractContactNetworkN=None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template
@@ -202,10 +202,11 @@ class Notification(models.Model):
         """
         # check
         parameters = {
-            'subject': content,
             'content': content,
         }
+        networks = {}
         if self.use_recipient and (recipient is not None):
+            networks['re'] = recipient
             parameters['recipient'] = recipient
         elif self.use_recipient:
             raise RuntimeError(
@@ -216,6 +217,7 @@ class Notification(models.Model):
                                'but is not specified in CourierMeta')
 
         if self.use_sender and (sender is not None):
+            networks['se'] = sender
             parameters['sender'] = sender
         elif self.use_sender:
             raise RuntimeError(
@@ -225,37 +227,52 @@ class Notification(models.Model):
             raise RuntimeError('Sender added to issue_notification, but is '
                                'not specified in CourierMeta')
 
-        contact_map = {
-            're': recipient,
-            'si': SiteContact.objects,
-            'se': sender,
+        contactable_list = {
+            'si': (SiteContact.objects,),
         }
-        for key, value in contact_map.items():
-            if value is not None:
-                self.send_messages(
-                    value.get_contacts_for_notification(self),
-                    parameters,
-                    Template.objects.filter(target=key))
+        for key, network in networks.items():
+            for channel in settings.CHANNELS:
+                if channel != '':
+                    key = key + ':' + channel
+                contactable_list[key] = network.get_contactables(channel)
 
-    def send_messages(self, contacts, parameters, template_queryset):
+        contact_set = collections.defaultdict(set)
+        for key, contactables in contactable_list.items():
+            for c_able in contactables:
+                for contact in c_able.get_contacts_for_notification(self):
+                    contact_set[key].add(contact)
+
+        for key, contacts in contact_set.items():
+            self.send_messages(
+                contacts,
+                parameters,
+                Template.objects.filter(target=key))
+
+    def send_messages(
+            self, contacts: Set[Contact],
+            generic_params: Mapping[str, Any], template_queryset):
+
         def _get_backend_message(protocol):
             backends = get_backends_from_settings(protocol)
             # now get all the templates for these backends
             for be in backends:
-                template = template_queryset.filter(
+                tpl = template_queryset.filter(
                     backend=be.ID, notification=self, is_active=True).first()
-                if template is not None:
-                    return be, be.build_message(template, parameters)
+                if tpl is not None:
+                    return be, tpl
             return None
 
         # per-protocol message cache
         cache = {}
         for contact in contacts:
-            protocol = contact.protocol
-            if protocol not in cache:
-                cache[protocol] = _get_backend_message(protocol)
-            if cache[protocol] is not None:
-                backend, message = cache[protocol]
+            params = generic_params.copy()
+            params['contact'] = contact
+            proto = contact.protocol
+            if proto not in cache:
+                cache[proto] = _get_backend_message(proto)
+            if cache[proto] is not None:
+                backend, template = cache[proto]
+                message = backend.build_message(template, params)
                 # We're catching all exceptions here because some people
                 # are bad people and can't subclass properly
                 try:
@@ -263,7 +280,7 @@ class Notification(models.Model):
                 except Exception as e:
                     FailedMessage.objects.create(
                         backend=backend.ID,
-                        protocol=protocol,
+                        name=contact.name,
                         address=contact.address,
                         message=str(message),
                         error=str(e),
@@ -273,13 +290,12 @@ class Notification(models.Model):
 class Template(models.Model):
 
     TARGET_CHOICES = (
-        ('re', _('Recipient')),
         ('si', _('Site Contacts')),
+        ('re', _('Recipient')),
         ('se', _('Sender')),
     )
 
     class Meta:
-        default_permissions = ()
         verbose_name = _('template')
 
     notification = models.ForeignKey(
@@ -288,39 +304,45 @@ class Template(models.Model):
     backend = models.CharField(max_length=100)
     content = models.TextField()
     target = models.CharField(
-        choices=TARGET_CHOICES, max_length=2, default='re',
+        max_length=103, default='re',
         help_text=_('Who this message actually gets sent to.'))
     is_active = models.BooleanField(default=True)
 
+    objects = models.Manager()
+
     def render(self, parameters: dict, autoescape=True):
-        template = templates.from_string(self.content)
+        content = cast(str, self.content)
+        template = templates.from_string(content)
         context = Context(parameters, autoescape=autoescape)
-        return template.template.render(context)
+        return template.render(context)
 
 
-class SiteContactManager(models.Manager, IContactable):
+class SiteContactManager(models.Manager, AbstractContactable):
     use_in_migrations = True
 
     def get_contacts_for_notification(
-            self, notification: 'Notification') -> List[IContact]:
+            self, notification: 'Notification') -> List[Contact]:
         for pref in SiteContactPreference.objects.filter(
                 notification=notification, is_active=True):
-            yield pref.site_contact
+            sc = pref.site_contact
+            yield Contact(sc.name, sc.protocol, sc.address)
 
 
-# can't make this subclass IContact or fields become unsettable
+# can't make this subclass AbstractContact or fields become unset-able
 class SiteContact(models.Model):
 
     class Meta:
-        default_permissions = ()
         verbose_name = _('site contact')
         unique_together = (('address', 'protocol'),)
 
     name = models.CharField(_('name'), blank=True, max_length=500)
-    address = models.CharField(_('address'), max_length=500)
     protocol = models.CharField(_('protocol'), max_length=100)
+    address = models.CharField(_('address'), max_length=500)
 
     objects = SiteContactManager()
+
+    def __str__(self):
+        return self.name
 
 
 class SiteContactPreference(models.Model):
@@ -329,16 +351,23 @@ class SiteContactPreference(models.Model):
     notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
     is_active = models.BooleanField(_('is active'))
 
+    objects = models.Manager()
+
 
 class FailedMessage(models.Model):
 
     class Meta:
-        default_permissions = ()
         verbose_name = _('failed message')
 
     backend = models.CharField(_('backend'), max_length=100)
+    contact_name = models.CharField(_('contact name'), max_length=500)
     address = models.CharField(_('address'), max_length=500)
-    protocol = models.CharField(_('protocol'), max_length=100)
     message = models.TextField(_('message'))
     error = models.TextField(_('error'))
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+
+    objects = models.Manager()
+
+    def __str__(self):
+        return '{}:{} @ {}'.format(self.backend.PROTOCOL,
+                                   self.address, self.created_at)

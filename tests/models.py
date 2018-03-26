@@ -6,7 +6,7 @@ from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
 from django_courier.models import (Contact, CourierModel, CourierParam,
-                                   IContactable)
+                                   ContactNetwork)
 
 
 class UserManager(BaseUserManager):
@@ -45,7 +45,7 @@ class UserManager(BaseUserManager):
         return user
 
 
-class User(IContactable, CourierModel, AbstractBaseUser, PermissionsMixin):
+class User(ContactNetwork, CourierModel, AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(_('email'), max_length=254, unique=True)
     name = models.CharField(_('name'), max_length=254)
@@ -72,8 +72,13 @@ class User(IContactable, CourierModel, AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.name
 
-    def get_contacts_for_notification(self, notification):
+    def get_contacts_for_notification(self, _notification):
         yield Contact(self.name, 'email', self.email)
+
+    def get_contactables(self, channel: str):
+        if channel == 'sub':
+            return Subscriber.objects.filter(author=self)
+        return super().get_contactables(channel)
 
 
 class Article(CourierModel):
@@ -81,7 +86,7 @@ class Article(CourierModel):
     class CourierMeta:
         notifications = (
             CourierParam(
-                'created', _('Notification to followers that a new article '
+                'created', _('Notification to subscriber that a new article '
                              'was created.'),
             ),
         )
@@ -98,25 +103,39 @@ class Article(CourierModel):
         new = self.id is None
         super().save(*args, **kwargs)
         if new:
-            for follower in Follower.objects.all():
-                self.issue_notification('created', sender=self.author,
-                                        recipient=follower)
+            # get all the site subscribers in one collection so we don't
+            # issue the notification multiple times
+            collection = SubscriberCollection(
+                Subscriber.objects.filter(author=None))
+            self.issue_notification(
+                'created', sender=self.author, recipient=collection)
 
 
-class Follower(CourierModel, IContactable):
+class Subscriber(ContactNetwork, CourierModel):
+    """
+    A subscriber to blog articles.
+
+    If the author field is set, only articles from those authors
+    are subscribed to; otherwise they all are.
+    """
 
     class Meta:
-        unique_together = (('email',),)
+        unique_together = (('author', 'email',),)
 
     class CourierMeta:
         notifications = (
             CourierParam(
-                'created', _('Notification from follower that a new follower '
-                             'was created. Intended for site admins'),
+                'created', _(
+                    'Notification from subscriber that a new subscriber was '
+                    'created. Intended for site admins'),
                 use_recipient=False,
             ),
         )
 
+    author = models.ForeignKey(
+        to=User, on_delete=models.CASCADE,
+        null=True, blank=True,
+        verbose_name=_('author'),)
     name = models.CharField(_('name'), max_length=254)
     email = models.EmailField(_('email'), max_length=254, unique=True)
     secret = models.CharField(
@@ -163,8 +182,18 @@ class Follower(CourierModel, IContactable):
         parts = (self.secret, self.email)
         return signer.sign(' | '.join(parts))
 
-    def get_contacts_for_notification(self, notification):
-        yield Contact(self.name, 'email', self.email)
+    def get_contacts_for_notification(self, _notification):
+        yield Contact(self.name + 'TODO', 'email', self.email, self)
+
+
+class SubscriberCollection(ContactNetwork, list):
+
+    def get_contactables(self, channel: str):
+        if channel == '':
+            return self
+        if channel == 'sub':
+            return ()
+        return super().get_contactables(channel)
 
 
 class Comment(CourierModel):
@@ -172,12 +201,12 @@ class Comment(CourierModel):
     class CourierMeta:
         notifications = (
             CourierParam(
-                'created', _('Notification from follower to author that a '
+                'created', _('Notification from subscriber to author that a '
                              'comment was posted')),
         )
 
     content = models.TextField(_('content'))
-    poster = models.ForeignKey(to=Follower, on_delete=models.CASCADE)
+    poster = models.ForeignKey(to=Subscriber, on_delete=models.CASCADE)
     article = models.ForeignKey(to=Article, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):

@@ -45,7 +45,7 @@ class MultipartMessage:
 
 
 # from https://stackoverflow.com/questions/2167269/
-def from_string(text: str, using=None) -> django.template.Template:
+def from_string(text: str, using=None) -> django.template.base.Template:
     """
     Convert a string into a template object,
     using a given template engine or using the default backends
@@ -58,26 +58,26 @@ def from_string(text: str, using=None) -> django.template.Template:
     exception = None
     for engine in engine_list:
         try:
-            return engine.from_string(text)
+            return engine.from_string(text).template
         except django.template.exceptions.TemplateSyntaxError as e:
             exception = e
     raise exception
 
 
 # inspired by django-templated-mail
-def email_parts(template: django.template.Template,
+def email_parts(template: django.template.base.Template,
                 parameters: dict) -> MultipartMessage:
     message = MultipartMessage()
     html_context = django.template.Context(parameters)
     text_context = django.template.Context(parameters, autoescape=False)
     node_parts = {}
-    for node in template.template.nodelist:
+    for node in template.nodelist:
         name = getattr(node, 'name', None)
         if name is not None:
             node_parts[name] = node
 
-    with html_context.bind_template(template.template):
-        with text_context.bind_template(template.template):
+    with html_context.bind_template(template):
+        with text_context.bind_template(template):
             if 'subject' in node_parts:
                 message.subject = node_parts['subject'].render(
                     text_context).strip()
@@ -91,7 +91,7 @@ def email_parts(template: django.template.Template,
                 message.html = node_parts['html_body'].render(
                     html_context).strip()
             if not has_parts:
-                message.text = template.template.render(text_context).strip()
+                message.text = template.render(text_context).strip()
     return message
 
 

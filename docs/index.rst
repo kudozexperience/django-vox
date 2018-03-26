@@ -2,6 +2,7 @@
    sphinx-quickstart on Sun Mar 18 17:38:19 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
+.. TODO: support genindex and modindex
 
 Django Courier Documentation
 ============================
@@ -22,6 +23,4 @@ Django Courier Documentation
 Indices and tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
