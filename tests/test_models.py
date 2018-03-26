@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from django.core import mail
-from django.test import TestCase, Client
+from django.test import Client, TestCase
 
 from . import models
 

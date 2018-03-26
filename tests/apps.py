@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 from django.core.management import call_command
+
 try:
     from django.test.utils import setup_databases
 except ImportError:  # workaround for django 1.10

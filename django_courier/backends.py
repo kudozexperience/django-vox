@@ -12,9 +12,9 @@ from django.utils.translation import ugettext_lazy as _
 from . import settings, templates
 
 PROTOCOLS = {
-    'email',
-    'sms',
-    'slack',
+    'email': _('Email'),
+    'sms': _('SMS'),
+    'slack-webhook': _('Slack Webhook'),
 }
 
 # a global that we initialize once, please use
@@ -33,7 +33,7 @@ class NotificationBackend:
 
     @classmethod
     def send_message(
-            cls, contact: 'django_courier.models.Contact', message):
+            cls, contact: 'django_courier.models.IContact', message):
         raise NotImplementedError
 
 
@@ -138,3 +138,10 @@ def get_backend_choices():
             backends.append(backend)
 
     return ((bk.ID, bk.VERBOSE_NAME) for bk in backends)
+
+
+def get_protocol_choices():
+    if not __ALL_BACKENDS__:
+        _init_backends()
+    for protocol in __ALL_BACKENDS__.keys():
+        yield (protocol, PROTOCOLS.get(protocol, protocol))

@@ -1,14 +1,16 @@
 import abc
 import collections
-from typing import List, TypeVar, cast, Mapping, Any, Set, Iterable
+from typing import Any, Iterable, List, Mapping, Set, TypeVar, cast
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
-from . import templates, settings
+from . import settings, templates
 from .backends import get_backends_from_settings
+
+__ALL_TARGETS__ = collections.OrderedDict()
 
 
 class CourierOptions(object):
@@ -289,12 +291,6 @@ class Notification(models.Model):
 
 class Template(models.Model):
 
-    TARGET_CHOICES = (
-        ('si', _('Site Contacts')),
-        ('re', _('Recipient')),
-        ('se', _('Sender')),
-    )
-
     class Meta:
         verbose_name = _('template')
 
@@ -371,3 +367,28 @@ class FailedMessage(models.Model):
     def __str__(self):
         return '{}:{} @ {}'.format(self.backend.PROTOCOL,
                                    self.address, self.created_at)
+
+
+def _init_targets():
+    """
+    Intialize channel settings
+    """
+    if not __ALL_TARGETS__:
+        __ALL_TARGETS__['si'] = _('Site Contacts')
+        for key, (re_name, se_name) in settings.CHANNELS.items():
+            if key == '':
+                __ALL_TARGETS__['re'] = re_name
+                __ALL_TARGETS__['se'] = se_name
+            else:
+                __ALL_TARGETS__['re:' + key] = re_name
+                __ALL_TARGETS__['se:' + key] = se_name
+
+
+def get_targets():
+    _init_targets()
+    return __ALL_TARGETS__
+
+
+def get_target_choices():
+    _init_targets()
+    return __ALL_TARGETS__.items()
