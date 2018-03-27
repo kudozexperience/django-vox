@@ -385,7 +385,7 @@ def _init_targets():
     """
     if not __ALL_TARGETS__:
         __ALL_TARGETS__['si'] = _('Site Contacts')
-        for key, (re_name, se_name) in settings.CHANNELS.items():
+        for key, (se_name, re_name) in settings.CHANNELS.items():
             if key == '':
                 __ALL_TARGETS__['re'] = re_name
                 __ALL_TARGETS__['se'] = se_name
