@@ -19,4 +19,3 @@ demo:
 
 coverage:
 	pytest --cov=django_courier tests/
-

@@ -130,7 +130,8 @@ class NotificationManager(models.Manager):
 
 class CourierParam:
     REQUIRED_PARAMS = {'codename', 'description'}
-    OPTIONAL_PARAMS = {'use_recipient': True, 'use_sender': True}
+    OPTIONAL_PARAMS = {'use_recipient': True, 'use_sender': True,
+                       'required': False}
 
     def __init__(self, codename, description, **kwargs):
         self.params = {
@@ -176,6 +177,10 @@ class Notification(models.Model):
     description = models.TextField(_('description'))
     use_sender = models.BooleanField(_('use sender'))
     use_recipient = models.BooleanField(_('use recipient'))
+    required = models.BooleanField(
+        _('required'), default=False,
+        help_text=_('If true, triggering the notification will throw an '
+                    'error if there is no available template/contact'))
 
     objects = NotificationManager()
 
@@ -244,11 +249,13 @@ class Notification(models.Model):
                 for contact in c_able.get_contacts_for_notification(self):
                     contact_set[key].add(contact)
 
+        sent = False
         for key, contacts in contact_set.items():
-            self.send_messages(
-                contacts,
-                parameters,
-                Template.objects.filter(target=key))
+            if self.send_messages(contacts, parameters,
+                                  Template.objects.filter(target=key)):
+                sent = True
+        if not sent and self.required:
+            raise RuntimeError('Notification required, but no message sent')
 
     def send_messages(
             self, contacts: Set[Contact],
@@ -266,6 +273,7 @@ class Notification(models.Model):
 
         # per-protocol message cache
         cache = {}
+        sent = False
         for contact in contacts:
             params = generic_params.copy()
             params['contact'] = contact
@@ -279,6 +287,7 @@ class Notification(models.Model):
                 # are bad people and can't subclass properly
                 try:
                     backend.send_message(contact, message)
+                    sent = True
                 except Exception as e:
                     FailedMessage.objects.create(
                         backend=backend.ID,
@@ -287,6 +296,7 @@ class Notification(models.Model):
                         message=str(message),
                         error=str(e),
                     )
+        return sent
 
 
 class Template(models.Model):

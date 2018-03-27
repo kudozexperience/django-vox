@@ -183,7 +183,7 @@ class Subscriber(ContactNetwork, CourierModel):
         return signer.sign(' | '.join(parts))
 
     def get_contacts_for_notification(self, _notification):
-        yield Contact(self.name + 'TODO', 'email', self.email, self)
+        yield Contact(self.name, 'email', self.email, self)
 
 
 class SubscriberCollection(ContactNetwork, list):
