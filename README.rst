@@ -49,15 +49,15 @@ it's worth it.
 
 .. |pipeline-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/pipeline.svg
    :target: https://gitlab.com/alantrick/django-courier/
-   :alt: Documentation Status
+   :alt: Build Status
 
 .. |coverage-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/coverage.svg
    :target: https://gitlab.com/alantrick/django-courier/
-   :alt: Documentation Status
+   :alt: Coverage Status
 
 .. |docs-badge| image:: https://img.shields.io/readthedocs/djangocourier.svg
    :target: `the documentation`_
-   :alt: Documentation Status
+   :alt: Documentation
 
 .. |pypi-badge| image:: https://img.shields.io/pypi/v/django_courier.svg
    :target: https://pypi.org/project/django-courier/
