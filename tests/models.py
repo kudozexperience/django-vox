@@ -108,7 +108,7 @@ class Article(CourierModel):
             collection = SubscriberCollection(
                 Subscriber.objects.filter(author=None))
             self.issue_notification(
-                'created', sender=self.author, recipient=collection)
+                'created', sender=self.author, recipients=collection)
 
 
 class Subscriber(ContactNetwork, CourierModel):
@@ -214,4 +214,4 @@ class Comment(CourierModel):
         super().save(*args, **kwargs)
         if new:
             self.issue_notification('created', sender=self.poster,
-                                    recipient=self.article.author)
+                                    recipients=self.article.author)

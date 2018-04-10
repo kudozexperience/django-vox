@@ -1,6 +1,6 @@
 import abc
 import collections
-from typing import Any, Iterable, List, Mapping, Set, TypeVar, cast
+from typing import Any, Iterable, List, Mapping, TypeVar, cast
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -58,12 +58,12 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
         abstract = True
 
     def issue_notification(self, codename: str,
-                           recipient: 'AbstractContactNetworkN' = None,
+                           recipients: 'AbstractContactNetworkN' = None,
                            sender: 'AbstractContactNetworkN' = None):
         ct = ContentType.objects.get_for_model(self)
         notification = Notification.objects.get(
             codename=codename, content_type=ct)
-        notification.issue(self, recipient, sender)
+        notification.issue(self, recipients, sender)
 
 
 class Contact:
@@ -194,7 +194,7 @@ class Notification(models.Model):
     natural_key.dependencies = ['contenttypes.contenttype']
 
     def issue(self, content,
-              recipient: AbstractContactNetworkN=None,
+              recipients: AbstractContactNetworkN=None,
               sender: AbstractContactNetworkN=None):
         """
         To send a notification to a user, get all the user's active methods.
@@ -203,7 +203,7 @@ class Notification(models.Model):
         the parameters with the backend.
 
         :param content: model object that the notification is about
-        :param recipient: either a user, or None if no logical recipient
+        :param recipients: either a user, or None if no logical recipient
         :param sender: user who initiated the notification
         :return: None
         """
@@ -212,14 +212,13 @@ class Notification(models.Model):
             'content': content,
         }
         networks = {}
-        if self.use_recipient and (recipient is not None):
-            networks['re'] = recipient
-            parameters['recipient'] = recipient
+        if self.use_recipient and (recipients is not None):
+            networks['re'] = recipients
         elif self.use_recipient:
             raise RuntimeError(
                 'Model specified "use_recipient" for notification but '
                 'recipient missing on issue_notification ')
-        elif recipient is not None:
+        elif recipients is not None:
             raise RuntimeError('Recipient added to issue_notification, '
                                'but is not specified in CourierMeta')
 
@@ -243,22 +242,22 @@ class Notification(models.Model):
                     key = key + ':' + channel
                 contactable_list[key] = network.get_contactables(channel)
 
-        contact_set = collections.defaultdict(set)
+        contact_set = collections.defaultdict(dict)
         for key, contactables in contactable_list.items():
             for c_able in contactables:
                 for contact in c_able.get_contacts_for_notification(self):
-                    contact_set[key].add(contact)
+                    contact_set[key][contact] = c_able
 
         sent = False
-        for key, contacts in contact_set.items():
-            if self.send_messages(contacts, parameters,
+        for key, contact_dict in contact_set.items():
+            if self.send_messages(contact_dict, parameters,
                                   Template.objects.filter(target=key)):
                 sent = True
         if not sent and self.required:
             raise RuntimeError('Notification required, but no message sent')
 
     def send_messages(
-            self, contacts: Set[Contact],
+            self, contacts: Mapping[Contact, AbstractContactable],
             generic_params: Mapping[str, Any], template_queryset):
 
         def _get_backend_message(protocol):
@@ -274,9 +273,10 @@ class Notification(models.Model):
         # per-protocol message cache
         cache = {}
         sent = False
-        for contact in contacts:
+        for contact, contactable in contacts.items():
             params = generic_params.copy()
             params['contact'] = contact
+            params['recipient'] = contactable
             proto = contact.protocol
             if proto not in cache:
                 cache[proto] = _get_backend_message(proto)
@@ -307,12 +307,15 @@ class Template(models.Model):
     notification = models.ForeignKey(
         to=Notification, on_delete=models.PROTECT,
         verbose_name=_('notification'))
-    backend = models.CharField(max_length=100)
-    content = models.TextField()
+    backend = models.CharField(_('backend'), max_length=100)
+    subject = models.CharField(_('subject'), max_length=500, blank=True)
+    content = models.TextField(_('content'))
     target = models.CharField(
-        max_length=103, default='re',
+        verbose_name=_('target'), max_length=103, default='re',
         help_text=_('Who this message actually gets sent to.'))
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(
+        _('is active'), default=True,
+        help_text=_('When not active, the template will be ignored'))
 
     objects = models.Manager()
 

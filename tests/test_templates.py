@@ -80,7 +80,7 @@ class EmailRenderTests(TestCase):
         params = {'message': 'There\'s a new burger at A&W'}
         email = "Hi, John Doe, here is a message: {{ message }}"
         text = "Hi, John Doe, here is a message: There's a new burger at A&W"
-        result = templates.email_parts_from_string(email, params)
+        result = templates.email_parts('', email, params)
         assert result.subject == ''
         assert result.text == text
 
@@ -98,7 +98,30 @@ class EmailRenderTests(TestCase):
         text = "Hi, John Doe, here is a message: There's a new burger at A&W"
         html = "<p>Hi, John Doe, here is a message: " \
                "There&#39;s a new burger at A&amp;W</p>"
-        result = templates.email_parts_from_string(email, params)
+        result = templates.email_parts('', email, params)
         assert result.subject == 'Test subject'
+        assert result.text == text
+        assert result.html == html
+
+
+class MarkdownEmailRenderTests(TestCase):
+
+    @staticmethod
+    def test_basic():
+        params = {
+            'firstname': 'Jon',
+            'lastname': 'Doe',
+            'message': 'There\'s a *new* burger at A&W'
+        }
+        subject = 'Hey {{ firstname }}'
+        body = "Hi {{ firstname }} {{ lastname}},\n\n" \
+               "Here is a message: {{ message }}"
+        text = "Hi Jon Doe,\n\n" \
+               "Here is a message: There's a *new* burger at A&W"
+        html = "<p>Hi Jon Doe,</p>\n\n" \
+               "<p>Here is a message: There&#8217;s a *new* burger " \
+               "at A&amp;W</p>\n"
+        result = templates.email_md(subject, body, params)
+        assert result.subject == 'Hey Jon'
         assert result.text == text
         assert result.html == html

@@ -1,11 +1,25 @@
 Notification Templates
 ======================
 
-Email Templates
----------------
+Notification templates use django's build-in, templating system. This
+gives us more than enough power to craft the kind of message we want,
+without making things too onerous.
 
-Email templates are a bit more complicated because they have to specify a
-header, and optionally a text/html section. To achieve this, we use
+Subjects
+--------
+
+Templates have a subject field which is sometimes used, depending on
+the backend. Any backend which supports a subject, has the attribute
+``USE_SUBJECT`` set to ``True``. Setting a subject on a template
+who's backend doesn't use it has no effect.
+
+
+Template-base Email Backend
+---------------------------
+
+The template-based email backend a fair bit more complicated because
+they use the template content to specify the subject, and a text
+and/or html component to the email. This is done by using
 the ``block`` feature in django templates. An example email might look
 something like::
 
@@ -18,3 +32,6 @@ something like::
 
     <p>{{ sender.name }} has posted a comment on your blog titled
     {{ content.article.title }}.</p>{% endblock %}
+
+If this seems a little complicated, the markdown-based email backend
+might be preferable.

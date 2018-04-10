@@ -56,7 +56,7 @@ instance. The result might look something like::
           new = self.id is None
           super().save(*args, **kwargs)
           if new:
-              self.issue_notification(recipient=self)
+              self.issue_notification(recipients=self)
 
   ...
 
@@ -78,10 +78,10 @@ instance. The result might look something like::
               old = PurchaseOrder.objects.get(pk=self.pk)
           super().save(*args, **kwargs)
           if new:
-              self.issue_notification('received', recipient=self.purchaser,
+              self.issue_notification('received', recipients=self.purchaser,
                                       sender=self.shop.manager)
           if not new and not old.on_hold and self.on_hold:
-              self.issue_notification('on_hold', recipient=self.purchaser,
+              self.issue_notification('on_hold', recipients=self.purchaser,
                                       sender=self.shop.manager)
 
 

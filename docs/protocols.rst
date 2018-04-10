@@ -24,7 +24,7 @@ SMS
 
 ID: ``sms``
 
-The contact's address for SMS is the contact's phone number in E.164 forat.
+The contact's address for SMS is the contact's phone number in E.164 format.
 It's recommended to use ``django-phonenumber-field`` if you want to store
 these numbers in a database.
 

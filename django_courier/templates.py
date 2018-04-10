@@ -1,9 +1,12 @@
 import json
+import re
 
 import django.conf
 import django.template
 import django.template.exceptions
 from django.core import mail
+
+from django_courier import settings
 
 
 class MultipartMessage:
@@ -65,19 +68,22 @@ def from_string(text: str, using=None) -> django.template.base.Template:
 
 
 # inspired by django-templated-mail
-def email_parts(template: django.template.base.Template,
-                parameters: dict) -> MultipartMessage:
+def email_parts(subject: str, body: str, parameters: dict) -> MultipartMessage:
     message = MultipartMessage()
     html_context = django.template.Context(parameters)
     text_context = django.template.Context(parameters, autoescape=False)
     node_parts = {}
-    for node in template.nodelist:
+    subject_template = from_string(subject)
+    body_template = from_string(body)
+    message.subject = subject_template.render(text_context)
+
+    for node in body_template.nodelist:
         name = getattr(node, 'name', None)
         if name is not None:
             node_parts[name] = node
 
-    with html_context.bind_template(template):
-        with text_context.bind_template(template):
+    with html_context.bind_template(body_template):
+        with text_context.bind_template(body_template):
             if 'subject' in node_parts:
                 message.subject = node_parts['subject'].render(
                     text_context).strip()
@@ -91,10 +97,61 @@ def email_parts(template: django.template.base.Template,
                 message.html = node_parts['html_body'].render(
                     html_context).strip()
             if not has_parts:
-                message.text = template.render(text_context).strip()
+                message.text = body_template.render(text_context).strip()
     return message
 
 
-def email_parts_from_string(text: str, parameters: dict) -> MultipartMessage:
-    template = from_string(text)
-    return email_parts(template, parameters)
+class MarkdownParameters:
+
+    MD_SPECIAL_PATTERN = re.compile(r"[\\\`\*\_\{\}\[\]\(\)\#\+\-\.\!]")
+
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __contains__(self, item):
+        return self._obj.__contains__(item)
+
+    def __getitem__(self, item):
+        obj = self._obj[item]
+        if callable(obj):
+            return CallableMarkdownParameters(obj)
+        return MarkdownParameters(obj)
+
+    def __getattr__(self, attr):
+        obj = getattr(self._obj, attr)
+        if callable(obj):
+            return CallableMarkdownParameters(obj)
+        return MarkdownParameters(obj)
+
+    def __str__(self):
+        return self.MD_SPECIAL_PATTERN.sub(self.escape, str(self._obj))
+
+    @staticmethod
+    def escape(patterns) -> str:
+        return '\\' + patterns[0]
+
+
+class CallableMarkdownParameters(MarkdownParameters):
+
+    def __call__(self, *args, **kwargs):
+        obj = self._obj.__call__(*args, **kwargs)
+        if callable(obj):
+            return CallableMarkdownParameters(obj)
+        return MarkdownParameters(obj)
+
+
+def email_md(subject: str, body: str, parameters: dict) -> MultipartMessage:
+    import markdown2
+    md_parameters = MarkdownParameters(parameters)
+    text_context = django.template.Context(parameters, autoescape=False)
+    md_context = django.template.Context(md_parameters, autoescape=False)
+    message = MultipartMessage()
+    subject_template = from_string(subject)
+    body_template = from_string(body)
+    message.subject = subject_template.render(text_context)
+    message.text = body_template.render(text_context)
+    md_body = body_template.render(md_context)
+    message.html = markdown2.markdown(
+        md_body, extras=settings.MARKDOWN_EXTRAS,
+        link_patterns=settings.MARKDOWN_LINK_PATTERNS)
+    return message

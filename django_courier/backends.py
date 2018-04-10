@@ -24,6 +24,7 @@ __ALL_BACKENDS__ = collections.defaultdict(list)
 
 class NotificationBackend:
 
+    USE_SUBJECT = False
     ESCAPE_HTML = True
 
     @classmethod
@@ -37,16 +38,12 @@ class NotificationBackend:
         raise NotImplementedError
 
 
-class EmailBackend(NotificationBackend):
+class BasicEmailBackend(NotificationBackend):
 
-    ID = 'email'
+    ID = 'email-basic'
     PROTOCOL = 'email'
-    VERBOSE_NAME = _('Email')
-
-    @classmethod
-    def build_message(cls, template, parameters):
-        return str(templates.email_parts_from_string(
-            template.content, parameters))
+    VERBOSE_NAME = _('Email (Basic)')
+    USE_SUBJECT = True
 
     @classmethod
     def send_message(cls, contact, message):
@@ -58,21 +55,51 @@ class EmailBackend(NotificationBackend):
         connection.send_messages([email])
 
 
-class PostmarkTemplateBackend(EmailBackend):
+class EmailBackend(BasicEmailBackend):
+
+    ID = 'email'
+    VERBOSE_NAME = _('Email (Template-based)')
+
+    @classmethod
+    def build_message(cls, template, parameters):
+        return str(templates.email_parts(
+            template.subject, template.content, parameters))
+
+
+class MarkdownEmailBackend(BasicEmailBackend):
+
+    ID = 'email-md'
+    VERBOSE_NAME = _('Email (Markdown)')
+
+    @classmethod
+    def build_message(cls, template, parameters):
+        return str(templates.email_md(
+            template.subject, template.content, parameters))
+
+
+class PostmarkTemplateBackend(NotificationBackend):
 
     ID = 'postmark_template'
+    PROTOCOL = 'email'
     VERBOSE_NAME = _('Postmark Email')
 
     @classmethod
-    def send(cls, template, contact, parameters):
+    def build_message(cls, template, parameters):
+        return json.dumps({
+            'template_id': template.content.strip(),
+            'parameters': dict((k, str(v)) for k, v in parameters.items()),
+        })
+
+    @classmethod
+    def send_message(cls, contact, message):
         from anymail.message import AnymailMessage
-        backend = None
+        data = json.loads(message)
         from_email = django.conf.settings.DEFAULT_FROM_EMAIL
-        to_email = [contact.address]
-        email = AnymailMessage('', '', from_email, to_email)
-        email.template_id = template.content
-        email.merge_global_data = parameters
-        backend.send_messages([email])
+        email = AnymailMessage('', '', from_email, [contact.address])
+        email.template_id = data['template_id']
+        email.merge_global_data = data['parameters']
+        # TODO: implement
+        # backend.send_messages([email])
 
 
 class TwilioBackend(NotificationBackend):
@@ -127,6 +154,14 @@ def get_backends_from_settings(protocol: str):
 
     for backend in __ALL_BACKENDS__[protocol]:
         yield backend
+
+
+def get_backends():
+    if not __ALL_BACKENDS__:
+        _init_backends()
+    for backend_list in __ALL_BACKENDS__.values():
+        for backend in backend_list:
+            yield backend
 
 
 def get_backend_choices():

@@ -7,7 +7,7 @@ Getting the code
 The recommended way to install django-courier is via pip_ (on Windows,
 replace ``pip3`` with ``pip``) ::
 
-    $ pip3 install django-courier
+    $ pip3 install django-courier[markdown,twilio]
 
 .. _pip: https://pip.pypa.io/
 

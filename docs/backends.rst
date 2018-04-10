@@ -15,6 +15,7 @@ in-use/enabled. If not set, the default is::
 
     DJANGO_COURIER_BACKENDS = (
         'django_courier.backends.EmailBackend',
+        'django_courier.backends.MarkdownEmailBackend',
         'django_courier.backends.TwilioBackend',
         'django_courier.backends.SlackWebhookBackend',
     )
@@ -37,6 +38,18 @@ than they are for the other backends, because emails can have multiple
 parts to them (subject, text, and html). The details of this are covered
 in the section on :doc:`templates <templates>`.
 
+
+Email (Markdown)
+----------------
+
+Protocol: ``email``
+
+This email backend also uses Django's internal mailing system. It's
+very similar to the basic email backend only it uses markdown to handle
+html generation, to work around the text/html problems. Note that the
+subject field is not encoded with markdown when using this backend.
+
+
 Twilio
 ------
 
@@ -52,6 +65,7 @@ all of which needs to be set for proper functioning.
 ``TWILIO_FROM_NUMBER``  Phone # to send Twilio SMS from (required for
                         Twilio backend)
 ======================  ================================================
+
 
 Slack Webhook
 -------------
