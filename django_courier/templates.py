@@ -1,12 +1,14 @@
 import json
+import random
 import re
 
 import django.conf
 import django.template
 import django.template.exceptions
 from django.core import mail
+from django.db.models import NOT_PROVIDED
 
-from django_courier import settings
+from . import settings, base
 
 
 class MultipartMessage:
@@ -155,3 +157,73 @@ def email_md(subject: str, body: str, parameters: dict) -> MultipartMessage:
         md_body, extras=settings.MARKDOWN_EXTRAS,
         link_patterns=settings.MARKDOWN_LINK_PATTERNS)
     return message
+
+
+def make_model_preview(content_type):
+    obj = content_type.objects.first()
+    if obj is not None:
+        return obj
+    obj = content_type()
+    for field in content_type._meta.fields:
+        value = None
+        if field.default != NOT_PROVIDED:
+            value = field.default
+        if not value:
+            desc = str(field.description).lower()
+            if desc.startswith('string'):
+                value = '{{{}}}'.format(field.verbose_name)
+            elif desc.startswith('integer'):
+                value = random.randint(1, 100)
+            else:
+                pass
+        setattr(obj, field.attname, value)
+    return obj
+
+
+class PreviewParameters:
+
+    def __init__(self, content_type):
+        self.contact = base.Contact(
+            'Contact Name', 'email', 'contact@example.org')
+        self.recipient = {}
+        self.sender = {}
+        self.content = make_model_preview(content_type)
+
+    def __contains__(self, item):
+        return item in ('contact', 'recipient', 'sender', 'content')
+
+    def __getitem__(self, attr):
+        obj = getattr(self, attr)
+        return ProxyParameters(obj)
+
+
+class ProxyParameters:
+
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __contains__(self, item):
+        return self._obj.__contains__(item)
+
+    def __getitem__(self, item):
+        obj = self._obj[item]
+        if callable(obj):
+            return CallableProxyParameters(obj)
+        return ProxyParameters(obj)
+
+    def __getattr__(self, attr):
+        obj = getattr(self._obj, attr)
+        if callable(obj):
+            return CallableProxyParameters(obj)
+        return ProxyParameters(obj)
+
+    def __str__(self):
+        return str(self._obj)
+
+
+class CallableProxyParameters(ProxyParameters):
+    def __call__(self, *args, **kwargs):
+        obj = self._obj.__call__(*args, **kwargs)
+        if callable(obj):
+            return CallableProxyParameters(obj)
+        return ProxyParameters(obj)

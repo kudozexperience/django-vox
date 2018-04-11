@@ -1,12 +1,14 @@
 import collections
 import json
+import requests
 import pydoc
 
 import django.conf
 import django.core.mail.backends.base
 import django.core.mail.backends.smtp
 import django.template
-import requests
+import django.utils.html
+from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, templates
@@ -28,13 +30,21 @@ class NotificationBackend:
     ESCAPE_HTML = True
 
     @classmethod
-    def build_message(
-            cls, template: 'django_courier.models.Template', parameters: dict):
-        return template.render(parameters, autoescape=cls.ESCAPE_HTML)
+    def build_message(cls, subject: str, body: str, parameters: dict):
+        template = templates.from_string(body)
+        context = Context(parameters, autoescape=cls.ESCAPE_HTML)
+        return template.render(context)
+
+    @classmethod
+    def preview_message(cls, subject: str, body: str, parameters: dict):
+        message = cls.build_message(subject, body, parameters)
+        if not cls.ESCAPE_HTML:
+            message = django.utils.html.escape(message)
+        return message
 
     @classmethod
     def send_message(
-            cls, contact: 'django_courier.models.IContact', message):
+            cls, contact: 'django_courier.base.Contact', message):
         raise NotImplementedError
 
 
@@ -61,9 +71,15 @@ class EmailBackend(BasicEmailBackend):
     VERBOSE_NAME = _('Email (Template-based)')
 
     @classmethod
-    def build_message(cls, template, parameters):
-        return str(templates.email_parts(
-            template.subject, template.content, parameters))
+    def build_message(cls, subject: str, body: str, parameters: dict):
+        return str(templates.email_parts(subject, body, parameters))
+
+    @classmethod
+    def preview_message(cls, subject: str, body: str, parameters: dict):
+        parts = templates.email_parts(subject, body, parameters)
+        if parts.html:
+            return parts.html
+        return django.utils.html.escape(parts.text)
 
 
 class MarkdownEmailBackend(BasicEmailBackend):
@@ -72,9 +88,12 @@ class MarkdownEmailBackend(BasicEmailBackend):
     VERBOSE_NAME = _('Email (Markdown)')
 
     @classmethod
-    def build_message(cls, template, parameters):
-        return str(templates.email_md(
-            template.subject, template.content, parameters))
+    def build_message(cls, subject: str, body: str, parameters: dict):
+        return str(templates.email_md(subject, body, parameters))
+
+    @classmethod
+    def preview_message(cls, subject: str, body: str, parameters: dict):
+        return templates.email_md(subject, body, parameters).html
 
 
 class PostmarkTemplateBackend(NotificationBackend):
@@ -84,9 +103,9 @@ class PostmarkTemplateBackend(NotificationBackend):
     VERBOSE_NAME = _('Postmark Email')
 
     @classmethod
-    def build_message(cls, template, parameters):
+    def build_message(cls, subject: str, body: str, parameters: dict):
         return json.dumps({
-            'template_id': template.content.strip(),
+            'template_id': body.content.strip(),
             'parameters': dict((k, str(v)) for k, v in parameters.items()),
         })
 

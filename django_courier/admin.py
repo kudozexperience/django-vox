@@ -1,4 +1,10 @@
+import django.http
+from django.conf.urls import url
 from django.contrib import admin
+from django.contrib.admin.utils import unquote
+from django.core.exceptions import PermissionDenied
+from django.utils.encoding import force_text
+from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
 from . import backends, models
@@ -97,7 +103,39 @@ class NotificationAdmin(admin.ModelAdmin):
     inlines = [TemplateInline]
 
     class Media:
-        js = ('django_courier/notification_fields.js',)
+        css = {
+            'all': ('django_courier/markitup/images.css',
+                    'django_courier/markitup/style.css'),
+        }
+        js = ('django_courier/markitup/jquery.markitup.js',
+              'django_courier/markitup/sets.js',
+              'django_courier/notification_fields.js')
+
+    def get_urls(self):
+        return [
+            url(
+                r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
+                self.admin_site.admin_view(self.preview),
+                name='django_courier_preview',
+            ),
+        ] + super().get_urls()
+
+    def preview(self, request, id, backend_id):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        notification = self.get_object(request, unquote(id))
+        if notification is None:
+            raise django.http.Http404(
+                _('%(name)s object with primary key %(key)r does not exist.')
+                % {'name': force_text(self.model._meta.verbose_name),
+                   'key': escape(id)})
+        if request.method != 'POST':
+            raise django.http.HttpResponseNotAllowed(('POST',))
+        try:
+            result = notification.preview(backend_id, request.POST['body'])
+        except Exception as exc:
+            result = 'Unable to make preview: {}'.format(str(exc))
+        return django.http.HttpResponse(result)
 
     def get_readonly_fields(self, request, obj=None):
         return ['codename', 'content_type', 'description',

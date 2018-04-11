@@ -94,7 +94,7 @@ notifications table using the ``make_notifications`` management command::
 Adding Contact Info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now we have to implement the ``django_courier.models.AbstractContactNetwork``
+Now we have to implement the ``django_courier.base.AbstractContactNetwork``
 interface for all the senders and recipients of our notifications. This
 means implementing the ``get_contacts_for_notification(notification)`` method.
 This method takes a notification, and returns all of the contacts that the
@@ -106,7 +106,8 @@ For now, we're just going to make an implementation that assumes every user
 will get email notifications for all notifications. We can alter the user
 class to look like this::
 
-  from django_courier.models import ContactNetwork, Contact
+  from django_courier.models import CourierModel
+  from django_courier.base import ContactNetwork, Contact
 
   class User(CourierModel, ContactNetwork):
       ...

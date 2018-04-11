@@ -5,8 +5,8 @@ from django.db import models
 from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
-from django_courier.models import (Contact, ContactNetwork, CourierModel,
-                                   CourierParam)
+from django_courier.models import CourierModel, CourierParam
+from django_courier.base import Contact, ContactNetwork
 
 
 class UserManager(BaseUserManager):

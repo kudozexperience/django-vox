@@ -1,6 +1,5 @@
-import abc
 import collections
-from typing import Any, Iterable, List, Mapping, TypeVar, cast
+from typing import Any, List, Mapping, cast
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -8,7 +7,8 @@ from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, templates
-from .backends import get_backends_from_settings
+from .base import Contact, AbstractContactable, AbstractContactNetworkN
+from .backends import get_backends_from_settings, get_backends
 
 __ALL_TARGETS__ = collections.OrderedDict()
 
@@ -64,57 +64,6 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
         notification = Notification.objects.get(
             codename=codename, content_type=ct)
         notification.issue(self, recipients, sender)
-
-
-class Contact:
-    """A generic contact object
-
-    If you want to return something that looks like this, make sure
-    to implement the __hash__ method the same, otherwise filtering
-    duplicate contacts won't work
-    """
-
-    def __init__(self, name: str, protocol: str, address: str, obj: Any=None):
-        self.name = name
-        self.protocol = protocol
-        self.address = address
-        self.object = obj
-
-    def __str__(self):
-        return '{} <{}:{}>'.format(self.name, self.protocol, self.address)
-
-    def __hash__(self):
-        return hash(str(self))
-
-
-class AbstractContactable(metaclass=abc.ABCMeta):
-
-    @abc.abstractmethod
-    def get_contacts_for_notification(
-            self, notification: 'Notification') -> List[Contact]:
-        ...
-
-
-class AbstractContactNetwork(metaclass=abc.ABCMeta):
-
-    def get_contactables(self, channel: str) -> List[AbstractContactable]:
-        ...
-
-
-class ContactNetwork:
-
-    def get_contactables(self, channel: str) -> Iterable[AbstractContactable]:
-        if channel == '':
-            return (self,)
-        raise ValueError('Channel {} not supported'.format(channel))
-
-
-AbstractContactable.register(ContactNetwork)
-AbstractContactNetwork.register(ContactNetwork)
-
-
-AbstractContactNetworkN = TypeVar('AbstractContactNetworkN',
-                                  AbstractContactNetwork, None)
 
 
 class NotificationManager(models.Manager):
@@ -282,7 +231,8 @@ class Notification(models.Model):
                 cache[proto] = _get_backend_message(proto)
             if cache[proto] is not None:
                 backend, template = cache[proto]
-                message = backend.build_message(template, params)
+                message = backend.build_message(
+                    template.subject, template.content, params)
                 # We're catching all exceptions here because some people
                 # are bad people and can't subclass properly
                 try:
@@ -297,6 +247,12 @@ class Notification(models.Model):
                         error=str(e),
                     )
         return sent
+
+    def preview(self, backend_id, message):
+        backend = [b for b in get_backends() if b.ID == backend_id][0]
+        content_model = self.content_type.model_class()
+        params = templates.PreviewParameters(content_model)
+        return backend.preview_message('', message, params)
 
 
 class Template(models.Model):
