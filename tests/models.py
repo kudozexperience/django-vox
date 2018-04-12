@@ -88,6 +88,7 @@ class Article(CourierModel):
             CourierParam(
                 'created', _('Notification to subscriber that a new article '
                              'was created.'),
+                recipient_model='tests.Subscriber',
             ),
         )
 
@@ -129,7 +130,7 @@ class Subscriber(ContactNetwork, CourierModel):
                     'Notification from subscriber that a new subscriber was '
                     'created. Intended for site admins'),
                 use_recipient=False,
-            ),
+                sender_model='tests.Subscriber'),
         )
 
     author = models.ForeignKey(
@@ -202,8 +203,9 @@ class Comment(CourierModel):
         notifications = (
             CourierParam(
                 'created', _('Notification from subscriber to author that a '
-                             'comment was posted')),
-        )
+                             'comment was posted'),
+                sender_model='tests.Subscriber'),
+            )
 
     content = models.TextField(_('content'))
     poster = models.ForeignKey(to=Subscriber, on_delete=models.CASCADE)

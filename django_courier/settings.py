@@ -39,3 +39,8 @@ MARKDOWN_LINK_PATTERNS = getattr(django.conf.settings,
                                  'DJANGO_COURIER_MARKDOWN_LINK_PATTERNS', None)
 if MARKDOWN_LINK_PATTERNS is None:
     MARKDOWN_LINK_PATTERNS = [(URL_PATTERN, r'\1')]
+
+SENDER_MODEL = getattr(django.conf.settings,
+                       'DJANGO_COURIER_SENDER_MODEL', None)
+RECIPIENT_MODEL = getattr(django.conf.settings,
+                          'DJANGO_COURIER_RECIPIENT_MODEL', None)

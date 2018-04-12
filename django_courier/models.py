@@ -5,6 +5,7 @@ import itertools
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Context
+from django.apps import apps
 from django.utils.translation import ugettext_lazy as _
 
 from . import settings, templates
@@ -12,6 +13,30 @@ from .base import Contact, AbstractContactable, AbstractContactNetworkN
 from .backends import get_backends_from_settings, get_backends
 
 __ALL_TARGETS__ = collections.OrderedDict()
+
+
+def get_model_variables(label, value, cls):
+    if cls is None:
+        yield {'label': label, 'value': value}
+        return
+    attrs = []
+    assert issubclass(cls, models.Model)
+    relations = []
+    for field in cls._meta.fields:
+        if field.is_relation:
+            relations.append(field)
+        else:
+            attrs.append({
+                'label': field.verbose_name.title(),
+                'value': '{}.{}'.format(value, field.name),
+            })
+    yield {'label': label, 'value': value, 'attrs': attrs}
+    for field in relations:
+        sub_value = '{}.{}'.format(value, field.name)
+        sub_label = '{} {}'.format(label, field.verbose_name.title())
+        for item in get_model_variables(
+                sub_label, sub_value, field.related_model):
+            yield item
 
 
 class CourierOptions(object):
@@ -81,6 +106,7 @@ class NotificationManager(models.Manager):
 class CourierParam:
     REQUIRED_PARAMS = {'codename', 'description'}
     OPTIONAL_PARAMS = {'use_recipient': True, 'use_sender': True,
+                       'sender_model': '', 'recipient_model': '',
                        'required': False}
 
     def __init__(self, codename, description, **kwargs):
@@ -126,7 +152,11 @@ class Notification(models.Model):
         verbose_name=_('content type'))
     description = models.TextField(_('description'))
     use_sender = models.BooleanField(_('use sender'))
+    sender_model = models.CharField(
+        _('sender model'), blank=True, max_length=500)
     use_recipient = models.BooleanField(_('use recipient'))
+    recipient_model = models.CharField(
+        _('recipient model'), blank=True, max_length=500)
     required = models.BooleanField(
         _('required'), default=False,
         help_text=_('If true, triggering the notification will throw an '
@@ -252,38 +282,33 @@ class Notification(models.Model):
     def preview(self, backend_id, message):
         backend = [b for b in get_backends() if b.ID == backend_id][0]
         content_model = self.content_type.model_class()
-        params = templates.PreviewParameters(content_model)
+        params = templates.PreviewParameters(
+            content_model, self.get_sender_model(), self.get_recipient_model())
         return backend.preview_message('', message, params)
 
-    @staticmethod
-    def get_sub_variables(label, value, cls):
-        if cls is None:
-            yield {'label': label, 'value': value}
-            return
-        attrs = []
-        assert issubclass(cls, models.Model)
-        relations = []
-        for field in cls._meta.fields:
-            if field.is_relation:
-                relations.append(field)
-            else:
-                attrs.append({
-                    'label': field.verbose_name,
-                    'value': '{}.{}'.format(value, field.name),
-                })
-        yield {'label': label, 'value': value, 'attrs': attrs}
-        for field in relations:
-            sub_value = '{}.{}'.format(value, field.name)
-            for item in Notification.get_sub_variables(
-                    field.verbose_name, sub_value, field.related_model):
-                yield item
+    def get_sender_model(self):
+        if self.sender_model:
+            return apps.get_model(self.sender_model)
+        if settings.SENDER_MODEL:
+            return apps.get_model(settings.SENDER_MODEL)
+        return None
+
+    def get_recipient_model(self):
+        if self.recipient_model:
+            return apps.get_model(self.recipient_model)
+        if settings.RECIPIENT_MODEL:
+            return apps.get_model(settings.RECIPIENT_MODEL)
+        return None
 
     def get_variables(self):
+        sender_model = self.get_sender_model()
+        recipient_model = self.get_recipient_model()
         content_model = self.content_type.model_class()
         return list(itertools.chain(
-            self.get_sub_variables('Content', 'content', content_model),
-            self.get_sub_variables('Sender', 'Sender', None),
-            self.get_sub_variables('Recipient', 'recipient', None))) + [
+            get_model_variables('Content', 'content', content_model),
+            get_model_variables('Sender', 'sender', sender_model),
+            get_model_variables('Recipient', 'recipient', recipient_model)
+        )) + [
             {'label': 'Contact', 'value': 'contact', 'attrs': [
                 {'label': 'Name', 'value': 'contact.name'},
                 {'label': 'Protocol', 'value': 'contact.protocol'},

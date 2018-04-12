@@ -182,11 +182,13 @@ def make_model_preview(content_type):
 
 class PreviewParameters:
 
-    def __init__(self, content_type):
+    def __init__(self, content_type, sender_model, recipient_model):
+        self.recipient = (make_model_preview(recipient_model)
+                          if recipient_model else {})
+        self.sender = (make_model_preview(sender_model)
+                       if sender_model else {})
         self.contact = base.Contact(
             'Contact Name', 'email', 'contact@example.org')
-        self.recipient = {}
-        self.sender = {}
         self.content = make_model_preview(content_type)
 
     def __contains__(self, item):

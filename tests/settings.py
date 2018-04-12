@@ -95,3 +95,5 @@ DJANGO_COURIER_CHANNELS = {
     '': (_('Sender'), _('Recipient')),
     'sub': (_('Sender\'s Subscribers'), _('Recipient\'s Subscribers')),
 }
+DJANGO_COURIER_SENDER_MODEL = AUTH_USER_MODEL
+DJANGO_COURIER_RECIPIENT_MODEL = AUTH_USER_MODEL

@@ -102,6 +102,9 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ('content_type',)
     inlines = [TemplateInline]
 
+    fields = ['codename', 'content_type', 'description',
+              'use_sender', 'use_recipient']
+
     class Media:
         css = {
             'all': ('django_courier/markitup/images.css',
@@ -132,7 +135,7 @@ class NotificationAdmin(admin.ModelAdmin):
                 % {'name': force_text(self.model._meta.verbose_name),
                    'key': escape(id)})
         if request.method != 'POST':
-            raise django.http.HttpResponseNotAllowed(('POST',))
+            return django.http.HttpResponseNotAllowed(('POST',))
         try:
             result = notification.preview(backend_id, request.POST['body'])
         except Exception as exc:
@@ -149,13 +152,14 @@ class NotificationAdmin(admin.ModelAdmin):
                 % {'name': force_text(self.model._meta.verbose_name),
                    'key': escape(id)})
         if request.method != 'POST':
-            raise django.http.HttpResponseNotAllowed(('POST',))
+            return django.http.HttpResponseNotAllowed(('POST',))
         result = notification.get_variables()
         return django.http.JsonResponse(result, safe=False)
 
     def get_readonly_fields(self, request, obj=None):
         return ['codename', 'content_type', 'description',
-                'use_sender', 'use_recipient', 'required']
+                'use_sender', 'use_recipient', 'required',
+                'sender_model', 'recipient_model']
 
     def has_add_permission(self, request):
         return False
