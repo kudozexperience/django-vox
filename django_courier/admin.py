@@ -108,17 +108,19 @@ class NotificationAdmin(admin.ModelAdmin):
                     'django_courier/markitup/style.css'),
         }
         js = ('django_courier/markitup/jquery.markitup.js',
-              'django_courier/markitup/sets.js',
               'django_courier/notification_fields.js')
 
     def get_urls(self):
         return [
-            url(
-                r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
-                self.admin_site.admin_view(self.preview),
-                name='django_courier_preview',
-            ),
-        ] + super().get_urls()
+                   url(
+                       r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
+                       self.admin_site.admin_view(self.preview),
+                       name='django_courier_preview'),
+                   url(
+                       r'^(?P<id>\w+)/variables/$',
+                       self.admin_site.admin_view(self.variables),
+                       name='django_courier_variables'),
+            ] + super().get_urls()
 
     def preview(self, request, id, backend_id):
         if not self.has_change_permission(request):
@@ -136,6 +138,20 @@ class NotificationAdmin(admin.ModelAdmin):
         except Exception as exc:
             result = 'Unable to make preview: {}'.format(str(exc))
         return django.http.HttpResponse(result)
+
+    def variables(self, request, id):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        notification = self.get_object(request, unquote(id))
+        if notification is None:
+            raise django.http.Http404(
+                _('%(name)s object with primary key %(key)r does not exist.')
+                % {'name': force_text(self.model._meta.verbose_name),
+                   'key': escape(id)})
+        if request.method != 'POST':
+            raise django.http.HttpResponseNotAllowed(('POST',))
+        result = notification.get_variables()
+        return django.http.JsonResponse(result, safe=False)
 
     def get_readonly_fields(self, request, obj=None):
         return ['codename', 'content_type', 'description',

@@ -1,6 +1,7 @@
 import collections
 from typing import Any, List, Mapping, cast
 
+import itertools
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Context
@@ -253,6 +254,42 @@ class Notification(models.Model):
         content_model = self.content_type.model_class()
         params = templates.PreviewParameters(content_model)
         return backend.preview_message('', message, params)
+
+    @staticmethod
+    def get_sub_variables(label, value, cls):
+        if cls is None:
+            yield {'label': label, 'value': value}
+            return
+        attrs = []
+        assert issubclass(cls, models.Model)
+        relations = []
+        for field in cls._meta.fields:
+            if field.is_relation:
+                relations.append(field)
+            else:
+                attrs.append({
+                    'label': field.verbose_name,
+                    'value': '{}.{}'.format(value, field.name),
+                })
+        yield {'label': label, 'value': value, 'attrs': attrs}
+        for field in relations:
+            sub_value = '{}.{}'.format(value, field.name)
+            for item in Notification.get_sub_variables(
+                    field.verbose_name, sub_value, field.related_model):
+                yield item
+
+    def get_variables(self):
+        content_model = self.content_type.model_class()
+        return list(itertools.chain(
+            self.get_sub_variables('Content', 'content', content_model),
+            self.get_sub_variables('Sender', 'Sender', None),
+            self.get_sub_variables('Recipient', 'recipient', None))) + [
+            {'label': 'Contact', 'value': 'contact', 'attrs': [
+                {'label': 'Name', 'value': 'contact.name'},
+                {'label': 'Protocol', 'value': 'contact.protocol'},
+                {'label': 'Address', 'value': 'contact.address'},
+            ]},
+        ]
 
 
 class Template(models.Model):

@@ -79,7 +79,8 @@ form .markItUpHeader ul {
 .markItUpHeader ul ul li {
 	float:none;
 	border: 0 solid #ccc;
-	border-width: 1px 1px 0 0
+	border-width: 1px 1px 0 0;
+	width: 150px;
 }
 .markItUpHeader ul ul .markItUpDropMenu {
 	background:#FFF url(images/submenu.png) no-repeat 100% 50%;
@@ -98,7 +99,7 @@ form .markItUpHeader ul {
 /* next rows of buttons */
 .markItUpHeader ul ul ul {
 	position:absolute;
-	top:-1px; left:150px; 
+	top: -1px; left: 150px;
 }
 .markItUpHeader ul ul ul li {
 	float:none;
