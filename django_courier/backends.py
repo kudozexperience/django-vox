@@ -24,6 +24,11 @@ PROTOCOLS = {
 __ALL_BACKENDS__ = collections.defaultdict(list)
 
 
+def html_format(text: str):
+    escaped = django.utils.html.escape(text)
+    return escaped.replace('\r\n', '<br/>').replace('\n', '<br/>')
+
+
 class NotificationBackend:
 
     USE_SUBJECT = False
@@ -39,7 +44,7 @@ class NotificationBackend:
     def preview_message(cls, subject: str, body: str, parameters: dict):
         message = cls.build_message(subject, body, parameters)
         if not cls.ESCAPE_HTML:
-            message = django.utils.html.escape(message)
+            message = html_format(message)
         return message
 
     @classmethod
