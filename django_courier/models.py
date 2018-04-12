@@ -15,7 +15,7 @@ from .backends import get_backends_from_settings, get_backends
 __ALL_TARGETS__ = collections.OrderedDict()
 
 
-def get_model_variables(label, value, cls):
+def get_model_variables(label, value, cls, depth=0):
     if cls is None:
         yield {'label': label, 'value': value}
         return
@@ -31,11 +31,13 @@ def get_model_variables(label, value, cls):
                 'value': '{}.{}'.format(value, field.name),
             })
     yield {'label': label, 'value': value, 'attrs': attrs}
+    if depth > 1:
+        return
     for field in relations:
         sub_value = '{}.{}'.format(value, field.name)
         sub_label = '{} {}'.format(label, field.verbose_name.title())
         for item in get_model_variables(
-                sub_label, sub_value, field.related_model):
+                sub_label, sub_value, field.related_model, depth+1):
             yield item
 
 
