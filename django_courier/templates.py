@@ -159,6 +159,21 @@ def email_md(subject: str, body: str, parameters: dict) -> MultipartMessage:
     return message
 
 
+def email_html(subject: str, body: str, parameters: dict) -> MultipartMessage:
+    import august
+    text_context = django.template.Context(parameters, autoescape=False)
+    html_context = django.template.Context(parameters, autoescape=True)
+    message = MultipartMessage()
+    # subject
+    subject_template = from_string(subject)
+    message.subject = subject_template.render(text_context)
+    # html
+    body_template = from_string(body)
+    message.html = body_template.render(html_context)
+    message.text = august.convert(message.html)
+    return message
+
+
 def make_model_preview(content_type):
     obj = content_type.objects.first()
     if obj is not None:

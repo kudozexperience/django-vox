@@ -33,5 +33,5 @@ something like::
     <p>{{ sender.name }} has posted a comment on your blog titled
     {{ content.article.title }}.</p>{% endblock %}
 
-If this seems a little complicated, the markdown-based email backend
+If this seems a little complicated, the html/markdown-based email backend
 might be preferable.

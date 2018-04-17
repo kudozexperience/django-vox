@@ -53,6 +53,7 @@
 
     var markItUpSettings = {
         'email': markItUpSettingsHtml,
+        'email-html': markItUpSettingsHtml,
         'email-md': markItUpSettingsMarkdown,
         'twilio': markItUpSettingsBasic,
         'slack-webhook': markItUpSettingsBasic,

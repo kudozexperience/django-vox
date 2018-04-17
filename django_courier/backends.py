@@ -87,6 +87,20 @@ class EmailBackend(BasicEmailBackend):
         return django.utils.html.escape(parts.text)
 
 
+class HtmlEmailBackend(BasicEmailBackend):
+
+    ID = 'email-html'
+    VERBOSE_NAME = _('Email (HTML)')
+
+    @classmethod
+    def build_message(cls, subject: str, body: str, parameters: dict):
+        return str(templates.email_html(subject, body, parameters))
+
+    @classmethod
+    def preview_message(cls, subject: str, body: str, parameters: dict):
+        return templates.email_html(subject, body, parameters).html
+
+
 class MarkdownEmailBackend(BasicEmailBackend):
 
     ID = 'email-md'

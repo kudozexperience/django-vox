@@ -14,6 +14,11 @@ if BACKENDS is None:
     BACKENDS = ['django_courier.backends.EmailBackend',
                 'django_courier.backends.SlackWebhookBackend']
     try:
+        import august  # noqa: F401
+        BACKENDS.append('django_courier.backends.HtmlEmailBackend')
+    except ImportError:
+        pass
+    try:
         import markdown2  # noqa: F401
         BACKENDS.append('django_courier.backends.MarkdownEmailBackend')
     except ImportError:

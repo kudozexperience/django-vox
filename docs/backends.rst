@@ -8,14 +8,23 @@ sends email via SMTP, and another one that uses the mailgun API. The
 important thing is that all the backends implementing a specific
 protocol must accept the same form of addresses.
 
+Most of these backends require extra dependencies that are not required
+for the base package. The specific extras are listed in the documentation,
+and you can mix/match them. For example::
+
+    # adds dependencies for html email backend and the twilio backend
+    pip3 install django-courier[html,twilio]
+
 In order to add or remove backends, you need to set the
 ``DJANGO_COURIER_BACKENDS`` setting in your projects ``settings.py``
 file. The setting is a list of class names for backends that are
-in-use/enabled. If not set, the default is::
+in-use/enabled. If not set, the default is (assuming you have the
+required dependencies)::
 
     DJANGO_COURIER_BACKENDS = (
         'django_courier.backends.EmailBackend',
         'django_courier.backends.MarkdownEmailBackend',
+        'django_courier.backends.HtmlEmailBackend',
         'django_courier.backends.TwilioBackend',
         'django_courier.backends.SlackWebhookBackend',
     )
@@ -23,15 +32,54 @@ in-use/enabled. If not set, the default is::
 Django-courier provides a few built-in backends. Here's how to
 set them up and use them.
 
-Email
------
+Email Backends
+--------------
 
-Protocol: ``email``
+Protocol
+  ``email``
 
-The email backend is a wrapper around Django's internal mailing system.
+These backends are a wrapper around Django's internal mailing system.
 As such, it uses all of the built-in email settings including
 ``DEFAULT_FROM_EMAIL``, and everything that starts with ``EMAIL`` in
 the standard `django settings`_.
+
+There are 3 backends included:
+
+* One that uses HTML (and converts it to text for you)
+* One that uses Markdown (and coverts it to HTML for you)
+* One that uses Django template blocks to specify both HTML & text
+  (not recommended)
+
+HTML Email Backend
+~~~~~~~~~~~~~~~~~~
+
+Extra
+  ``[html]``
+
+When using this, the content of your template will have to be HTML. If
+you don't, it will be HTML anyways, but it will look real bad, and the
+god will frown on you. The backend automatically uses a library to
+convert the HTML into plain-text, so that there is a text version of the
+email, and so that the spam filters think better of you.
+
+Incidentally, the subject field is not HTML formatted.
+
+Markdown Email Backend
+~~~~~~~~~~~~~~~~~~~~~~
+
+Extra
+ ``[markdown]``
+
+This backend has you specify the content of your templates with markdown.
+While markdown doesn't give you quite the flexibility as HTML, it's a bit
+more intuitive.
+
+Template-based Email Backend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This backend isn't recommended because it's probably too confusing to be
+wroth it. However, if you really need to tailor-make your emails, it's
+a solution that you can make work.
 
 Writing notification templates for emails are a little more complicated
 than they are for the other backends, because emails can have multiple
@@ -39,21 +87,13 @@ parts to them (subject, text, and html). The details of this are covered
 in the section on :doc:`templates <templates>`.
 
 
-Email (Markdown)
-----------------
-
-Protocol: ``email``
-
-This email backend also uses Django's internal mailing system. It's
-very similar to the basic email backend only it uses markdown to handle
-html generation, to work around the text/html problems. Note that the
-subject field is not encoded with markdown when using this backend.
-
-
 Twilio
 ------
 
-Protocol: ``sms``
+Protocol
+  ``sms``
+Extra
+  ``[twilio]``
 
 The twilio backend uses Twilio's python library. It depends on 3 settings,
 all of which needs to be set for proper functioning.
@@ -70,7 +110,8 @@ all of which needs to be set for proper functioning.
 Slack Webhook
 -------------
 
-Protocol: ``slack-webhook``
+Protocol
+  ``slack-webhook``
 
 This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up

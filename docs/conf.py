@@ -7,7 +7,7 @@ author = 'Alan Trick'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.5.5'
+release = '0.11.0'
 
 
 # -- General configuration ---------------------------------------------------
