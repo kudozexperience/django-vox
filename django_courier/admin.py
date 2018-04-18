@@ -2,7 +2,7 @@ import django.http
 from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import unquote
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils.encoding import force_text
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
@@ -79,6 +79,14 @@ class TemplateForm(forms.ModelForm):
         model = models.Template
         fields = ['notification', 'backend', 'subject', 'content',
                   'target', 'is_active']
+
+    def clean(self):
+        data = self.cleaned_data
+        notification = data['notification']
+        try:
+            notification.preview(data['backend'], data['content'])
+        except Exception as exc:
+            raise ValidationError(str(exc))
 
 
 class SiteContactForm(forms.ModelForm):
