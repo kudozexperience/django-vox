@@ -1,3 +1,5 @@
+import datetime
+import decimal
 import json
 import random
 import re
@@ -105,7 +107,17 @@ def email_parts(subject: str, body: str, parameters: dict) -> MultipartMessage:
 
 class MarkdownParameters:
 
+    IGNORED_TYPES = (int, float, decimal.Decimal, datetime.timedelta,
+                     datetime.datetime, datetime.date, datetime.time)
     MD_SPECIAL_PATTERN = re.compile(r"[\\\`\*\_\{\}\[\]\(\)\#\+\-\.\!]")
+
+    @classmethod
+    def wrap(cls, obj):
+        if callable(obj):
+            return CallableMarkdownParameters(obj)
+        elif isinstance(obj, cls.IGNORED_TYPES):
+            return obj
+        return MarkdownParameters(obj)
 
     def __init__(self, obj):
         self._obj = obj
@@ -114,16 +126,10 @@ class MarkdownParameters:
         return self._obj.__contains__(item)
 
     def __getitem__(self, item):
-        obj = self._obj[item]
-        if callable(obj):
-            return CallableMarkdownParameters(obj)
-        return MarkdownParameters(obj)
+        return self.wrap(self._obj[item])
 
     def __getattr__(self, attr):
-        obj = getattr(self._obj, attr)
-        if callable(obj):
-            return CallableMarkdownParameters(obj)
-        return MarkdownParameters(obj)
+        return self.wrap(getattr(self._obj, attr))
 
     def __str__(self):
         return self.MD_SPECIAL_PATTERN.sub(self.escape, str(self._obj))
@@ -210,37 +216,4 @@ class PreviewParameters:
         return item in ('contact', 'recipient', 'sender', 'content')
 
     def __getitem__(self, attr):
-        obj = getattr(self, attr)
-        return ProxyParameters(obj)
-
-
-class ProxyParameters:
-
-    def __init__(self, obj):
-        self._obj = obj
-
-    def __contains__(self, item):
-        return self._obj.__contains__(item)
-
-    def __getitem__(self, item):
-        obj = self._obj[item]
-        if callable(obj):
-            return CallableProxyParameters(obj)
-        return ProxyParameters(obj)
-
-    def __getattr__(self, attr):
-        obj = getattr(self._obj, attr)
-        if callable(obj):
-            return CallableProxyParameters(obj)
-        return ProxyParameters(obj)
-
-    def __str__(self):
-        return str(self._obj)
-
-
-class CallableProxyParameters(ProxyParameters):
-    def __call__(self, *args, **kwargs):
-        obj = self._obj.__call__(*args, **kwargs)
-        if callable(obj):
-            return CallableProxyParameters(obj)
-        return ProxyParameters(obj)
+        return getattr(self, attr)

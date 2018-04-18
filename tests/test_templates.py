@@ -1,3 +1,5 @@
+import datetime
+
 from django.template import TemplateSyntaxError
 from django.test import TestCase
 
@@ -111,16 +113,19 @@ class MarkdownEmailRenderTests(TestCase):
         params = {
             'firstname': 'Jon',
             'lastname': 'Doe',
-            'message': 'There\'s a *new* burger at A&W'
+            'message': 'There\'s a *new* burger at A&W',
+            'when': datetime.datetime(2013, 3, 12),
         }
         subject = 'Hey {{ firstname }}'
         body = "Hi {{ firstname }} {{ lastname}},\n\n" \
-               "Here is a message: {{ message }}"
+               "Here is a message: {{ message }} starting " \
+               "{{ when | date:\"SHORT_DATE_FORMAT\" }}"
         text = "Hi Jon Doe,\n\n" \
-               "Here is a message: There's a *new* burger at A&W"
+               "Here is a message: There's a *new* burger at A&W " \
+               "starting 03/12/2013"
         html = "<p>Hi Jon Doe,</p>\n\n" \
                "<p>Here is a message: There&#8217;s a *new* burger " \
-               "at A&amp;W</p>\n"
+               "at A&amp;W starting 03/12/2013</p>\n"
         result = templates.email_md(subject, body, params)
         assert result.subject == 'Hey Jon'
         assert result.text == text
