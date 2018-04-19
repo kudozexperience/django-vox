@@ -59,25 +59,40 @@
         'slack-webhook': markItUpSettingsBasic,
     };
 
+    function parseVariables(variables){
+        var result = [];
+        for (var i=0; i<variables.length; i++) {
+            var variable = variables[i];
+            var item = {name: variable.label, replaceWith: '{{ '+variable.value+' }}'};
+            if ('attrs' in variable) {
+                var attrs_list = [];
+                var rel_list = [];
+                for (var j=0; j<variable.attrs.length; j++) {
+                    var sub = variable.attrs[j];
+                    attrs_list.push({name: sub.label, replaceWith: '{{ '+sub.value+' }}'});
+                }
+                if ('rels' in variable) {
+                    var rel_list = parseVariables(variable.rels);
+                }
+                var rel_len = rel_list.length
+                if (rel_len < 1 || rel_len + attrs_list.length < 11) {
+                    item.dropMenu = attrs_list.concat(rel_list);
+                } else {
+                    item.dropMenu = [{name: 'Attributes', dropMenu: attrs_list},
+                                     {name: 'Relations', dropMenu: rel_list}];
+                }
+            }
+            result.push(item);
+        }
+        return result;
+    }
+
 
     function getMarkItUpSettings(backend, variables) {
         var settings = Object.assign({}, markItUpSettings[backend]);
         settings.previewParserPath = '../preview/' + backend + '/';
         settings.previewParserVar = 'body';
-        var variableList = [];
-        for (var i=0; i<variables.length; i++) {
-            var variable = variables[i];
-            var item = {name: variable.label, replaceWith: '{{ '+variable.value+' }}'};
-            if ('attrs' in variable) {
-                var sub_list = [];
-                for (var j=0; j<variable.attrs.length; j++) {
-                    var sub = variable.attrs[j];
-                    sub_list.push({name: sub.label, replaceWith: '{{ '+sub.value+' }}'});
-                }
-                item.dropMenu = sub_list;
-            }
-            variableList.push(item);
-        }
+        var variableList = parseVariables(variables);
         settings.markupSet = [
             {name:'Variables', className:'variable', openWith:'{{ ', closeWith:' }}',
                 dropMenu: variableList},

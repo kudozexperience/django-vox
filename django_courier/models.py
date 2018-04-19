@@ -15,30 +15,30 @@ from .backends import get_backends_from_settings, get_backends
 __ALL_TARGETS__ = collections.OrderedDict()
 
 
-def get_model_variables(label, value, cls, depth=0):
+def get_model_variables(label, value, cls, ancestors=set()):
     if cls is None:
         yield {'label': label, 'value': value}
         return
-    attrs = []
     assert issubclass(cls, models.Model)
-    relations = []
+    sub_ancestors = ancestors.copy()
+    sub_ancestors.add(cls)
+    attrs = []
+    skip_relations = len(ancestors) > 2
+    children = []
     for field in cls._meta.fields:
-        if field.is_relation:
-            relations.append(field)
-        else:
-            attrs.append({
-                'label': field.verbose_name.title(),
-                'value': '{}.{}'.format(value, field.name),
-            })
-    yield {'label': label, 'value': value, 'attrs': attrs}
-    if depth > 1:
-        return
-    for field in relations:
+        sub_label = field.verbose_name.title(),
         sub_value = '{}.{}'.format(value, field.name)
-        sub_label = '{} {}'.format(label, field.verbose_name.title())
-        for item in get_model_variables(
-                sub_label, sub_value, field.related_model, depth+1):
-            yield item
+        if field.is_relation:
+            if skip_relations or field.related_model in ancestors:
+                continue
+            for child in get_model_variables(
+                    sub_label, sub_value, field.related_model,
+                    ancestors=sub_ancestors):
+                children.append(child)
+        else:
+            attrs.append({'label': sub_label, 'value': sub_value})
+    yield {'label': label, 'value': value, 'attrs': attrs,
+           'rels': children}
 
 
 class CourierOptions(object):
