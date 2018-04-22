@@ -10,7 +10,7 @@ import django.template.exceptions
 from django.core import mail
 from django.db.models import NOT_PROVIDED
 
-from . import settings, base
+from . import base, settings
 
 
 class MultipartMessage:

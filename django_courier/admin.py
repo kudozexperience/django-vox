@@ -1,4 +1,6 @@
+import django.forms.utils
 import django.http
+from django import forms
 from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import unquote
@@ -8,30 +10,25 @@ from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
 from . import backends, models
-from django import forms
 
 # Generic things
 
 
-class TargetFilter(admin.SimpleListFilter):
+class RecipientFilter(admin.SimpleListFilter):
     """A really simple filter so that we have the right labels
     """
-    title = _('target')
-    parameter_name = 'target'
+    title = _('recipient')
+    parameter_name = 'recipient'
 
     def lookups(self, request, model_admin):
         """Return list of key/name tuples
         """
-        return models.get_target_choices()
+        return models.get_recipient_choices()
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(target=self.value())
+            return queryset.filter(recipient=self.value())
         return queryset
-
-
-def target_field(obj):
-    return models.get_targets().get(obj.target, obj.target)
 
 
 class SelectWithSubjectData(forms.Select):
@@ -71,14 +68,26 @@ class BackendChoiceField(forms.ChoiceField):
         self.widget.use_subjects = use_subjects
 
 
+class TemplateInlineFormSet(forms.BaseInlineFormSet):
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['notification'] = self.instance
+        return kwargs
+
+
 class TemplateForm(forms.ModelForm):
     backend = BackendChoiceField(choices=backends.get_backends())
-    target = forms.ChoiceField(choices=models.get_target_choices())
+    recipient = forms.ChoiceField()
 
     class Meta:
         model = models.Template
         fields = ['notification', 'backend', 'subject', 'content',
-                  'target', 'is_active']
+                  'recipient', 'is_active']
+
+    def __init__(self, notification=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['recipient'].choices = \
+            models.get_recipient_choices(notification)
 
     def clean(self):
         data = self.cleaned_data
@@ -97,21 +106,28 @@ class SiteContactForm(forms.ModelForm):
         fields = ['name', 'protocol', 'address']
 
 
+class NotificationForm(forms.ModelForm):
+
+    class Meta:
+        model = models.Notification
+        fields = ['codename', 'content_type', 'description', 'target_model']
+
+
 class TemplateInline(admin.StackedInline):
     model = models.Template
     form = TemplateForm
+    formset = TemplateInlineFormSet
     min_num = 0
     extra = 0
 
 
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'description', 'use_sender',
-                    'use_recipient', 'required', 'template_count')
+    list_display = ('__str__', 'description', 'required', 'template_count')
     list_filter = ('content_type',)
     inlines = [TemplateInline]
+    form = NotificationForm
 
-    fields = ['codename', 'content_type', 'description',
-              'use_sender', 'use_recipient']
+    fields = ['codename', 'content_type', 'description']
 
     class Media:
         css = {
@@ -120,6 +136,10 @@ class NotificationAdmin(admin.ModelAdmin):
         }
         js = ('django_courier/markitup/jquery.markitup.js',
               'django_courier/notification_fields.js')
+
+    # only show inlines on change forms
+    def get_inline_instances(self, request, obj=None):
+        return obj and super().get_inline_instances(request, obj) or []
 
     def get_urls(self):
         return [
@@ -161,19 +181,25 @@ class NotificationAdmin(admin.ModelAdmin):
                    'key': escape(id)})
         if request.method != 'POST':
             return django.http.HttpResponseNotAllowed(('POST',))
-        result = notification.get_variables()
+        result = notification.get_recipient_variables()
         return django.http.JsonResponse(result, safe=False)
 
     def get_readonly_fields(self, request, obj=None):
-        return ['codename', 'content_type', 'description',
-                'use_sender', 'use_recipient', 'required',
-                'sender_model', 'recipient_model']
-
-    def has_add_permission(self, request):
-        return False
+        if self.has_delete_permission(request, obj):
+            return ['content_type'] if obj else []
+        return ['codename', 'content_type', 'description', 'required',
+                'source_model', 'target_model']
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        if obj is None:
+            return super().has_delete_permission(request)
+        return super().has_delete_permission(request) and not obj.from_code
+
+    def save_form(self, request, form, change):
+        result = super().save_form(request, form, change)
+        if not change:
+            result.from_code = False
+        return result
 
     @staticmethod
     def template_count(obj):
@@ -186,9 +212,7 @@ class SiteContactPreferenceInline(admin.TabularInline):
 
 class SiteContactAdmin(admin.ModelAdmin):
     form = SiteContactForm
-    inlines = [
-        SiteContactPreferenceInline
-    ]
+    inlines = [SiteContactPreferenceInline]
     list_display = ('name', 'address', 'protocol')
 
 

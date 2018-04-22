@@ -27,7 +27,7 @@
       <p>A new article, <a href='http://127.0.0.1:8000/{{ content.pk }}/?token={{
       recipient.get_token | urlencode }}'>{{ content }}</a>, has been
       published at the awesome blog.</p>{% endblock %}"
-    target: re
+    recipient: c:sub
     is_active: true
 - model: django_courier.template
   pk: 2
@@ -35,10 +35,10 @@
     notification: [tests, comment, created]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
-      <p>{{ sender.name }} has posted a comment on your article <a
+      <p>{{ content.poster.name }} has posted a comment on your article <a
       href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
       content.article }}</a>. Go check it out!</p>{% endblock %}"
-    target: re
+    recipient: c:poster
     is_active: true
 - model: django_courier.template
   pk: 3
@@ -46,7 +46,7 @@
     notification: [tests, subscriber, created]
     backend: email
     content: "A new subscriber {{ content }} has been added on the blog"
-    target: si
+    recipient: si
     is_active: true
 - model: django_courier.sitecontact
   pk: 1

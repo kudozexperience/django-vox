@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Iterable, List, TypeVar
+from typing import List
 
 
 class Contact:
@@ -10,11 +10,10 @@ class Contact:
     duplicate contacts won't work
     """
 
-    def __init__(self, name: str, protocol: str, address: str, obj: Any=None):
+    def __init__(self, name: str, protocol: str, address: str):
         self.name = name
         self.protocol = protocol
         self.address = address
-        self.object = obj
 
     def __str__(self):
         return '{} <{}:{}>'.format(self.name, self.protocol, self.address)
@@ -29,25 +28,3 @@ class AbstractContactable(metaclass=abc.ABCMeta):
     def get_contacts_for_notification(
             self, notification: 'Notification') -> List[Contact]:
         ...
-
-
-class AbstractContactNetwork(metaclass=abc.ABCMeta):
-
-    def get_contactables(self, channel: str) -> List[AbstractContactable]:
-        ...
-
-
-class ContactNetwork:
-
-    def get_contactables(self, channel: str) -> Iterable[AbstractContactable]:
-        if channel == '':
-            return (self,)
-        raise ValueError('Channel {} not supported'.format(channel))
-
-
-AbstractContactable.register(ContactNetwork)
-AbstractContactNetwork.register(ContactNetwork)
-
-
-AbstractContactNetworkN = TypeVar('AbstractContactNetworkN',
-                                  AbstractContactNetwork, None)

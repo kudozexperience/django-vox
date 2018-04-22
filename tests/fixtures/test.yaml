@@ -10,24 +10,21 @@
   fields:
     codename: created
     content_type: [tests, article]
-    description: Notification to subscriber that a new article was created.
-    use_sender: true
-    use_recipient: true
+    description: Notification that a new article was created
+    from_code: true
 - model: django_courier.notification
   fields:
     codename: created
     content_type: [tests, subscriber]
     description: Notification from subscriber that a new subscriber was created. Intended
       for site admins
-    use_sender: true
-    use_recipient: false
+    from_code: true
 - model: django_courier.notification
   fields:
     codename: created
     content_type: [tests, comment]
     description: Notification from subscriber to author that a comment was posted
-    use_sender: true
-    use_recipient: true
+    from_code: true
 - model: tests.user
   pk: 1
   fields:
@@ -58,44 +55,32 @@
   pk: 1
   fields:
     notification: [tests, article, created]
-    backend: email
-    content: "{% block subject %}Site sub email{% endblock %}
-      {% block html_body %}<p>Hi {{ contact.name }},</p>
+    backend: "email-html"
+    subject: "Subscriber email"
+    content: "<p>Hi {{ contact.name }},</p>
       <p>A new article, <a href='http://127.0.0.1:8000/{{ content.pk }}/?token={{
-      contact.object.get_token | urlencode }}'>{{ content }}</a>, has been
-      published at the awesome blog.</p>{% endblock %}"
-    target: re
+      recipient.get_token | urlencode }}'>{{ content }}</a>, has been
+      published at the awesome blog.</p>"
+    recipient: c:sub
     is_active: true
 - model: django_courier.template
   pk: 2
   fields:
-    notification: [tests, article, created]
+    notification: [tests, comment, created]
     backend: email
-    content: "{% block subject %}Author sub email{% endblock %}
-      {% block html_body %}<p>Hi {{ contact.name }},</p>
-      <p>A new article, <a href='http://127.0.0.1:8000/{{ content.pk }}/?token={{
-      contact.object.get_token | urlencode }}'>{{ content }}</a>, has been
-      published at the awesome blog.</p>{% endblock %}"
-    target: se:sub
+    content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
+      <p>{{ content.poster.name }} has posted a comment on your article <a
+      href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
+      content.article.name }}</a>. Go check it out!</p>{% endblock %}"
+    recipient: c:poster
     is_active: true
 - model: django_courier.template
   pk: 3
   fields:
-    notification: [tests, comment, created]
-    backend: email
-    content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
-      <p>{{ sender.name }} has posted a comment on your article <a
-      href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
-      content.article.name }}</a>. Go check it out!</p>{% endblock %}"
-    target: re
-    is_active: true
-- model: django_courier.template
-  pk: 4
-  fields:
     notification: [tests, subscriber, created]
     backend: email
     content: "A new subscriber {{ content }} has been added on the blog"
-    target: si
+    recipient: si
     is_active: true
 - model: django_courier.sitecontact
   pk: 1
@@ -103,10 +88,4 @@
     name: admin
     protocol: email
     address: admin@example.org
-#- model: django_courier.sitecontactpreference
-#  pk: 1
-#  fields:
-#    site_contact: 1
-#    notification: [tests, subscriber, created]
-#    is_active: true
 

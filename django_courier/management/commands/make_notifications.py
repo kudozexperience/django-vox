@@ -74,8 +74,9 @@ def make_notifications(app_config, verbosity=2, dry_run=False,
         for notification in new_notifications:
             print("Added notification '%s'" % notification)
         for notification in all_notifications.values():
-            print("Removing notification '%s'" % notification)
-            if not dry_run:
-                notification.delete(using=using)
+            if notification.from_code:
+                print("Removing notification '%s'" % notification)
+                if not dry_run:
+                    notification.delete(using=using)
     if not dry_run:
         notification_class.objects.using(using).bulk_create(new_notifications)

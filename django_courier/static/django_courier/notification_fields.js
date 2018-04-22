@@ -59,7 +59,16 @@
         'slack-webhook': markItUpSettingsBasic,
     };
 
-    function parseVariables(variables){
+    function parseVariables(recipient, variables) {
+        var result = [];
+        if (Object.keys(variables).includes(recipient)) {
+            result = result.concat(parseSubVariables([variables[recipient]]));
+        }
+        result = result.concat(parseSubVariables(variables._static));
+        return result;
+    }
+
+    function parseSubVariables(variables){
         var result = [];
         for (var i=0; i<variables.length; i++) {
             var variable = variables[i];
@@ -72,7 +81,7 @@
                     attrs_list.push({name: sub.label, replaceWith: '{{ '+sub.value+' }}'});
                 }
                 if ('rels' in variable) {
-                    var rel_list = parseVariables(variable.rels);
+                    var rel_list = parseSubVariables(variable.rels);
                 }
                 var rel_len = rel_list.length
                 if (rel_len < 1 || rel_len + attrs_list.length < 11) {
@@ -88,11 +97,11 @@
     }
 
 
-    function getMarkItUpSettings(backend, variables) {
+    function getMarkItUpSettings(backend, recipient, variables) {
         var settings = Object.assign({}, markItUpSettings[backend]);
         settings.previewParserPath = '../preview/' + backend + '/';
         settings.previewParserVar = 'body';
-        var variableList = parseVariables(variables);
+        var variableList = parseVariables(recipient, variables);
         settings.markupSet = [
             {name:'Variables', className:'variable', openWith:'{{ ', closeWith:' }}',
                 dropMenu: variableList},
@@ -118,20 +127,12 @@
 
     function setup(variables) {
         // show subject based on backends
+        var recipientSelects = django.jQuery('.field-recipient select')
+        recipientSelects.on('change', function() {
+            selectRecipient(this, variables);});
         var backendSelects = django.jQuery('.field-backend select');
         backendSelects.each(function() {selectBackend(this, variables);});
         backendSelects.on('change', function() {selectBackend(this, variables);});
-        // disable targets
-        var useTargetFields = {'use_sender': 'se', 'use_recipient': 're'};
-        for (var useField in useTargetFields) {
-            var useFieldElem = $('.field-' + useField + ' label+div img')[0];
-            var prefix = useTargetFields[useField];
-            if (useFieldElem.getAttribute('alt').toLowerCase() != 'true') {
-                $('.field-target select').each(function() {
-                    disableTargetsByPrefix(this.options, prefix);
-                });
-            }
-        }
     }
 
     function selectBackend(elem, variables) {
@@ -139,13 +140,28 @@
         var use_subject = opt.dataset.subject == 'true';
         parent = elem.parentNode.parentNode.parentNode;
         // update subject
-        field = parent.getElementsByClassName('field-subject');
-        django.jQuery(field).toggle(use_subject);
+        subject_div = parent.getElementsByClassName('field-subject');
+        django.jQuery(subject_div).toggle(use_subject);
         // update markitup
-        var textarea = django.jQuery(parent).find('.field-content textarea');
+        jp = django.jQuery(parent);
+        var recipient = jp.find('.field-recipient select').val();
+        var textarea = jp.find('.field-content textarea');
         textarea.markItUpRemove();
         if (elem.value in markItUpSettings) {
-            textarea.markItUp(getMarkItUpSettings(elem.value, variables));
+            textarea.markItUp(getMarkItUpSettings(
+                elem.value, recipient, variables));
+        }
+    }
+
+    function selectRecipient(elem, variables) {
+        parent = elem.parentNode.parentNode.parentNode;
+        jp = django.jQuery(parent);
+        var backend = jp.find('.field-backend select').val()
+        var textarea = jp.find('.field-content textarea');
+        textarea.markItUpRemove();
+        if (backend in markItUpSettings) {
+            textarea.markItUp(getMarkItUpSettings(
+                backend, elem.value, variables));
         }
     }
 
@@ -156,20 +172,23 @@
 
 
     $(document).ready(function() {
-        // set up CSRF ajax stuff
-        var csrftoken = $("[name=csrfmiddlewaretoken]").val();
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        // only on the change page with the template inline
+        if (document.getElementById('template_set-group')) {
+            // set up CSRF ajax stuff
+            var csrftoken = $("[name=csrfmiddlewaretoken]").val();
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
                 }
-            }
-        });
-        django.jQuery.ajax({
-            type: 'POST',
-            global: false,
-            url: '../variables/',
-            success: setup,
-        });
+            });
+            django.jQuery.ajax({
+                type: 'POST',
+                global: false,
+                url: '../variables/',
+                success: setup,
+            });
+        }
     });
 })(django.jQuery)

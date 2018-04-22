@@ -26,24 +26,21 @@ class DemoTests(TestCase):
         # now a notification should be fired, check the outbox
         # mail.outbox is a list of EmailMultiAlternatives
         assert len(mail.outbox) == 2
-        mail_by_subject = {}
         for message in mail.outbox:
-            mail_by_subject[message.subject] = message
-        site_mail = mail_by_subject['Site sub email']
-        assert site_mail.content_subtype == 'html'
-        soup = BeautifulSoup(site_mail.body, 'html.parser')
-        anchors = soup.find_all('a')
-        assert len(anchors) == 1
-        url = anchors[0].get('href')
-        assert url.startswith('http://127.0.0.1:8000/2/?token=')
-        assert len(url) > 31  # if less, token is blank
-        client = Client()
-        response = client.get(url)
-        assert response.status_code == 200
-        assert response['Content-Type'] == 'text/html; charset=utf-8'
-        author_mail = mail_by_subject['Author sub email']
-        assert author_mail.to[0] == 'authorsubscriber@example.org'
-        # TODO: continue
+            assert (message.content_subtype == 'plain'
+                    and message.mixed_subtype == 'mixed')
+            html = message.alternatives[0][0]
+            soup = BeautifulSoup(html, 'html.parser')
+            anchors = soup.find_all('a')
+            assert len(anchors) == 1
+            url = anchors[0].get('href')
+            assert url.startswith('http://127.0.0.1:8000/2/?token=')
+            assert len(url) > 31  # if less, token is blank
+            client = Client()
+            response = client.get(url)
+            assert response.status_code == 200
+            assert response['Content-Type'] == 'text/html; charset=utf-8'
+            # TODO: continue
 
     @staticmethod
     def test_markdown():

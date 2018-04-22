@@ -1,6 +1,5 @@
 import collections
 import json
-import requests
 import pydoc
 
 import django.conf
@@ -8,6 +7,7 @@ import django.core.mail.backends.base
 import django.core.mail.backends.smtp
 import django.template
 import django.utils.html
+import requests
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
