@@ -291,7 +291,7 @@ class Notification(models.Model):
             raise RuntimeError('Recipient added to issue_notification, '
                                'but is not specified in CourierMeta')
         if self.source_model and (source is not None):
-            choices['se'] + source
+            choices['se'] = source
         elif self.source_model:
             raise RuntimeError(
                 'Model specified "source_model" for notification but source '
