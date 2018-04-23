@@ -203,17 +203,17 @@ def make_model_preview(content_type):
 
 class PreviewParameters:
 
-    def __init__(self, content_type, sender_model, recipient_model):
-        self.recipient = (make_model_preview(recipient_model)
-                          if recipient_model else {})
-        self.sender = (make_model_preview(sender_model)
-                       if sender_model else {})
+    def __init__(self, content_type, source_model, target_model):
+        self.target = (make_model_preview(target_model)
+                       if target_model else {})
+        self.source = (make_model_preview(source_model)
+                       if source_model else {})
         self.contact = base.Contact(
             'Contact Name', 'email', 'contact@example.org')
         self.content = make_model_preview(content_type)
 
     def __contains__(self, item):
-        return item in ('contact', 'recipient', 'sender', 'content')
+        return item in ('contact', 'target', 'source', 'content')
 
     def __getitem__(self, attr):
         return getattr(self, attr)

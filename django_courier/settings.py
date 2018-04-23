@@ -1,7 +1,6 @@
 import re
 
 import django.conf
-from django.utils.translation import ugettext_lazy as _
 
 URL_PATTERN = re.compile(
     r'((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]'
@@ -28,12 +27,6 @@ if BACKENDS is None:
         BACKENDS.append('django_courier.backends.TwilioBackend')
     except ImportError:
         pass
-
-CHANNELS = getattr(django.conf.settings, 'DJANGO_COURIER_CHANNELS', None)
-if CHANNELS is None:
-    CHANNELS = {
-        '': (_('Sender'), _('Recipient')),
-    }
 
 MARKDOWN_EXTRAS = getattr(django.conf.settings,
                           'DJANGO_COURIER_MARKDOWN_EXTRAS', None)

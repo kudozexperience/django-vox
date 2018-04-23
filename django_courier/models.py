@@ -85,7 +85,7 @@ class CourierOptions(object):
         """
         Set any options provided, replacing the default values
         """
-        self.__channel_items = None
+        self.__channel_items = {}
         self._channels = {}
         self.notifications = []
         if meta is not None:
@@ -97,8 +97,8 @@ class CourierOptions(object):
                         'CourierMeta has invalid attribute: {}'.format(key))
 
     def get_channels(self, prefix: str, obj) -> dict:
-        if self.__channel_items is None:
-            self.__channel_items = {}
+        if prefix not in self.__channel_items:
+            value = {}
             for key, (name, cls, func) in self._channels.items():
                 channel_key = prefix if key == '' else prefix + ':' + key
                 if name == '':
@@ -107,12 +107,14 @@ class CourierOptions(object):
                         name = cls._meta.verbose_name.title()
                 else:
                     name = self.PREFIX_FORMATS[prefix].format(name)
-                self.__channel_items[channel_key] = (name, cls, func)
+                value[channel_key] = (name, cls, func)
+            self.__channel_items[prefix] = value
         return dict((key, Channel(name, cls, func, obj))
-                    for key, (name, cls, func) in self.__channel_items.items())
+                    for key, (name, cls, func)
+                    in self.__channel_items[prefix].items())
 
     def add_channel(self, key, name, target_type, func=None):
-        self.__channel_items = None
+        self.__channel_items = {}
         self._channels[key] = name, target_type, func
 
     def has_channels(self):
@@ -265,15 +267,11 @@ class Notification(models.Model):
     natural_key.dependencies = ['contenttypes.contenttype']
 
     def get_recipient_models(self):
-        source_model = self.get_source_model()
-        target_model = self.get_target_model()
-        content_model = (None if self.content_type_id is None
-                         else self.content_type.model_class())
         recipient_spec = {
             'si': SiteContact,
-            're': target_model,
-            'se': source_model,
-            'c': content_model,
+            're': self.get_target_model(),
+            'se': self.get_source_model(),
+            'c': self.get_content_model(),
         }
         return dict((key, value) for (key, value)
                     in recipient_spec.items() if value is not None)
@@ -398,26 +396,28 @@ class Notification(models.Model):
 
     def preview(self, backend_id, message):
         backend = [b for b in get_backends() if b.ID == backend_id][0]
-        content_model = self.content_type.model_class()
         params = templates.PreviewParameters(
-            content_model, self.get_source_model(), self.get_target_model())
+            self.get_content_model(), self.get_source_model(),
+            self.get_target_model())
         return backend.preview_message('', message, params)
 
     def get_source_model(self):
-        if self.source_model:
-            return self.source_model.model_class()
-        return None
+        return (self.source_model.model_class() if self.source_model_id
+                else None)
 
     def get_target_model(self):
-        if self.target_model:
-            return apps.get_model(self.target_model)
-        return None
+        return (self.target_model.model_class() if self.target_model_id
+                else None)
+
+    def get_content_model(self):
+        return (self.content_type.model_class() if self.content_type_id
+                else None)
 
     def get_recipient_variables(self):
         recipient_spec = self.get_recipient_models()
         source_model = self.get_source_model()
         target_model = self.get_target_model()
-        content_model = self.content_type.model_class()
+        content_model = self.get_content_model()
         mapping = {}
         for target_key, model in recipient_spec.items():
             if model is not None:
