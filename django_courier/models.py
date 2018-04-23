@@ -4,6 +4,7 @@ from typing import Any, List, Mapping, TypeVar, cast
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Q
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
@@ -470,14 +471,23 @@ class SiteContactManager(models.Manager, AbstractContactable):
 
     def get_contacts_for_notification(
             self, notification: 'Notification') -> List[Contact]:
-        for pref in SiteContactPreference.objects.filter(
-                notification=notification, is_active=True):
-            sc = pref.site_contact
+        wlq = Q(enable_filter='whitelist',
+                sitecontactpreference__notification=notification,
+                sitecontactpreference__is_active=False)
+        blq = Q(enable_filter='blacklist') & ~Q(
+                sitecontactpreference__notification=notification,
+                sitecontactpreference__is_active=False)
+        for sc in SiteContact.objects.filter(blq | wlq):
             yield Contact(sc.name, sc.protocol, sc.address)
 
 
 # can't make this subclass AbstractContact or fields become unset-able
 class SiteContact(CourierModel):
+
+    ENABLE_CHOICES = (
+        ('blacklist', _('Blacklist')),
+        ('whitelist', _('Whitelist')),
+    )
 
     class Meta:
         verbose_name = _('site contact')
@@ -486,6 +496,8 @@ class SiteContact(CourierModel):
     name = models.CharField(_('name'), blank=True, max_length=500)
     protocol = models.CharField(_('protocol'), max_length=100)
     address = models.CharField(_('address'), max_length=500)
+    enable_filter = models.CharField(choices=ENABLE_CHOICES, max_length=10,
+                                     default='blacklist')
 
     objects = SiteContactManager()
 
