@@ -1,17 +1,21 @@
+import django.contrib.messages
 import django.forms.utils
 import django.http
 from django import forms
 from django.conf.urls import url
 from django.contrib import admin
+from django.contrib.admin.options import IS_POPUP_VAR
 from django.contrib.admin.utils import unquote
+from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.template.response import TemplateResponse
+from django.urls import reverse
 from django.utils.encoding import force_text
 from django.utils.html import escape
+from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 
 from . import backends, models
-
-# Generic things
 
 
 class RecipientFilter(admin.SimpleListFilter):
@@ -113,6 +117,29 @@ class NotificationForm(forms.ModelForm):
         fields = ['codename', 'content_type', 'description', 'target_model']
 
 
+class NotificationIssueForm(forms.Form):
+
+    contents = forms.ModelMultipleChoiceField(
+        queryset=None, label=_('Objects'),
+        widget=FilteredSelectMultiple(
+            verbose_name=_('Objects'), is_stacked=False),
+        help_text=_('A separate notification will be issued for each object.')
+    )
+
+    def __init__(self, notification, *args, **kwargs):
+        self.notification = notification
+        model_cls = notification.content_type.model_class()
+        self.declared_fields['contents'].queryset = model_cls.objects
+        super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        if not commit:
+            return
+        contents = self.cleaned_data['contents']
+        for content in contents:
+            self.notification.issue(content)
+
+
 class TemplateInline(admin.StackedInline):
     model = models.Template
     form = TemplateForm
@@ -122,10 +149,13 @@ class TemplateInline(admin.StackedInline):
 
 
 class NotificationAdmin(admin.ModelAdmin):
+    change_form_template = 'django_courier/notification/change_form.html'
     list_display = ('__str__', 'description', 'required', 'template_count')
     list_filter = ('content_type',)
     inlines = [TemplateInline]
     form = NotificationForm
+    issue_form = NotificationIssueForm
+    issue_template = 'django_courier/notification/issue.html'
 
     fields = ['codename', 'content_type', 'description']
 
@@ -143,14 +173,18 @@ class NotificationAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         return [
-                   url(
-                       r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
-                       self.admin_site.admin_view(self.preview),
-                       name='django_courier_preview'),
-                   url(
-                       r'^(?P<id>\w+)/variables/$',
-                       self.admin_site.admin_view(self.variables),
-                       name='django_courier_variables'),
+            url(
+                r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
+                self.admin_site.admin_view(self.preview),
+                name='django_courier_preview'),
+            url(
+                r'^(?P<id>\w+)/variables/$',
+                self.admin_site.admin_view(self.variables),
+                name='django_courier_variables'),
+            url(
+                r'^(?P<id>\w+)/issue/$',
+                self.admin_site.admin_view(self.issue),
+                name='django_courier_issue'),
             ] + super().get_urls()
 
     def preview(self, request, id, backend_id):
@@ -183,6 +217,61 @@ class NotificationAdmin(admin.ModelAdmin):
             return django.http.HttpResponseNotAllowed(('POST',))
         result = notification.get_recipient_variables()
         return django.http.JsonResponse(result, safe=False)
+
+    def issue(self, request, id, form_url=''):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        notification = self.get_object(request, unquote(id))
+        if notification is None:
+            raise django.http.Http404(
+                _('%(name)s object with primary key %(key)r does not exist.')
+                % {'name': force_text(self.model._meta.verbose_name),
+                   'key': escape(id)})
+        if request.method == 'POST':
+            form = self.issue_form(notification, request.POST)
+            if form.is_valid():
+                form.save()
+                msg = ugettext('Notification sent successfully.')
+                django.contrib.messages.success(request, msg)
+                return django.http.HttpResponseRedirect(
+                    reverse(
+                        '%s:%s_%s_change' % (
+                            self.admin_site.name,
+                            notification._meta.app_label,
+                            notification._meta.model_name,
+                        ),
+                        args=(notification.pk,),
+                    )
+                )
+        elif request.method == 'GET':
+            form = self.issue_form(notification)
+        else:
+            return django.http.HttpResponseNotAllowed(('POST',))
+
+        fieldsets = [(None, {'fields': list(form.base_fields)})]
+        admin_form = admin.helpers.AdminForm(form, fieldsets, {})
+
+        context = {
+            'title': _('Send notification: %s') % escape(str(notification)),
+            'media': self.media + admin_form.media,
+            'form_url': form_url,
+            'form': form,
+            'is_popup': (IS_POPUP_VAR in request.POST or
+                         IS_POPUP_VAR in request.GET),
+            'add': True,
+            'change': False,
+            'has_delete_permission': False,
+            'has_change_permission': True,
+            'has_absolute_url': False,
+            'opts': self.model._meta,
+            'original': notification,
+            'save_as': False,
+            'show_save': True,
+        }
+        context.update(self.admin_site.each_context(request))
+        request.current_app = self.admin_site.name
+
+        return TemplateResponse(request, self.issue_template, context)
 
     def get_readonly_fields(self, request, obj=None):
         if self.has_delete_permission(request, obj):

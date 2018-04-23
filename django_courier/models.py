@@ -1,16 +1,15 @@
 import collections
-from typing import Any, List, Mapping, cast, TypeVar
+from typing import Any, List, Mapping, TypeVar, cast
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Context
-from django.apps import apps
 from django.utils.translation import ugettext_lazy as _
 
 from . import templates
-from .base import Contact, AbstractContactable
-from .backends import get_backends_from_settings, get_backends
-
+from .backends import get_backends, get_backends_from_settings
+from .base import AbstractContactable, Contact
 
 _COURIER_CONTENTTYPE_IDS = None
 
@@ -103,6 +102,8 @@ class CourierOptions(object):
                 channel_key = prefix if key == '' else prefix + ':' + key
                 if name == '':
                     name = self.PREFIX_NAMES[prefix]
+                    if name == 'Content':
+                        name = cls._meta.verbose_name.title()
                 else:
                     name = self.PREFIX_FORMATS[prefix].format(name)
                 self.__channel_items[channel_key] = (name, cls, func)
@@ -391,6 +392,9 @@ class Notification(models.Model):
                     )
         return sent
 
+    def can_issue_custom(self):
+        return not (self.source_model or self.target_model)
+
     def preview(self, backend_id, message):
         backend = [b for b in get_backends() if b.ID == backend_id][0]
         content_model = self.content_type.model_class()
@@ -421,8 +425,9 @@ class Notification(models.Model):
                 for key, (name, cls, _func, _obj) in channel_items:
                     mapping[key] = get_model_variables(
                         'Recipient', 'recipient', cls)
+        content_name = content_model._meta.verbose_name.title()
         mapping['_static'] = [
-            get_model_variables('Content', 'content', content_model),
+            get_model_variables(content_name, 'content', content_model),
         ]
         if source_model:
             mapping['_static'].append(
