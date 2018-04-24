@@ -107,7 +107,7 @@ class SiteContactForm(forms.ModelForm):
 
     class Meta:
         model = models.SiteContact
-        fields = ['name', 'protocol', 'address']
+        fields = ['name', 'protocol', 'address', 'enable_filter']
 
 
 class NotificationForm(forms.ModelForm):
