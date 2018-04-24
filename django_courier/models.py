@@ -477,7 +477,7 @@ class SiteContactManager(models.Manager, AbstractContactable):
         blq = Q(enable_filter='blacklist') & ~Q(
                 sitecontactpreference__notification=notification,
                 sitecontactpreference__is_active=False)
-        for sc in SiteContact.objects.filter(blq | wlq):
+        for sc in SiteContact.objects.filter(blq | wlq).distinct():
             yield Contact(sc.name, sc.protocol, sc.address)
 
 

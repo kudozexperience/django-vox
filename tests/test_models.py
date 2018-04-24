@@ -25,8 +25,11 @@ class DemoTests(TestCase):
         )
         # now a notification should be fired, check the outbox
         # mail.outbox is a list of EmailMultiAlternatives
-        assert len(mail.outbox) == 2
+        assert len(mail.outbox) == 3
         for message in mail.outbox:
+            # ignore site message
+            if 'admin@example.org' in message.to:
+                continue
             assert (message.content_subtype == 'plain'
                     and message.mixed_subtype == 'mixed')
             html = message.alternatives[0][0]
@@ -65,7 +68,7 @@ class DemoTests(TestCase):
         )
         # now a notification should be fired, check the outbox
         # mail.outbox is a list of EmailMultiAlternatives
-        assert len(mail.outbox) == 2
+        assert len(mail.outbox) == 3
         mail_by_subject = {}
         for message in mail.outbox:
             mail_by_subject[message.subject] = message

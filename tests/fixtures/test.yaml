@@ -66,6 +66,17 @@
 - model: django_courier.template
   pk: 2
   fields:
+    notification: [tests, article, created]
+    backend: email-md
+    content: "{{ content.author.name }} has posted a new article.
+
+    See at <a href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
+      content.article.name }}</a>."
+    recipient: si
+    is_active: true
+- model: django_courier.template
+  pk: 3
+  fields:
     notification: [tests, comment, created]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
@@ -75,7 +86,7 @@
     recipient: c:poster
     is_active: true
 - model: django_courier.template
-  pk: 3
+  pk: 4
   fields:
     notification: [tests, subscriber, created]
     backend: email
@@ -88,4 +99,15 @@
     name: admin
     protocol: email
     address: admin@example.org
-
+- model: django_courier.sitecontactpreference
+  pk: 1
+  fields:
+    site_contact: 1
+    notification: [tests, subscriber, created]
+    is_active: true
+- model: django_courier.sitecontactpreference
+  pk: 2
+  fields:
+    site_contact: 1
+    notification: [tests, article, created]
+    is_active: true
