@@ -17,6 +17,7 @@ Django Courier Documentation
    protocols
    templates
    demo
+   extras
    comparison
 
 

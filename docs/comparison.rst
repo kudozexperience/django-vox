@@ -18,7 +18,6 @@ some specific alternatives.
 
   - Upsides
 
-    + Delayed message sending
     + Less setup
     + Comes with notification settings editor
 

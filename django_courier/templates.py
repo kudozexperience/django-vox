@@ -109,7 +109,7 @@ class MarkdownParameters:
 
     IGNORED_TYPES = (int, float, decimal.Decimal, datetime.timedelta,
                      datetime.datetime, datetime.date, datetime.time)
-    MD_SPECIAL_PATTERN = re.compile(r"[\\\`\*\_\{\}\[\]\(\)\#\+\-\.\!]")
+    MD_SPECIAL_PATTERN = re.compile(r"[\\`*_{\}\[\]()#+\-.!]")
 
     @classmethod
     def wrap(cls, obj):
