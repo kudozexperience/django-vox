@@ -90,12 +90,11 @@ if __name__ == "__main__":
         except ValueError:
             pass
         else:
-            pytest_args = [
-                '--cov-report',
-                'xml',
-                '--cov',
-                'django_courier'] + pytest_args
-
+            pytest_args = ['--cov', 'django_courier'] + pytest_args
+            if style == 'default':
+                pytest_args = ['--cov-report', 'term-missing'] + pytest_args
+            else:
+                pytest_args = ['--cov-report', 'term'] + pytest_args
         if first_arg.startswith('-'):
             # `runtests.py [flags]`
             pytest_args = ['tests'] + pytest_args
