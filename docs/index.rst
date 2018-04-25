@@ -1,17 +1,10 @@
-.. Django Courier documentation master file, created by
-   sphinx-quickstart on Sun Mar 18 17:38:19 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-.. TODO: support genindex and modindex
-
 Django Courier Documentation
 ============================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
-   installation
    getting_started
    backends
    protocols
@@ -20,8 +13,14 @@ Django Courier Documentation
    extras
    comparison
 
+.. toctree::
+   :hidden:
+
+   api/modules
 
 Indices and tables
-==================
+------------------
 
+* :doc:`api/modules`
+* :ref:`genindex`
 * :ref:`search`

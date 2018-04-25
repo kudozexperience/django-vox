@@ -1,37 +1,64 @@
+===============
 Getting Started
 ===============
 
-Once you've gone through the :doc:`installation <installation>`
-and configured whatever :doc:`backends <backends>` you which to support,
-you're ready to start adding notifications into your model code. In
-addition to the tutorial here, there is also a :doc:`demo <demo>` that
-comes with this package.
+Installation
+============
+
+Getting the code
+----------------
+
+The recommended way to install django-courier is via pip_ (on Windows,
+replace ``pip3`` with ``pip``) ::
+
+    $ pip3 install django-courier[markdown,twilio,html]
+
+.. _pip: https://pip.pypa.io/
+
+
+Configuring Django
+------------------
+
+Add ``'django_courier'`` to your ``INSTALLED_APPS`` setting::
+
+    INSTALLED_APPS = [
+        # ...
+        'django_courier',
+    ]
+
+Additionally, you may want to configure certain :doc:`backends <backends>`
+depending on exactly what sort of other notifications you want.
+
+
+The Demo
+========
+
+While you're welcome to use the setup instructions here, it may be easier
+to just try out the :doc:`demo <demo>` that comes with this package. The
+demo doesn't cover all the use cases (yet) but it does cover most of the
+standard stuff.
+
 
 Setting up the Models
----------------------
+=====================
 
-There's basically two parts to setting up the models. First, you have
-to add notifications to the models that you want notifications about;
-and second, you have to add implement the ``AbstractContactNetwork``
-and ``AbstractContactable`` interfaces for whatever you want to
-send to notifications too/from. If you only
-ever want to send the notifications to the site contacts, then there's
-nothing to do for step two, but that's not very fun, is it.
+There's basically two parts to setting up the models. First, you have to
+add notifications to the models that you want notifications about. Second,
+you have to add `channels` to those notifications to specify where they
+can be sent. Finally, you need to implement the ``AbstractContactable``
+interfaces for whatever your channels return so that we now how to contact
+them.
+
+If you only ever want to send notifications to the site contacts, you can
+skip step 2 and 3, but that's not very fun, is it.
 
 Adding Model Notifications
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 Notifications in django courier are centered around models. This is
 important, because it makes it possible to predictably know what
 parameters will be available in the notification templates, and
 provides a measure of sanity to whoever is editing them.
-
-Any given notification can be sent to one of three possible targets:
-the sender, the recipient, and the site contacts. Sometimes it doesn't
-make sense for a notification to have a sender or a recipient, so
-notifications can specify the positional parameters ``uses_sender``
-and ``uses_recipient``. These default to ``True`` but you can set them
-if a sender or a recipient doesn't make any sense given context.
 
 To add notifications to a model, change the parent class from
 ``django.db.models.Model`` to ``django_courier.models.CourierModel``.
@@ -46,8 +73,7 @@ instance. The result might look something like::
           notifications = (
               CourierParam(
                   'created',
-                  'Notification to a user that they created an account',
-                  use_sender=False),
+                  'Notification to that a user created an account'),
           )
 
       ...
@@ -56,7 +82,7 @@ instance. The result might look something like::
           new = self.id is None
           super().save(*args, **kwargs)
           if new:
-              self.issue_notification(recipients=self)
+              self.issue_notification('created')
 
   ...
 
@@ -65,11 +91,9 @@ instance. The result might look something like::
       class CourierMeta:
           notifications = (
               CourierParam(
-                  'received', 'Notification from shop_manager to purchaser '
-                              'that an order was received.'),
+                  'received', 'Notification that an order was received.'),
               CourierParam(
-                  'on_hold',  'Notification shop manager to purchaser '
-                              'that an order is on hold.'),
+                  'on_hold',  'Notification that an order is on hold.'),
           )
 
       def save(self, *args, **kwargs):
@@ -78,11 +102,9 @@ instance. The result might look something like::
               old = PurchaseOrder.objects.get(pk=self.pk)
           super().save(*args, **kwargs)
           if new:
-              self.issue_notification('received', recipients=self.purchaser,
-                                      sender=self.shop.manager)
+              self.issue_notification('received')
           if not new and not old.on_hold and self.on_hold:
-              self.issue_notification('on_hold', recipients=self.purchaser,
-                                      sender=self.shop.manager)
+              self.issue_notification('on_hold')
 
 
 Once you've finished adding these, you'll need to regenerate the
@@ -91,25 +113,66 @@ notifications table using the ``make_notifications`` management command::
     python3 manage.py make_notifications
 
 
-Adding Contact Info
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Adding Channels
+---------------
 
-Now we have to implement the ``django_courier.base.AbstractContactNetwork``
-interface for all the senders and recipients of our notifications. This
-means implementing the ``get_contacts_for_notification(notification)`` method.
-This method takes a notification, and returns all of the contacts that the
-object has enabled for that notification. The idea behind this method is that
-it allows you to implement your own notification preferences on a per-contact
-basis.
+Channels are what allow you to select different recipients. The site contacts
+channel is available by default, but if you want any other channels, you have
+to create them yourself using the ``CourierModel.add_channel`` method. The
+method takes four arguments:
+
+``key``
+   A slug that identifies the channel. Should be unique per model.
+``name``
+   A name that shows up in the admin. Optional, defaults to various automatic
+   values.
+``recipient_type``
+   Model class of the objects returned by the function. Optional, defaults
+   to the CourierModel subclass (i.e. ``Foo`` in ``Foo.add_channel``).
+``func``
+   A function or method that returns the instances of ``recipient_type``.
+   The function is called with a single argument which is the CourierModel
+   instance that will eventually use it (i.e. the ``content`` object).
+   Optional, defaults to ``lambda x: x``
+
+
+An example of channels given the above code might look like this::
+
+    class PurchaseOrder(CourierModel):
+        ...
+        def get_purchasers(self):
+            yield self.purchaser
+
+        def get_managers(self):
+            yield self.shop.manager
+
+    ...
+
+    User.add_channel('')
+    PurchaceOrder.add_channel('purchaser', _('Purchaser'), User,
+        PurchaseOrder.get_purchasers)
+    PurchaceOrder.add_channel('manager', _('Manager'), User,
+        PurchaseOrder.get_managers)
+
+
+Adding Contact Info
+-------------------
+
+Now we have to implement the ``get_contacts_for_notification(notification)``
+method for all the things that are return in channels. In our above
+example, that's just the ``User`` model. This method takes a notification,
+and returns all of the contacts that the object has enabled for that
+notification. The idea behind this method is that it allows you to implement
+your own notification preferences on a per-contact basis.
 
 For now, we're just going to make an implementation that assumes every user
 will get email notifications for all notifications. We can alter the user
 class to look like this::
 
   from django_courier.models import CourierModel
-  from django_courier.base import ContactNetwork, Contact
+  from django_courier.base import Contact
 
-  class User(CourierModel, ContactNetwork):
+  class User(CourierModel):
       ...
       email = models.EmailField(max_length=254, unique=True)
 
@@ -117,11 +180,11 @@ class to look like this::
           return Contact(self.name, 'email', self.email)
 
 
-.. note:: There's a lot more going on here than meets the eye, but this
-   example should be enough to get you started.
+.. note:: We haven't covered sources or targets, but this example should
+   be enough to get you started.
 
 And there you have it. Now, in order for this to do anything useful,
 you'll need to add some appropriate :doc:`templates <templates>`.
-In this case, you'll want an email template for the recipient of the
+In this case, you'll want an email template for the "User" recipient of the
 "user created" notification, and possibly a template for a site contact
 too.

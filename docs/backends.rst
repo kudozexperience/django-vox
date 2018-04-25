@@ -53,6 +53,8 @@ There are 3 backends included:
 HTML Email Backend
 ~~~~~~~~~~~~~~~~~~
 
+Class
+    ``django_courier.backends.HtmlEmailBackend``
 Extra
   ``[html]``
 
@@ -67,6 +69,8 @@ Incidentally, the subject field is not HTML formatted.
 Markdown Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~
 
+Class
+    ``django_courier.backends.MarkdownEmailBackend``
 Extra
  ``[markdown]``
 
@@ -77,14 +81,20 @@ more intuitive.
 Template-based Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Class
+    ``django_courier.backends.EmailBackend``
+
 This backend isn't recommended because it's probably too confusing to be
 wroth it. However, if you really need to tailor-make your emails, it's
 a solution that you can make work.
 
 Writing notification templates for emails are a little more complicated
 than they are for the other backends, because emails can have multiple
-parts to them (subject, text, and html). The details of this are covered
-in the section on :doc:`templates <templates>`.
+parts to them (subject, text, and html). The basic form looks like this::
+
+    {% block subject %}Email Subject{% endblock %}
+    {% block text_body %}Text body of email{% endblock %}
+    {% block html_body %}HTML body of email{% endblock %}
 
 
 Twilio
@@ -92,6 +102,8 @@ Twilio
 
 Protocol
   ``sms``
+Class
+    ``django_courier.backends.SlackWebhookBackend``
 Extra
   ``[twilio]``
 
@@ -112,6 +124,8 @@ Slack Webhook
 
 Protocol
   ``slack-webhook``
+Class
+    ``django_courier.backends.TwilioBackend``
 
 This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up

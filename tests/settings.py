@@ -20,15 +20,16 @@ DEBUG = True
 
 # Application definition
 
-INSTALLED_APPS = [
+BASE_INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django_courier',
-    'tests',
 ]
+
+INSTALLED_APPS = BASE_INSTALLED_APPS + ['tests']
 
 AUTH_USER_MODEL = 'tests.User'
 

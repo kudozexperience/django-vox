@@ -1,22 +1,24 @@
+# -- Django workaround
+# import unittest.mock
+# import sys
+
+# MODULES = ['django']
+# for mod_name in MODULES:
+#     sys.modules[mod_name] = unittest.mock.MagicMock()
+import django
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.docs_settings'
+django.setup()
+
 # -- Project information -----------------------------------------------------
 
 project = 'Django Courier'
 copyright = '2018, Alan Trick'
 author = 'Alan Trick'
 
-# The short X.Y version
-version = ''
-# The full version, including alpha/beta/rc tags
-release = '0.11.0'
-
-
-# -- General configuration ---------------------------------------------------
-
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
 extensions = [
     'sphinx.ext.doctest',
+    'sphinx.ext.autodoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
