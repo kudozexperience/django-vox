@@ -1,4 +1,3 @@
-from background_task import background
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 
@@ -27,7 +26,6 @@ class BackgroundCourierModel(django_courier.models.CourierModel):
         issue_notification(codename, self_cls_str, self.id, **kwargs)
 
 
-@background(queue='django-courier')
 def issue_notification(
         codename: str,
         content_cls_str: str,
@@ -52,3 +50,12 @@ def issue_notification(
     notification = django_courier.models.Notification.objects.get(
         codename=codename, content_type=content_ct)
     notification.issue(content, target, source)
+
+
+try:
+    from background_task import background
+    issue_notification = background(queue='django-courier')(issue_notification)
+except ImportError:
+    pass
+except RuntimeError:
+    pass
