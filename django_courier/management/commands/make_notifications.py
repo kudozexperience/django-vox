@@ -7,15 +7,24 @@ from django.db import DEFAULT_DB_ALIAS, router
 
 
 class Command(BaseCommand):
-    args = ''
     help = 'Creates notifications based on CourierMeta instances in classes'
 
-    def handle(self, *args, **options):
+    def add_arguments(self, parser):  # pragma: no cover
+        parser.add_agument(
+            '--dry-run',
+            action='store_true', dest='dry_run', default=False,
+            help='Don\'t actually make changes')
+        parser.add_agument(
+            '-v', '--verbose',
+            action='store_true', dest='verbose', default=True,
+            help='Print output when notifications are changed')
+
+    def handle(self, *args, verbose=True, dry_run=False):
         for app in apps.get_app_configs():
-            make_notifications(app)
+            make_notifications(app, verbose=verbose, dry_run=dry_run)
 
 
-def make_notifications(app_config, verbosity=2, dry_run=False,
+def make_notifications(app_config, verbose=False, dry_run=False,
                        using=DEFAULT_DB_ALIAS):
     if not app_config.models_module:
         return
@@ -62,21 +71,22 @@ def make_notifications(app_config, verbosity=2, dry_run=False,
             new_notifications.append(params.create(ct))
         else:
             if not params.params_equal(notification):
-                if verbosity >= 2:
+                if verbose:
                     print("Altering notification '%s'" % notification)
                 params.set_params(notification)
                 if not dry_run:
                     notification.save()
             del all_notifications[(ct.pk, params.codename)]
 
-    # comment for testing
-    if verbosity >= 2:
+    if verbose:
         for notification in new_notifications:
             print("Added notification '%s'" % notification)
-        for notification in all_notifications.values():
-            if notification.from_code:
+
+    for notification in all_notifications.values():
+        if notification.from_code:
+            if verbose:
                 print("Removing notification '%s'" % notification)
-                if not dry_run:
-                    notification.delete(using=using)
+            if not dry_run:
+                notification.delete(using=using)
     if not dry_run:
         notification_class.objects.using(using).bulk_create(new_notifications)

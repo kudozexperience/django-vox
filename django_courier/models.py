@@ -16,8 +16,6 @@ _COURIER_CONTENTTYPE_IDS = None
 
 
 def get_model_variables(label, value, cls, ancestors=set()):
-    if cls is None:
-        return {'label': label, 'value': value}
     assert issubclass(cls, models.Model)
     sub_ancestors = ancestors.copy()
     sub_ancestors.add(cls)
@@ -28,6 +26,7 @@ def get_model_variables(label, value, cls, ancestors=set()):
         sub_label = field.verbose_name.title(),
         sub_value = '{}.{}'.format(value, field.name)
         if field.is_relation:
+            # prevent super long/circular references
             if skip_relations or field.related_model in ancestors:
                 continue
             children.append(get_model_variables(
@@ -146,12 +145,16 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
     class Meta:
         abstract = True
 
+    @classmethod
+    def get_notification(cls, codename: str) -> 'Notification':
+        ct = ContentType.objects.get_for_model(cls)
+        return Notification.objects.get(
+            codename=codename, content_type=ct)
+
     def issue_notification(self, codename: str,
                            target: CourierModelN = None,
                            source: CourierModelN = None):
-        ct = ContentType.objects.get_for_model(self)
-        notification = Notification.objects.get(
-            codename=codename, content_type=ct)
+        notification = self.get_notification(codename)
         notification.issue(self, target, source)
 
     @classmethod
@@ -200,7 +203,14 @@ class CourierParam:
 
     def params_equal(self, notification):
         for key in self.params:
-            if getattr(notification, key) != self.params[key]:
+            value = getattr(notification, key)
+            my_value = self.params[key]
+            if key in ('source_model', 'target_model'):
+                if value is None:
+                    value = ''
+                else:
+                    value = '{}.{}'.format(value.app_label, value.model)
+            if value != my_value:
                 return False
         return True
 
