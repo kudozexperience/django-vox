@@ -7,22 +7,22 @@ except ImportError:  # workaround for django 1.10
     from django.test.runner import setup_databases
 
 
-class CourierTestConfig(AppConfig):
+class VoxTestConfig(AppConfig):
     name = 'tests'
-    verbose_name = 'Courier Test'
+    verbose_name = 'Vox Test'
 
     def ready(self):
         setup_databases(verbosity=3, interactive=False)
 
 
-class CourierDemoConfig(AppConfig):
+class VoxDemoConfig(AppConfig):
     name = 'tests'
-    verbose_name = 'Courier Demo'
+    verbose_name = 'Vox Demo'
 
     def ready(self):
         setup_databases(verbosity=3, interactive=False)
         # add notification objects
-        from django_courier.management.commands.make_notifications \
+        from django_vox.management.commands.make_notifications \
             import make_notifications
         make_notifications(self)
         call_command('loaddata', 'demo')

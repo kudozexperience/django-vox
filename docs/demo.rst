@@ -34,7 +34,7 @@ here's a walkthough you can follow that will show you its features.
 1. First, go to the admin site. The url should be
    ``http://127.0.0.1:8000/admin/``. The username is ``author@example.org``
    and the password is ``password``. Once in, you can go to "Articles"
-   (under Courier Demo) and add a new one.
+   (under Vox Demo) and add a new one.
 2. The demo comes with a subscriber already added, so once you add the
    article, an email should show up the console. The
    email contains a link to the new article. Click (or copy-paste) the

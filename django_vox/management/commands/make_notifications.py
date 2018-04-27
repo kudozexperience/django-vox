@@ -7,7 +7,7 @@ from django.db import DEFAULT_DB_ALIAS, router
 
 
 class Command(BaseCommand):
-    help = 'Creates notifications based on CourierMeta instances in classes'
+    help = 'Creates notifications based on VoxMeta instances in classes'
 
     def add_arguments(self, parser):  # pragma: no cover
         parser.add_agument(
@@ -33,7 +33,7 @@ def make_notifications(app_config, verbose=False, dry_run=False,
     try:
         app_config = apps.get_app_config(app_label)
         contenttype_class = apps.get_model('contenttypes', 'ContentType')
-        notification_class = apps.get_model('django_courier', 'Notification')
+        notification_class = apps.get_model('django_vox', 'Notification')
     except LookupError:
         return
 
@@ -46,7 +46,7 @@ def make_notifications(app_config, verbose=False, dry_run=False,
     # The code names and content types that should exist.
     content_types = set()
     for cls in app_config.get_models():
-        meta = getattr(cls, '_courier_meta', None)
+        meta = getattr(cls, '_vox_meta', None)
         if meta is not None:
             # Force looking up the content types in the current database
             # before creating foreign keys to them.

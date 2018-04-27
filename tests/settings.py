@@ -1,5 +1,5 @@
 """
-Django settings for django_courier tests
+Django settings for django_vox tests
 """
 # based of django-debug-toolbar
 # https://github.com/jazzband/django-debug-toolbar/blob/master/tests/settings.py
@@ -26,7 +26,7 @@ BASE_INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django_courier',
+    'django_vox',
 ]
 
 INSTALLED_APPS = BASE_INSTALLED_APPS + ['tests']

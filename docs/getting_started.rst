@@ -8,10 +8,10 @@ Installation
 Getting the code
 ----------------
 
-The recommended way to install django-courier is via pip_ (on Windows,
+The recommended way to install django-vox is via pip_ (on Windows,
 replace ``pip3`` with ``pip``) ::
 
-    $ pip3 install django-courier[markdown,twilio,html]
+    $ pip3 install django-vox[markdown,twilio,html]
 
 .. _pip: https://pip.pypa.io/
 
@@ -19,11 +19,11 @@ replace ``pip3`` with ``pip``) ::
 Configuring Django
 ------------------
 
-Add ``'django_courier'`` to your ``INSTALLED_APPS`` setting::
+Add ``'django_vox'`` to your ``INSTALLED_APPS`` setting::
 
     INSTALLED_APPS = [
         # ...
-        'django_courier',
+        'django_vox',
     ]
 
 Additionally, you may want to configure certain :doc:`backends <backends>`
@@ -55,23 +55,23 @@ skip step 2 and 3, but that's not very fun, is it.
 Adding Model Notifications
 --------------------------
 
-Notifications in django courier are centered around models. This is
+Notifications in django vox are centered around models. This is
 important, because it makes it possible to predictably know what
 parameters will be available in the notification templates, and
 provides a measure of sanity to whoever is editing them.
 
 To add notifications to a model, change the parent class from
-``django.db.models.Model`` to ``django_courier.models.CourierModel``.
-Also, add ``CourierMeta`` inner class (much like django's ``Meta``)
+``django.db.models.Model`` to ``django_vox.models.VoxModel``.
+Also, add ``VoxMeta`` inner class (much like django's ``Meta``)
 which contains one attribute, a tuple named ``notifications``. Each
-item in the tuple should be a ``django_courier.models.CourierParam``
+item in the tuple should be a ``django_vox.models.VoxParam``
 instance. The result might look something like::
 
-  class User(CourierModel):
+  class User(VoxModel):
 
-      class CourierMeta:
+      class VoxMeta:
           notifications = (
-              CourierParam(
+              VoxParam(
                   'created',
                   'Notification to that a user created an account'),
           )
@@ -86,13 +86,13 @@ instance. The result might look something like::
 
   ...
 
-  class PurchaseOrder(CourierModel):
+  class PurchaseOrder(VoxModel):
 
-      class CourierMeta:
+      class VoxMeta:
           notifications = (
-              CourierParam(
+              VoxParam(
                   'received', 'Notification that an order was received.'),
-              CourierParam(
+              VoxParam(
                   'on_hold',  'Notification that an order is on hold.'),
           )
 
@@ -118,7 +118,7 @@ Adding Channels
 
 Channels are what allow you to select different recipients. The site contacts
 channel is available by default, but if you want any other channels, you have
-to create them yourself using the ``CourierModel.add_channel`` method. The
+to create them yourself using the ``VoxModel.add_channel`` method. The
 method takes four arguments:
 
 ``key``
@@ -128,17 +128,17 @@ method takes four arguments:
    values.
 ``recipient_type``
    Model class of the objects returned by the function. Optional, defaults
-   to the CourierModel subclass (i.e. ``Foo`` in ``Foo.add_channel``).
+   to the VoxModel subclass (i.e. ``Foo`` in ``Foo.add_channel``).
 ``func``
    A function or method that returns the instances of ``recipient_type``.
-   The function is called with a single argument which is the CourierModel
+   The function is called with a single argument which is the VoxModel
    instance that will eventually use it (i.e. the ``content`` object).
    Optional, defaults to ``lambda x: x``
 
 
 An example of channels given the above code might look like this::
 
-    class PurchaseOrder(CourierModel):
+    class PurchaseOrder(VoxModel):
         ...
         def get_purchasers(self):
             yield self.purchaser
@@ -163,16 +163,16 @@ method for all the things that are return in channels. In our above
 example, that's just the ``User`` model. This method takes a notification,
 and returns all of the contacts that the object has enabled for that
 notification. The idea behind this method is that it allows you to implement
-your own notification preferences on a per-contact basis.
+your own notification settings on a per-contact basis.
 
 For now, we're just going to make an implementation that assumes every user
 will get email notifications for all notifications. We can alter the user
 class to look like this::
 
-  from django_courier.models import CourierModel
-  from django_courier.base import Contact
+  from django_vox.models import VoxModel
+  from django_vox.base import Contact
 
-  class User(CourierModel):
+  class User(VoxModel):
       ...
       email = models.EmailField(max_length=254, unique=True)
 

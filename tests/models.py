@@ -6,8 +6,8 @@ from django.db.models import Q
 from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
-from django_courier.base import Contact
-from django_courier.models import CourierModel, CourierParam
+from django_vox.base import Contact
+from django_vox.models import VoxModel, VoxParam
 
 
 class UserManager(BaseUserManager):
@@ -46,7 +46,7 @@ class UserManager(BaseUserManager):
         return user
 
 
-class User(CourierModel, AbstractBaseUser, PermissionsMixin):
+class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(_('email'), max_length=254, unique=True)
     name = models.CharField(_('name'), max_length=254)
@@ -77,11 +77,11 @@ class User(CourierModel, AbstractBaseUser, PermissionsMixin):
         yield Contact(self.name, 'email', self.email)
 
 
-class Article(CourierModel):
+class Article(VoxModel):
 
-    class CourierMeta:
+    class VoxMeta:
         notifications = (
-            CourierParam(
+            VoxParam(
                 'created', _('Notification that a new article was created.'),
             ),
         )
@@ -108,7 +108,7 @@ class Article(CourierModel):
         yield self.author
 
 
-class Subscriber(CourierModel):
+class Subscriber(VoxModel):
     """
     A subscriber to blog articles.
 
@@ -119,9 +119,9 @@ class Subscriber(CourierModel):
     class Meta:
         unique_together = (('author', 'email',),)
 
-    class CourierMeta:
+    class VoxMeta:
         notifications = (
-            CourierParam(
+            VoxParam(
                 'created', _(
                     'Notification from subscriber that a new subscriber was '
                     'created. Intended for site admins')),
@@ -181,11 +181,11 @@ class Subscriber(CourierModel):
         yield Contact(self.name, 'email', self.email)
 
 
-class Comment(CourierModel):
+class Comment(VoxModel):
 
-    class CourierMeta:
+    class VoxMeta:
         notifications = (
-            CourierParam(
+            VoxParam(
                 'created', _('Notification that a comment was posted')),
             )
 

@@ -8,7 +8,7 @@ django.setup()
 
 # -- Project information -----------------------------------------------------
 
-project = 'Django Courier'
+project = 'Django Vox'
 copyright = '2018, Alan Trick'
 author = 'Alan Trick'
 
@@ -35,14 +35,14 @@ pygments_style = 'sphinx'
 
 html_theme = 'classic'
 html_static_path = ['_static']
-htmlhelp_basename = 'DjangoCourierdoc'
+htmlhelp_basename = 'DjangoVoxdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {}
 
 latex_documents = [
-    (master_doc, 'DjangoCourier.tex', 'Django Courier Documentation',
+    (master_doc, 'DjangoVox.tex', 'Django Vox Documentation',
      'Alan Trick', 'manual'),
 ]
 
@@ -50,7 +50,7 @@ latex_documents = [
 # -- Options for manual page output ------------------------------------------
 
 man_pages = [
-    (master_doc, 'djangocourier', 'Django Courier Documentation',
+    (master_doc, 'djangovox', 'Django Vox Documentation',
      [author], 1)
 ]
 
@@ -58,7 +58,7 @@ man_pages = [
 # -- Options for Texinfo output ----------------------------------------------
 
 texinfo_documents = [
-    (master_doc, 'DjangoCourier', 'Django Courier Documentation',
-     author, 'DjangoCourier', 'One line description of project.',
+    (master_doc, 'DjangoVox', 'Django Vox Documentation',
+     author, 'DjangoVox', 'One line description of project.',
      'Miscellaneous'),
 ]

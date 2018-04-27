@@ -1,20 +1,20 @@
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 
-import django_courier.models
+import django_vox.models
 
 
-class BackgroundCourierModel(django_courier.models.CourierModel):
+class BackgroundVoxModel(django_vox.models.VoxModel):
     """
-    A courier model that sends it's calls though a background task
+    A vox model that sends its calls though a background task
     """
 
     class Meta:
         abstract = True
 
     def issue_notification(self, codename: str,
-                           target: django_courier.models.CourierModelN = None,
-                           source: django_courier.models.CourierModelN = None):
+                           target: django_vox.models.VoxModelN = None,
+                           source: django_vox.models.VoxModelN = None):
         kwargs = {}
         self_cls_str = str(self.__class__._meta)
         if target is not None:
@@ -47,14 +47,14 @@ def issue_notification(
         model = apps.get_model(source_cls_str)
         source = model.objects.get(pk=source_id)
 
-    notification = django_courier.models.Notification.objects.get(
+    notification = django_vox.models.Notification.objects.get(
         codename=codename, content_type=content_ct)
     notification.issue(content, target, source)
 
 
 try:
     from background_task import background
-    issue_notification = background(queue='django-courier')(issue_notification)
+    issue_notification = background(queue='django-vox')(issue_notification)
 except ImportError:
     pass
 except RuntimeError:

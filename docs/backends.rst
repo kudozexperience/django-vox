@@ -13,23 +13,23 @@ for the base package. The specific extras are listed in the documentation,
 and you can mix/match them. For example::
 
     # adds dependencies for html email backend and the twilio backend
-    pip3 install django-courier[html,twilio]
+    pip3 install django-vox[html,twilio]
 
 In order to add or remove backends, you need to set the
-``DJANGO_COURIER_BACKENDS`` setting in your projects ``settings.py``
+``DJANGO_VOX_BACKENDS`` setting in your projects ``settings.py``
 file. The setting is a list of class names for backends that are
 in-use/enabled. If not set, the default is (assuming you have the
 required dependencies)::
 
-    DJANGO_COURIER_BACKENDS = (
-        'django_courier.backends.EmailBackend',
-        'django_courier.backends.MarkdownEmailBackend',
-        'django_courier.backends.HtmlEmailBackend',
-        'django_courier.backends.TwilioBackend',
-        'django_courier.backends.SlackWebhookBackend',
+    DJANGO_VOX_BACKENDS = (
+        'django_vox.backends.EmailBackend',
+        'django_vox.backends.MarkdownEmailBackend',
+        'django_vox.backends.HtmlEmailBackend',
+        'django_vox.backends.TwilioBackend',
+        'django_vox.backends.SlackWebhookBackend',
     )
 
-Django-courier provides a few built-in backends. Here's how to
+Django-vox provides a few built-in backends. Here's how to
 set them up and use them.
 
 Email Backends
@@ -54,7 +54,7 @@ HTML Email Backend
 ~~~~~~~~~~~~~~~~~~
 
 Class
-    ``django_courier.backends.HtmlEmailBackend``
+    ``django_vox.backends.HtmlEmailBackend``
 Extra
   ``[html]``
 
@@ -70,7 +70,7 @@ Markdown Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Class
-    ``django_courier.backends.MarkdownEmailBackend``
+    ``django_vox.backends.MarkdownEmailBackend``
 Extra
  ``[markdown]``
 
@@ -82,7 +82,7 @@ Template-based Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Class
-    ``django_courier.backends.EmailBackend``
+    ``django_vox.backends.EmailBackend``
 
 This backend isn't recommended because it's probably too confusing to be
 wroth it. However, if you really need to tailor-make your emails, it's
@@ -100,7 +100,7 @@ Postmark Templates
 ------------------
 
 Class
-    ``django_courier.backends.PostmarkTemplateBackend``
+    ``django_vox.backends.PostmarkTemplateBackend``
 
 This backend requires one config setting: ``POSTMARK_API_TOKEN``. It should
 be, unsurprisingly, your token for interacting with the postmark API. When
@@ -117,7 +117,7 @@ Twilio
 Protocol
   ``sms``
 Class
-    ``django_courier.backends.TwilioBackend``
+    ``django_vox.backends.TwilioBackend``
 Extra
   ``[twilio]``
 
@@ -139,7 +139,7 @@ Slack Webhook
 Protocol
   ``slack-webhook``
 Class
-    ``django_courier.backends.SlackWebhookBackend``
+    ``django_vox.backends.SlackWebhookBackend``
 
 This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up

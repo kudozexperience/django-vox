@@ -12,7 +12,7 @@ from . import templates
 from .backends import get_backends, get_backends_from_settings
 from .base import AbstractContactable, Contact
 
-_COURIER_CONTENTTYPE_IDS = None
+_VOX_CONTENTTYPE_IDS = None
 
 
 def get_model_variables(label, value, cls, ancestors=set()):
@@ -38,20 +38,20 @@ def get_model_variables(label, value, cls, ancestors=set()):
             'rels': children}
 
 
-def _courier_contenttype_ids():
+def _vox_contenttype_ids():
     for all_models in apps.all_models.values():
         for model in all_models.values():
-            if issubclass(model, CourierModel):
-                if model._courier_meta.has_channels():
+            if issubclass(model, VoxModel):
+                if model._vox_meta.has_channels():
                     ct = ContentType.objects.get_for_model(model)
                     yield ct.id
 
 
 def content_type_limit():
-    global _COURIER_CONTENTTYPE_IDS
-    if _COURIER_CONTENTTYPE_IDS is None:
-        _COURIER_CONTENTTYPE_IDS = tuple(_courier_contenttype_ids())
-    return {'id__in': _COURIER_CONTENTTYPE_IDS}
+    global _VOX_CONTENTTYPE_IDS
+    if _VOX_CONTENTTYPE_IDS is None:
+        _VOX_CONTENTTYPE_IDS = tuple(_vox_contenttype_ids())
+    return {'id__in': _VOX_CONTENTTYPE_IDS}
 
 
 class Channel(collections.namedtuple('ChannelBase',
@@ -60,9 +60,9 @@ class Channel(collections.namedtuple('ChannelBase',
         return (self.obj,) if self.func is None else self.func(self.obj)
 
 
-class CourierOptions(object):
+class VoxOptions(object):
     """
-    Options for Courier extensions
+    Options for Vox extensions
     """
 
     PREFIX_NAMES = {
@@ -93,7 +93,7 @@ class CourierOptions(object):
                     setattr(self, key, value)
                 elif not key.startswith('_'):  # ignore private parts
                     raise ValueError(
-                        'CourierMeta has invalid attribute: {}'.format(key))
+                        'VoxMeta has invalid attribute: {}'.format(key))
 
     def get_channels(self, prefix: str, obj) -> dict:
         if prefix not in self.__channel_items:
@@ -120,24 +120,24 @@ class CourierOptions(object):
         return bool(self._channels)
 
 
-class CourierModelBase(models.base.ModelBase):
+class VoxModelBase(models.base.ModelBase):
     """
-    Metaclass for Courier extensions.
+    Metaclass for Vox extensions.
 
-    Deals with notifications on CourierOptions
+    Deals with notifications on VoxOptions
     """
     def __new__(mcs, name, bases, attributes):
-        new = super(CourierModelBase, mcs).__new__(
+        new = super(VoxModelBase, mcs).__new__(
             mcs, name, bases, attributes)
-        meta = attributes.pop('CourierMeta', None)
-        setattr(new, '_courier_meta', CourierOptions(meta))
+        meta = attributes.pop('VoxMeta', None)
+        setattr(new, '_vox_meta', VoxOptions(meta))
         return new
 
 
-CourierModelN = TypeVar('CourierModelN', 'CourierModel', None)
+VoxModelN = TypeVar('VoxModelN', 'VoxModel', None)
 
 
-class CourierModel(models.Model, metaclass=CourierModelBase):
+class VoxModel(models.Model, metaclass=VoxModelBase):
     """
     Base class for models that implement notifications
     """
@@ -152,8 +152,8 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
             codename=codename, content_type=ct)
 
     def issue_notification(self, codename: str,
-                           target: CourierModelN = None,
-                           source: CourierModelN = None):
+                           target: VoxModelN = None,
+                           source: VoxModelN = None):
         notification = self.get_notification(codename)
         notification.issue(self, target, source)
 
@@ -164,10 +164,10 @@ class CourierModel(models.Model, metaclass=CourierModelBase):
         elif func is None and target_type != cls:
             raise ValueError('Must specify function when using '
                              'different models')
-        cls._courier_meta.add_channel(key, verbose_name, target_type, func)
+        cls._vox_meta.add_channel(key, verbose_name, target_type, func)
 
     def get_channels(self, prefix: str):
-        return self.__class__._courier_meta.get_channels(prefix, self)
+        return self.__class__._vox_meta.get_channels(prefix, self)
 
 
 class NotificationManager(models.Manager):
@@ -181,7 +181,7 @@ class NotificationManager(models.Manager):
         )
 
 
-class CourierParam:
+class VoxParam:
     REQUIRED_PARAMS = {'codename', 'description'}
     OPTIONAL_PARAMS = {'source_model': '', 'target_model': '',
                        'required': False}
@@ -299,7 +299,7 @@ class Notification(models.Model):
                 'target missing on issue_notification ')
         elif target is not None:
             raise RuntimeError('Recipient added to issue_notification, '
-                               'but is not specified in CourierMeta')
+                               'but is not specified in VoxMeta')
         if self.source_model and (source is not None):
             choices['se'] = source
         elif self.source_model:
@@ -308,7 +308,7 @@ class Notification(models.Model):
                 'missing on issue_notification ')
         elif source is not None:
             raise RuntimeError('Sender added to issue_notification, but is '
-                               'not specified in CourierMeta')
+                               'not specified in VoxMeta')
 
         return dict((key, model) for (key, model)
                     in choices.items() if model is not None)
@@ -320,8 +320,8 @@ class Notification(models.Model):
                     for key, channel in model.get_channels(recip_key).items())
 
     def issue(self, content,
-              target: CourierModelN=None,
-              source: CourierModelN=None):
+              target: VoxModelN=None,
+              source: VoxModelN=None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template
@@ -367,7 +367,7 @@ class Notification(models.Model):
             # now get all the templates for these backends
             for be in backends:
                 tpl = template_queryset.filter(
-                    backend=be.ID, notification=self, is_active=True).first()
+                    backend=be.ID, notification=self, enabled=True).first()
                 if tpl is not None:
                     return be, tpl
             return None
@@ -431,7 +431,7 @@ class Notification(models.Model):
         mapping = {}
         for target_key, model in recipient_spec.items():
             if model is not None:
-                channel_items = model._courier_meta.get_channels(
+                channel_items = model._vox_meta.get_channels(
                     target_key, None).items()
                 for key, (name, cls, _func, _obj) in channel_items:
                     mapping[key] = get_model_variables(
@@ -463,8 +463,8 @@ class Template(models.Model):
     recipient = models.CharField(
         verbose_name=_('recipient'), max_length=103, default='re',
         help_text=_('Who this message actually gets sent to.'))
-    is_active = models.BooleanField(
-        _('is active'), default=True,
+    enabled = models.BooleanField(
+        _('enabled'), default=True,
         help_text=_('When not active, the template will be ignored'))
 
     objects = models.Manager()
@@ -482,17 +482,17 @@ class SiteContactManager(models.Manager, AbstractContactable):
     def get_contacts_for_notification(
             self, notification: 'Notification') -> List[Contact]:
         wlq = Q(enable_filter='whitelist',
-                sitecontactpreference__notification=notification,
-                sitecontactpreference__is_active=False)
+                sitecontactsetting__notification=notification,
+                sitecontactsetting__enabled=False)
         blq = Q(enable_filter='blacklist') & ~Q(
-                sitecontactpreference__notification=notification,
-                sitecontactpreference__is_active=False)
+                sitecontactsetting__notification=notification,
+                sitecontactsetting__enabled=False)
         for sc in SiteContact.objects.filter(blq | wlq).distinct():
             yield Contact(sc.name, sc.protocol, sc.address)
 
 
 # can't make this subclass AbstractContact or fields become unset-able
-class SiteContact(CourierModel):
+class SiteContact(VoxModel):
 
     ENABLE_CHOICES = (
         ('blacklist', _('Blacklist')),
@@ -522,11 +522,15 @@ class SiteContact(CourierModel):
 SiteContact.add_channel('', func=SiteContact.all_contacts)
 
 
-class SiteContactPreference(models.Model):
+class SiteContactSetting(models.Model):
+
+    class Meta:
+        verbose_name = _('site contact setting')
+        unique_together = (('site_contact', 'notification'),)
 
     site_contact = models.ForeignKey(SiteContact, on_delete=models.CASCADE)
     notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
-    is_active = models.BooleanField(_('is active'))
+    enabled = models.BooleanField(_('enabled'))
 
     objects = models.Manager()
 
@@ -552,6 +556,6 @@ class FailedMessage(models.Model):
 
 def get_recipient_choices(notification):
     for recipient_key, model in notification.get_recipient_models().items():
-        channel_data = model._courier_meta.get_channels(recipient_key, None)
+        channel_data = model._vox_meta.get_channels(recipient_key, None)
         for key, (name, _cls, _func, _obj) in channel_data.items():
             yield key, name

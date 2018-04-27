@@ -1,7 +1,7 @@
 Comparison with similar projects
 ================================
 
-Django Courier is great if you:
+Django Vox is great if you:
 
 * Have content authors who are not programmers
 * Use a current versions of Django/Python
@@ -10,7 +10,7 @@ Django Courier is great if you:
   need "web-scale")
 * You don't want to maintain a separate web service
 
-That said here's a more in-depth comparison between Django Courier and
+That said here's a more in-depth comparison between Django Vox and
 some specific alternatives.
 
 
@@ -37,7 +37,7 @@ some specific alternatives.
     + Notification types can be created anywhere in the code, this means
       more flexibility, but potentially more confusion too.
 
-* `h3's django-courier <https://github.com/h3/django-courier>`_
+* `django-courier <https://github.com/h3/django-courier>`_
 
   - Upsides:
 
@@ -169,7 +169,7 @@ Actually Not Similar Projects
 There's also a good number of notification frameworks that solve a
 seeming-ly similar, but different problem: in-app notifications and
 activity feeds. These are the sort of things that might be a back-end
-to Django Courier. They're listed here for completion:
+to Django Vox. They're listed here for completion:
 
 * `django-notifications-hq <https://pypi.python.org/pypi/django-notifications-hq>`_
 * `Stream Django (getstream.io) <https://pypi.python.org/pypi/stream-django>`_

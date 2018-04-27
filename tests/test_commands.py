@@ -5,8 +5,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 import tests.models
-from django_courier.management.commands import make_notifications
-from django_courier.models import Notification
+from django_vox.management.commands import make_notifications
+from django_vox.models import Notification
 
 
 class MakeNotificationTests(TestCase):

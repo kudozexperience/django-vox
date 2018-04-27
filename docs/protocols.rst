@@ -2,12 +2,12 @@ Protocols and Addresses
 =======================
 
 A protocol is what lets us sort out and make sense of contact information
-in django-courier. Classic examples of a "protocol" are things like email,
+in django-vox. Classic examples of a "protocol" are things like email,
 SMS, and XMPP. You can also have proprietary protocols like Slack webhooks,
 or things that use Google or Apple's push notifications.
 
 Each protocol has it's own kind of addresses. When a contact is sent a
-message, django-courier automatically selects a backend that matches the
+message, django-vox automatically selects a backend that matches the
 available contacts (and addresses by extension) for that protocol.
 
 Email

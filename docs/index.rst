@@ -1,5 +1,5 @@
-Django Courier Documentation
-============================
+Django Vox Documentation
+========================
 
 .. toctree::
    :maxdepth: 1

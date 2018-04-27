@@ -5,7 +5,7 @@ Extras
 Background Tasks
 ================
 
-Django-courier can integrate with `django-backgroundtasks`_ if available.
+Django vox can integrate with `django-backgroundtasks`_ if available.
 Doing so is pretty simple, and (particularly if you have to do database
 lookups inside ``get_contacts_for_notification``) can significantly reduce
 the work for an initial request.
@@ -20,12 +20,12 @@ how you want the background tasks run is a question only you can answer.
 
 Once it is set up, replace the following::
 
-    from django_courier.models import CourierModel
+    from django_vox.models import VoxModel
 
 with this::
 
-    from django_courier.extra.background import BackgroundCourierModel \
-        as CourierModel
+    from django_vox.extra.background import BackgroundVoxModel \
+        as VoxModel
 
 
 

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import django.conf
 from django.test import TestCase
 
-from django_courier import backends, base
+from django_vox import backends, base
 
 
 def mocked_requests_post(url, _data=None, json=None, **_kwargs):

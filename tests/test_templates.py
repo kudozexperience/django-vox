@@ -3,7 +3,7 @@ import datetime
 from django.template import TemplateSyntaxError
 from django.test import TestCase
 
-from django_courier import models, templates
+from django_vox import models, templates
 
 
 class MultipartMessageTests(TestCase):

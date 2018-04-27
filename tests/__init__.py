@@ -1,1 +1,1 @@
-default_app_config = 'tests.apps.CourierTestConfig'
+default_app_config = 'tests.apps.VoxTestConfig'

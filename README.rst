@@ -1,10 +1,10 @@
-==============
-Django Courier
-==============
+==========
+Django Vox
+==========
 
 |pipeline-badge| |coverage-badge| |docs-badge| |pypi-badge|
 
-Django courier is a django app that allow you to create and issue
+Django vox is a django app that allow you to create and issue
 different types of notifications. Notifications can have different
 kinds of parameters which allow for convenient editing in the admin.
 
@@ -47,21 +47,21 @@ get you started. A word of warning, it's not super simple to setup, but
 it's worth it.
 
 
-.. |pipeline-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/pipeline.svg
-   :target: https://gitlab.com/alantrick/django-courier/
+.. |pipeline-badge| image:: https://gitlab.com/alantrick/django-vox/badges/master/pipeline.svg
+   :target: https://gitlab.com/alantrick/django-vox/
    :alt: Build Status
 
-.. |coverage-badge| image:: https://gitlab.com/alantrick/django-courier/badges/master/coverage.svg
-   :target: https://gitlab.com/alantrick/django-courier/
+.. |coverage-badge| image:: https://gitlab.com/alantrick/django-vox/badges/master/coverage.svg
+   :target: https://gitlab.com/alantrick/django-vox/
    :alt: Coverage Status
 
-.. |docs-badge| image:: https://img.shields.io/readthedocs/djangocourier.svg
+.. |docs-badge| image:: https://img.shields.io/readthedocs/django-vox.svg
    :target: `the documentation`_
    :alt: Documentation
 
-.. |pypi-badge| image:: https://img.shields.io/pypi/v/django_courier.svg
-   :target: https://pypi.org/project/django-courier/
+.. |pypi-badge| image:: https://img.shields.io/pypi/v/django_vox.svg
+   :target: https://pypi.org/project/django-vox/
    :alt: Project on PyPI
 
-.. _the documentation: http://djangocourier.readthedocs.io/en/latest/?badge=latest
+.. _the documentation: http://django-vox.readthedocs.io/en/latest/?badge=latest
 

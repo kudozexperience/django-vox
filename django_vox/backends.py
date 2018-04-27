@@ -52,7 +52,7 @@ class NotificationBackend:
 
     @classmethod
     def send_message(
-            cls, contact: 'django_courier.base.Contact', message):
+            cls, contact: 'django_vox.base.Contact', message):
         raise NotImplementedError
 
 

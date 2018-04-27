@@ -1,5 +1,5 @@
 [run]
-source = django_courier
+source = django_vox
 branch = 1
 
 [report]

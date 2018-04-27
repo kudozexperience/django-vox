@@ -86,7 +86,7 @@ class TemplateForm(forms.ModelForm):
     class Meta:
         model = models.Template
         fields = ['notification', 'backend', 'subject', 'content',
-                  'recipient', 'is_active']
+                  'recipient', 'enabled']
 
     def __init__(self, notification=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -149,23 +149,23 @@ class TemplateInline(admin.StackedInline):
 
 
 class NotificationAdmin(admin.ModelAdmin):
-    change_form_template = 'django_courier/notification/change_form.html'
+    change_form_template = 'django_vox/notification/change_form.html'
     list_display = ('__str__', 'description', 'required', 'template_count')
     list_filter = ('content_type',)
     inlines = [TemplateInline]
     form = NotificationForm
     issue_form = NotificationIssueForm
-    issue_template = 'django_courier/notification/issue.html'
+    issue_template = 'django_vox/notification/issue.html'
 
     fields = ['codename', 'content_type', 'description']
 
     class Media:
         css = {
-            'all': ('django_courier/markitup/images.css',
-                    'django_courier/markitup/style.css'),
+            'all': ('django_vox/markitup/images.css',
+                    'django_vox/markitup/style.css'),
         }
-        js = ('django_courier/markitup/jquery.markitup.js',
-              'django_courier/notification_fields.js')
+        js = ('django_vox/markitup/jquery.markitup.js',
+              'django_vox/notification_fields.js')
 
     # only show inlines on change forms
     def get_inline_instances(self, request, obj=None):
@@ -176,15 +176,15 @@ class NotificationAdmin(admin.ModelAdmin):
             url(
                 r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
                 self.admin_site.admin_view(self.preview),
-                name='django_courier_preview'),
+                name='django_vox_preview'),
             url(
                 r'^(?P<id>\w+)/variables/$',
                 self.admin_site.admin_view(self.variables),
-                name='django_courier_variables'),
+                name='django_vox_variables'),
             url(
                 r'^(?P<id>\w+)/issue/$',
                 self.admin_site.admin_view(self.issue),
-                name='django_courier_issue'),
+                name='django_vox_issue'),
             ] + super().get_urls()
 
     def preview(self, request, id, backend_id):
@@ -295,13 +295,13 @@ class NotificationAdmin(admin.ModelAdmin):
         return obj.template_set.count()
 
 
-class SiteContactPreferenceInline(admin.TabularInline):
-    model = models.SiteContactPreference
+class SiteContactSettingInline(admin.TabularInline):
+    model = models.SiteContactSetting
 
 
 class SiteContactAdmin(admin.ModelAdmin):
     form = SiteContactForm
-    inlines = [SiteContactPreferenceInline]
+    inlines = [SiteContactSettingInline]
     list_display = ('name', 'address', 'protocol')
 
 

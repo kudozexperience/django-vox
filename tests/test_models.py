@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core import mail
 from django.test import Client, TestCase
 
-import django_courier.models
+import django_vox.models
 
 from . import models
 
@@ -51,7 +51,7 @@ class DemoTests(TestCase):
         # sanity
         assert len(mail.outbox) == 0
         # get the article created template
-        template = django_courier.models.Template.objects.get(pk=1)
+        template = django_vox.models.Template.objects.get(pk=1)
         template.backend = 'email-md'
         template.subject = 'Hi {{ recipient.name }}'
         template.content = 'Hi {{ recipient.name }},\n\nA new article, ' \
@@ -94,11 +94,11 @@ class DemoTests(TestCase):
         """
         expected_ids = set()
         for model in (models.Article, models.Subscriber, models.User,
-                      models.Comment, django_courier.models.SiteContact):
+                      models.Comment, django_vox.models.SiteContact):
             ct = ContentType.objects.get_for_model(model)
             expected_ids.add(ct.id)
 
-        courier_ct_limit = django_courier.models.content_type_limit()
-        assert 'id__in' in courier_ct_limit
-        actual_ids = set(courier_ct_limit['id__in'])
+        vox_ct_limit = django_vox.models.content_type_limit()
+        assert 'id__in' in vox_ct_limit
+        actual_ids = set(vox_ct_limit['id__in'])
         assert actual_ids == expected_ids

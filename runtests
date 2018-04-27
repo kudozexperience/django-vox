@@ -11,9 +11,9 @@ PYTEST_ARGS = {
     'fast': ['tests', '--tb=short', '-q', '-s', '-rw'],
 }
 
-FLAKE8_ARGS = ['django_courier', 'tests']
+FLAKE8_ARGS = ['django_vox', 'tests']
 
-ISORT_ARGS = ['--recursive', '--check-only', '--diff', '-o' 'uritemplate', '-p', 'tests', 'django_courier', 'tests']
+ISORT_ARGS = ['--recursive', '--check-only', '--diff', '-o' 'uritemplate', '-p', 'tests', 'django_vox', 'tests']
 
 
 def exit_on_failure(ret, message=None):
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         except ValueError:
             pass
         else:
-            pytest_args = ['--cov', 'django_courier'] + pytest_args
+            pytest_args = ['--cov', 'django_vox'] + pytest_args
             if style == 'default':
                 pytest_args = ['--cov-report', 'term-missing'] + pytest_args
             else:
