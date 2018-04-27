@@ -27,6 +27,11 @@ if BACKENDS is None:
         BACKENDS.append('django_courier.backends.TwilioBackend')
     except ImportError:
         pass
+    try:
+        import lxml  # noqa: F401
+        BACKENDS.append('django_courier.backends.PostmarkTemplateBackend')
+    except ImportError:
+        pass
 
 MARKDOWN_EXTRAS = getattr(django.conf.settings,
                           'DJANGO_COURIER_MARKDOWN_EXTRAS', None)

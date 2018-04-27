@@ -96,6 +96,20 @@ parts to them (subject, text, and html). The basic form looks like this::
     {% block text_body %}Text body of email{% endblock %}
     {% block html_body %}HTML body of email{% endblock %}
 
+Postmark Templates
+------------------
+
+Class
+    ``django_courier.backends.PostmarkTemplateBackend``
+
+This backend requires one config setting: ``POSTMARK_API_TOKEN``. It should
+be, unsurprisingly, your token for interacting with the postmark API. When
+using this backend, the 'Subject' field refers to Postmark's "template alias"
+and the template content should look something like this::
+
+    parameter_one: {{ content.attribute }}
+    parameter_two: {{ recpient.name }}
+
 
 Twilio
 ------
@@ -103,7 +117,7 @@ Twilio
 Protocol
   ``sms``
 Class
-    ``django_courier.backends.SlackWebhookBackend``
+    ``django_courier.backends.TwilioBackend``
 Extra
   ``[twilio]``
 
@@ -125,7 +139,7 @@ Slack Webhook
 Protocol
   ``slack-webhook``
 Class
-    ``django_courier.backends.TwilioBackend``
+    ``django_courier.backends.SlackWebhookBackend``
 
 This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up

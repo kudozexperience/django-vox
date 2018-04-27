@@ -55,6 +55,7 @@
         'email': markItUpSettingsHtml,
         'email-html': markItUpSettingsHtml,
         'email-md': markItUpSettingsMarkdown,
+        'postmark-template': markItUpSettingsBasic,
         'twilio': markItUpSettingsBasic,
         'slack-webhook': markItUpSettingsBasic,
     };
