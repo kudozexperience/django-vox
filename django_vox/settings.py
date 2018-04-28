@@ -20,13 +20,14 @@ if BACKENDS is None:
         'django_vox.backends.template_email.Backend',
         'django_vox.backends.twilio.Backend',
         'django_vox.backends.slack.Backend',
+        'django_vox.backends.json_webhook.Backend',
     ]
     for cls_str in default_backends:
         cls = pydoc.locate(cls_str)
         for dep in cls.DEPENDS:
             if importlib.util.find_spec(dep) is None:
                 continue
-            BACKENDS.append(cls_str)
+        BACKENDS.append(cls_str)
 
 MARKDOWN_EXTRAS = getattr(django.conf.settings,
                           'DJANGO_VOX_MARKDOWN_EXTRAS', None)

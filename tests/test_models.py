@@ -102,3 +102,14 @@ class DemoTests(TestCase):
         assert 'id__in' in vox_ct_limit
         actual_ids = set(vox_ct_limit['id__in'])
         assert actual_ids == expected_ids
+
+    @staticmethod
+    def test_previews():
+        pp = django_vox.models.PreviewParameters(
+            models.Article, models.User, models.Subscriber)
+        assert 'recipient' not in pp
+        assert 'target' in pp
+        assert pp['contact'].name == 'Contact Name'
+        assert pp['content'].title == 'Why are there so many blog demos'
+        assert pp['target'].name == 'Subscriber'
+        assert pp['source'].name == 'Author'
