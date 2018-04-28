@@ -4,7 +4,10 @@ from unittest.mock import MagicMock, patch
 import django.conf
 from django.test import TestCase
 
-from django_vox import backends, base
+import django_vox.backends.postmark_email
+import django_vox.backends.template_email
+import django_vox.backends.twilio
+from django_vox import base
 
 
 def mocked_requests_post(url, _data=None, json=None, **_kwargs):
@@ -20,7 +23,7 @@ def mocked_requests_post(url, _data=None, json=None, **_kwargs):
         def ok(self):
             return self.status_code // 100 == 2
 
-    if url == backends.PostmarkTemplateBackend.ENDPOINT:
+    if url == django_vox.backends.postmark_email.Backend.ENDPOINT:
         if not (json.get('TemplateAlias') or json.get('TemplateId')):
             return MockResponse(
                 {'ErrorCode': "403", 'Message': 'details'}, 422)
@@ -43,18 +46,18 @@ class TestTwilioBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = backends.TwilioBackend()
+        backend = django_vox.backends.twilio.Backend()
         message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.MESSAGE == message
 
     @classmethod
     def test_preview_message(cls):
-        backend = backends.TwilioBackend()
+        backend = django_vox.backends.twilio.Backend()
         message = backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = backends.TwilioBackend()
+        backend = django_vox.backends.twilio.Backend()
         message = backend.build_message(self.SUBJECT, self.TEXT, self.PARAMS)
         contact = base.Contact('George', 'sms', '+123')
         with patch('twilio.rest.Client'):
@@ -101,18 +104,18 @@ class TestPostmarkBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = backends.PostmarkTemplateBackend()
+        backend = django_vox.backends.postmark_email.Backend()
         message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.MESSAGE == message
 
     @classmethod
     def test_preview_message(cls):
-        backend = backends.PostmarkTemplateBackend()
+        backend = django_vox.backends.postmark_email.Backend()
         message = backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = backends.PostmarkTemplateBackend()
+        backend = django_vox.backends.postmark_email.Backend()
         bad_message = backend.build_message('', self.TEXT, self.PARAMS)
         message = backend.build_message(self.SUBJECT, self.TEXT, self.PARAMS)
         contact = base.Contact('George', 'email', 'george@example.org')
@@ -146,13 +149,13 @@ class TestTemplateEmailBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = backends.EmailBackend()
+        backend = django_vox.backends.template_email.Backend()
         message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         obj = json.loads(message)
         assert cls.MESSAGE == obj
 
     @classmethod
     def test_preview_message(cls):
-        backend = backends.EmailBackend()
+        backend = django_vox.backends.template_email.Backend()
         message = backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message

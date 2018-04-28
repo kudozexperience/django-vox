@@ -3,7 +3,8 @@ import datetime
 from django.template import TemplateSyntaxError
 from django.test import TestCase
 
-from django_vox import models, templates
+from django_vox import models
+from django_vox.backends import base_email, markdown_email, template_email
 
 
 class MultipartMessageTests(TestCase):
@@ -15,11 +16,11 @@ class MultipartMessageTests(TestCase):
             'text': 'A message about foo',
             'html': 'A <blink>message</blink> about foo',
         }
-        mpm = templates.MultipartMessage.from_dict(mpm_dict)
+        mpm = base_email.MultipartMessage.from_dict(mpm_dict)
         new_dict = mpm.to_dict()
         assert new_dict == mpm_dict
         serialized = str(mpm)
-        new_mpm = templates.MultipartMessage.from_string(serialized)
+        new_mpm = base_email.MultipartMessage.from_string(serialized)
         assert new_mpm.subject == mpm.subject
         assert new_mpm.text == mpm.text
         assert new_mpm.html == mpm.html
@@ -82,7 +83,7 @@ class EmailRenderTests(TestCase):
         params = {'message': 'There\'s a new burger at A&W'}
         email = "Hi, John Doe, here is a message: {{ message }}"
         text = "Hi, John Doe, here is a message: There's a new burger at A&W"
-        result = templates.email_parts('', email, params)
+        result = template_email.email_parts('', email, params)
         assert result.subject == ''
         assert result.text == text
 
@@ -100,7 +101,7 @@ class EmailRenderTests(TestCase):
         text = "Hi, John Doe, here is a message: There's a new burger at A&W"
         html = "<p>Hi, John Doe, here is a message: " \
                "There&#39;s a new burger at A&amp;W</p>"
-        result = templates.email_parts('', email, params)
+        result = template_email.email_parts('', email, params)
         assert result.subject == 'Test subject'
         assert result.text == text
         assert result.html == html
@@ -126,7 +127,7 @@ class MarkdownEmailRenderTests(TestCase):
         html = "<p>Hi Jon Doe,</p>\n\n" \
                "<p>Here is a message: There&#8217;s a *new* burger " \
                "at A&amp;W starting 03/12/2013</p>\n"
-        result = templates.email_md(subject, body, params)
+        result = markdown_email.email_md(subject, body, params)
         assert result.subject == 'Hey Jon'
         assert result.text == text
         assert result.html == html

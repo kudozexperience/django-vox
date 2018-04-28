@@ -1,3 +1,5 @@
+import importlib.util
+import pydoc
 import re
 
 import django.conf
@@ -9,29 +11,22 @@ URL_PATTERN = re.compile(
 
 BACKENDS = getattr(django.conf.settings, 'DJANGO_VOX_BACKENDS', None)
 if BACKENDS is None:
+    BACKENDS = []
     # Automatically set based on libraries available
-    BACKENDS = ['django_vox.backends.EmailBackend',
-                'django_vox.backends.SlackWebhookBackend']
-    try:
-        import august  # noqa: F401
-        BACKENDS.append('django_vox.backends.HtmlEmailBackend')
-    except ImportError:
-        pass
-    try:
-        import markdown2  # noqa: F401
-        BACKENDS.append('django_vox.backends.MarkdownEmailBackend')
-    except ImportError:
-        pass
-    try:
-        import twilio.rest  # noqa: F401
-        BACKENDS.append('django_vox.backends.TwilioBackend')
-    except ImportError:
-        pass
-    try:
-        import lxml  # noqa: F401
-        BACKENDS.append('django_vox.backends.PostmarkTemplateBackend')
-    except ImportError:
-        pass
+    default_backends = [
+        'django_vox.backends.html_email.Backend',
+        'django_vox.backends.markdown_email.Backend',
+        'django_vox.backends.postmark_email.Backend',
+        'django_vox.backends.template_email.Backend',
+        'django_vox.backends.twilio.Backend',
+        'django_vox.backends.slack.Backend',
+    ]
+    for cls_str in default_backends:
+        cls = pydoc.locate(cls_str)
+        for dep in cls.DEPENDS:
+            if importlib.util.find_spec(dep) is None:
+                continue
+            BACKENDS.append(cls_str)
 
 MARKDOWN_EXTRAS = getattr(django.conf.settings,
                           'DJANGO_VOX_MARKDOWN_EXTRAS', None)

@@ -15,7 +15,7 @@ from django.utils.html import escape
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 
-from . import backends, models
+from . import models, registry
 
 
 class RecipientFilter(admin.SimpleListFilter):
@@ -80,7 +80,7 @@ class TemplateInlineFormSet(forms.BaseInlineFormSet):
 
 
 class TemplateForm(forms.ModelForm):
-    backend = BackendChoiceField(choices=backends.get_backends())
+    backend = BackendChoiceField(choices=registry.BACKENDS.all())
     recipient = forms.ChoiceField()
 
     class Meta:
@@ -103,7 +103,7 @@ class TemplateForm(forms.ModelForm):
 
 
 class SiteContactForm(forms.ModelForm):
-    protocol = forms.ChoiceField(choices=backends.get_protocol_choices())
+    protocol = forms.ChoiceField(choices=registry.get_protocol_choices())
 
     class Meta:
         model = models.SiteContact

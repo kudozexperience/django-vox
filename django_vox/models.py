@@ -1,18 +1,58 @@
 import collections
+import random
 from typing import Any, List, Mapping, TypeVar, cast
 
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.db.models import Q
+from django.db.models import NOT_PROVIDED, Q
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
-from . import templates
-from .backends import get_backends, get_backends_from_settings
+import django_vox.backends
+
 from .base import AbstractContactable, Contact
 
 _VOX_CONTENTTYPE_IDS = None
+
+
+def make_model_preview(content_type):
+    obj = content_type.objects.first()
+    if obj is not None:
+        return obj
+    obj = content_type()
+    for field in content_type._meta.fields:
+        value = None
+        if field.default != NOT_PROVIDED:
+            value = field.default
+        if not value:
+            desc = str(field.description).lower()
+            if desc.startswith('string'):
+                value = '{{{}}}'.format(field.verbose_name)
+            elif desc.startswith('integer'):
+                value = random.randint(1, 100)
+            else:
+                pass
+        setattr(obj, field.attname, value)
+    return obj
+
+
+class PreviewParameters:
+
+    def __init__(self, content_type, source_model, target_model):
+        self.target = (make_model_preview(target_model)
+                       if target_model else {})
+        self.source = (make_model_preview(source_model)
+                       if source_model else {})
+        self.contact = Contact(
+            'Contact Name', 'email', 'contact@example.org')
+        self.content = make_model_preview(content_type)
+
+    def __contains__(self, item):
+        return item in ('contact', 'target', 'source', 'content')
+
+    def __getitem__(self, attr):
+        return getattr(self, attr)
 
 
 def get_model_variables(label, value, cls, ancestors=set()):
@@ -363,7 +403,7 @@ class Notification(models.Model):
             generic_params: Mapping[str, Any], template_queryset):
 
         def _get_backend_message(protocol):
-            backends = get_backends_from_settings(protocol)
+            backends = django_vox.registry.BACKENDS.by_protocol(protocol)
             # now get all the templates for these backends
             for be in backends:
                 tpl = template_queryset.filter(
@@ -405,8 +445,8 @@ class Notification(models.Model):
         return not (self.source_model or self.target_model)
 
     def preview(self, backend_id, message):
-        backend = [b for b in get_backends() if b.ID == backend_id][0]
-        params = templates.PreviewParameters(
+        backend = django_vox.registry.BACKENDS.by_id(backend_id)
+        params = PreviewParameters(
             self.get_content_model(), self.get_source_model(),
             self.get_target_model())
         return backend.preview_message('', message, params)
@@ -471,7 +511,7 @@ class Template(models.Model):
 
     def render(self, parameters: dict, autoescape=True):
         content = cast(str, self.content)
-        template = templates.from_string(content)
+        template = django_vox.backends.base.template_from_string(content)
         context = Context(parameters, autoescape=autoescape)
         return template.render(context)
 
