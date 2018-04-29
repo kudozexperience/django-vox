@@ -22,7 +22,5 @@ class VoxDemoConfig(AppConfig):
     def ready(self):
         setup_databases(verbosity=3, interactive=False)
         # add notification objects
-        from django_vox.management.commands.make_notifications \
-            import make_notifications
-        make_notifications(self)
+        call_command('make_notifications')
         call_command('loaddata', 'demo')
