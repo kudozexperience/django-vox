@@ -13,8 +13,8 @@ __ALL__ = ('PROTOCOLS', 'Backend', 'template_from_string')
 PROTOCOLS = {
     'email': _('Email'),
     'sms': _('SMS'),
-    'webhook': _('Webhook'),
-    'slack-webhook': _('Slack Webhook'),
+    'json-webhook': _('Webhook (JSON)'),
+    'slack-webhook': _('Webhook (Slack)'),
 }
 
 

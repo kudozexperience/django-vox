@@ -1,3 +1,4 @@
+=======================
 Protocols and Addresses
 =======================
 
@@ -11,7 +12,7 @@ message, django-vox automatically selects a backend that matches the
 available contacts (and addresses by extension) for that protocol.
 
 Email
------
+=====
 
 ID: ``email``
 
@@ -20,7 +21,7 @@ is just the email address.
 
 
 SMS
----
+===
 
 ID: ``sms``
 
@@ -28,13 +29,17 @@ The contact's address for SMS is the contact's phone number in E.164 format.
 It's recommended to use ``django-phonenumber-field`` if you want to store
 these numbers in a database.
 
+Webhook Protocols
+=================
 
-Slack Webhook
--------------
+While webhooks aren't typically a convenient way to contact end-users, they
+can be pretty useful for setting up site contacts. Because of the templating
+system, you can be quite flexible in the way you set them up.
 
-ID: ``slack-webhook``
-
-The address of a slack webhook is the URL of the webhook. This is mostly
-intended to be used in conjunction with site contacts because of the
-obvious difficulty of creating webhooks for slack channels.
-
+=============  =================  =========================
+Name           ID                 Purpose
+=============  =================  =========================
+JSON Webhook   ``json-webhook``   Generic JSON data
+                                  (specified in template)
+Slack Webhook  ``slack-webhook``  Posting messages to Slack
+=============  =================  =========================

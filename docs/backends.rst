@@ -54,7 +54,7 @@ HTML Email Backend
 ~~~~~~~~~~~~~~~~~~
 
 Class
-    ``django_vox.backends.HtmlEmailBackend``
+    ``django_vox.backends.html_email.Backend``
 Extra
   ``[html]``
 
@@ -70,7 +70,7 @@ Markdown Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Class
-    ``django_vox.backends.MarkdownEmailBackend``
+    ``django_vox.backends.markdown_email.Backend``
 Extra
  ``[markdown]``
 
@@ -82,7 +82,7 @@ Template-based Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Class
-    ``django_vox.backends.EmailBackend``
+    ``django_vox.backends.template_email.Backend``
 
 This backend isn't recommended because it's probably too confusing to be
 wroth it. However, if you really need to tailor-make your emails, it's
@@ -100,7 +100,7 @@ Postmark Templates
 ------------------
 
 Class
-    ``django_vox.backends.PostmarkTemplateBackend``
+    ``django_vox.backends.postmark_email.Backend``
 
 This backend requires one config setting: ``POSTMARK_API_TOKEN``. It should
 be, unsurprisingly, your token for interacting with the postmark API. When
@@ -108,7 +108,7 @@ using this backend, the 'Subject' field refers to Postmark's "template alias"
 and the template content should look something like this::
 
     parameter_one: {{ content.attribute }}
-    parameter_two: {{ recpient.name }}
+    parameter_two: {{ recipient.name }}
 
 
 Twilio
@@ -117,7 +117,7 @@ Twilio
 Protocol
   ``sms``
 Class
-    ``django_vox.backends.TwilioBackend``
+    ``django_vox.backends.twilio.Backend``
 Extra
   ``[twilio]``
 
@@ -132,14 +132,34 @@ all of which needs to be set for proper functioning.
                         Twilio backend)
 ======================  ================================================
 
+Webhook (JSON)
+--------------
 
-Slack Webhook
--------------
+Protocol
+  ``json-webhook``
+Class
+    ``django_vox.backends.json_webhook.Backend``
+
+This backend post JSON-formatted data to webhook. It's useful for
+implementing generic webhooks or integrating with systems like
+Huginn or Zapier. The way you specify parameters is the same
+as with the Postmark backend::
+
+    parameter_one: {{ content.attribute }}
+    parameter_two: Hello World
+
+This will translate into::
+
+    {'parameter_one': '<content.attribute>',
+     'parameter_two': 'Hello World'}
+
+Webhook (Slack)
+---------------
 
 Protocol
   ``slack-webhook``
 Class
-    ``django_vox.backends.SlackWebhookBackend``
+    ``django_vox.backends.slack.Backend``
 
 This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up

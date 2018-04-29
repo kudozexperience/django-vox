@@ -8,6 +8,7 @@ import django.utils.html
 import requests
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
+import lxml
 
 from . import base
 
@@ -19,7 +20,6 @@ class Backend(base.Backend):
     ID = 'json-webhook'
     PROTOCOL = 'json-webhook'
     VERBOSE_NAME = _('Generic Webhook (JSON)')
-    DEPENDS = ('lxml',)
 
     @classmethod
     def parse_message(cls, body: str) -> typing.Mapping[str, str]:
@@ -51,8 +51,7 @@ class Backend(base.Backend):
 
     @classmethod
     def extract_model(cls, message):
-        from lxml import etree
-        tree = etree.fromstring(message)
+        tree = lxml.etree.fromstring(message)
         subject = tree[0].text
         model = {}
         key = ''

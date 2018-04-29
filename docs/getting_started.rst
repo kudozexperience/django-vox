@@ -118,8 +118,9 @@ Adding Channels
 
 Channels are what allow you to select different recipients. The site contacts
 channel is available by default, but if you want any other channels, you have
-to create them yourself using the ``VoxModel.add_channel`` method. The
-method takes four arguments:
+to create them yourself using the channel registry at
+``django_vox.registry.channels``. You can add new channels using either the
+``add`` or ``add_self`` method takes four arguments:
 
 ``key``
    A slug that identifies the channel. Should be unique per model.
@@ -148,10 +149,11 @@ An example of channels given the above code might look like this::
 
     ...
 
-    User.add_channel('')
-    PurchaceOrder.add_channel('purchaser', _('Purchaser'), User,
+    from django_vox.registry import channels
+    channels[User].add_self()
+    channels[PurchaseOrder].add('purchaser', _('Purchaser'), User,
         PurchaseOrder.get_purchasers)
-    PurchaceOrder.add_channel('manager', _('Manager'), User,
+    channels[PurchaseOrder].add('manager', _('Manager'), User,
         PurchaseOrder.get_managers)
 
 
