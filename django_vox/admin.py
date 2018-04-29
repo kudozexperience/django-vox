@@ -18,23 +18,6 @@ from django.utils.translation import ugettext_lazy as _
 from . import models, registry
 
 
-class RecipientFilter(admin.SimpleListFilter):
-    """A really simple filter so that we have the right labels
-    """
-    title = _('recipient')
-    parameter_name = 'recipient'
-
-    def lookups(self, request, model_admin):
-        """Return list of key/name tuples
-        """
-        return models.get_recipient_choices()
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(recipient=self.value())
-        return queryset
-
-
 class SelectWithSubjectData(forms.Select):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -80,7 +63,7 @@ class TemplateInlineFormSet(forms.BaseInlineFormSet):
 
 
 class TemplateForm(forms.ModelForm):
-    backend = BackendChoiceField(choices=registry.BACKENDS.all())
+    backend = BackendChoiceField(choices=registry.backends.all())
     recipient = forms.ChoiceField()
 
     class Meta:
@@ -91,7 +74,7 @@ class TemplateForm(forms.ModelForm):
     def __init__(self, notification=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['recipient'].choices = \
-            models.get_recipient_choices(notification)
+            self.get_recipient_choices(notification)
 
     def clean(self):
         data = self.cleaned_data
@@ -100,6 +83,14 @@ class TemplateForm(forms.ModelForm):
             notification.preview(data['backend'], data['content'])
         except Exception as exc:
             raise ValidationError(str(exc))
+
+    @staticmethod
+    def get_recipient_choices(notification):
+        recipient_models = notification.get_recipient_models()
+        for recipient_key, model in recipient_models.items():
+            channel_data = registry.channels[model].prefix(recipient_key)
+            for key, channel in channel_data.items():
+                yield key, channel.name
 
 
 class SiteContactForm(forms.ModelForm):
@@ -232,7 +223,8 @@ class NotificationAdmin(admin.ModelAdmin):
             if form.is_valid():
                 form.save()
                 msg = ugettext('Notification sent successfully.')
-                django.contrib.messages.success(request, msg)
+                django.contrib.messages.success(
+                    request, msg, fail_silently=True)
                 return django.http.HttpResponseRedirect(
                     reverse(
                         '%s:%s_%s_change' % (

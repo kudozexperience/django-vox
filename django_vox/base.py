@@ -1,7 +1,3 @@
-import abc
-from typing import List
-
-
 class Contact:
     """A generic contact object
 
@@ -20,11 +16,3 @@ class Contact:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class AbstractContactable(metaclass=abc.ABCMeta):
-
-    @abc.abstractmethod
-    def get_contacts_for_notification(
-            self, notification: 'Notification') -> List[Contact]:
-        ...

@@ -1,3 +1,4 @@
+import abc
 import collections
 import random
 from typing import Any, List, Mapping, TypeVar, cast
@@ -11,9 +12,7 @@ from django.utils.translation import ugettext_lazy as _
 
 import django_vox.backends
 
-from .base import AbstractContactable, Contact
-
-_VOX_CONTENTTYPE_IDS = None
+from . import base, registry
 
 
 def make_model_preview(content_type):
@@ -44,7 +43,7 @@ class PreviewParameters:
                        if target_model else {})
         self.source = (make_model_preview(source_model)
                        if source_model else {})
-        self.contact = Contact(
+        self.contact = base.Contact(
             'Contact Name', 'email', 'contact@example.org')
         self.content = make_model_preview(content_type)
 
@@ -78,26 +77,12 @@ def get_model_variables(label, value, cls, ancestors=set()):
             'rels': children}
 
 
-def _vox_contenttype_ids():
-    for all_models in apps.all_models.values():
-        for model in all_models.values():
-            if issubclass(model, VoxModel):
-                if model._vox_meta.has_channels():
-                    ct = ContentType.objects.get_for_model(model)
-                    yield ct.id
+class AbstractContactable(metaclass=abc.ABCMeta):
 
-
-def content_type_limit():
-    global _VOX_CONTENTTYPE_IDS
-    if _VOX_CONTENTTYPE_IDS is None:
-        _VOX_CONTENTTYPE_IDS = tuple(_vox_contenttype_ids())
-    return {'id__in': _VOX_CONTENTTYPE_IDS}
-
-
-class Channel(collections.namedtuple('ChannelBase',
-                                     ('name', 'cls', 'func', 'obj'))):
-    def contactables(self):
-        return (self.obj,) if self.func is None else self.func(self.obj)
+    @abc.abstractmethod
+    def get_contacts_for_notification(
+            self, notification: 'Notification') -> List[base.Contact]:
+        ...
 
 
 class VoxOptions(object):
@@ -105,18 +90,7 @@ class VoxOptions(object):
     Options for Vox extensions
     """
 
-    PREFIX_NAMES = {
-        'si': _('Site Contacts'),
-        'c': 'Content',
-        'se': _('Source'),
-        're': _('Target'),
-    }
-    PREFIX_FORMATS = {
-        'c': '{}',
-        'se': _('Source\'s {}'),
-        're': _('Target\'s {}'),
-    }
-    ALL_OPTIONS = ('notifications', 'channels')
+    ALL_OPTIONS = ('notifications',)
     # list of notification code names
     notifications = []
 
@@ -124,8 +98,6 @@ class VoxOptions(object):
         """
         Set any options provided, replacing the default values
         """
-        self.__channel_items = {}
-        self._channels = {}
         self.notifications = []
         if meta is not None:
             for key, value in meta.__dict__.items():
@@ -134,30 +106,6 @@ class VoxOptions(object):
                 elif not key.startswith('_'):  # ignore private parts
                     raise ValueError(
                         'VoxMeta has invalid attribute: {}'.format(key))
-
-    def get_channels(self, prefix: str, obj) -> dict:
-        if prefix not in self.__channel_items:
-            value = {}
-            for key, (name, cls, func) in self._channels.items():
-                channel_key = prefix if key == '' else prefix + ':' + key
-                if name == '':
-                    name = self.PREFIX_NAMES[prefix]
-                    if name == 'Content':
-                        name = cls._meta.verbose_name.title()
-                else:
-                    name = self.PREFIX_FORMATS[prefix].format(name)
-                value[channel_key] = (name, cls, func)
-            self.__channel_items[prefix] = value
-        return dict((key, Channel(name, cls, func, obj))
-                    for key, (name, cls, func)
-                    in self.__channel_items[prefix].items())
-
-    def add_channel(self, key, name, target_type, func=None):
-        self.__channel_items = {}
-        self._channels[key] = name, target_type, func
-
-    def has_channels(self):
-        return bool(self._channels)
 
 
 class VoxModelBase(models.base.ModelBase):
@@ -196,18 +144,6 @@ class VoxModel(models.Model, metaclass=VoxModelBase):
                            source: VoxModelN = None):
         notification = self.get_notification(codename)
         notification.issue(self, target, source)
-
-    @classmethod
-    def add_channel(cls, key, verbose_name='', target_type=None, func=None):
-        if target_type is None:
-            target_type = cls
-        elif func is None and target_type != cls:
-            raise ValueError('Must specify function when using '
-                             'different models')
-        cls._vox_meta.add_channel(key, verbose_name, target_type, func)
-
-    def get_channels(self, prefix: str):
-        return self.__class__._vox_meta.get_channels(prefix, self)
 
 
 class NotificationManager(models.Manager):
@@ -285,16 +221,16 @@ class Notification(models.Model):
     codename = models.CharField(_('codename'), max_length=100)
     content_type = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE,
-        limit_choices_to=content_type_limit,
+        limit_choices_to=registry.channel_type_limit,
         verbose_name=_('content type'))
     description = models.TextField(_('description'))
     source_model = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE, related_name='+',
-        limit_choices_to=content_type_limit,
+        limit_choices_to=registry.channel_type_limit,
         verbose_name=_('source model'), null=True, blank=True)
     target_model = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE, related_name='+',
-        limit_choices_to=content_type_limit,
+        limit_choices_to=registry.channel_type_limit,
         verbose_name=_('target model'), null=True, blank=True)
     required = models.BooleanField(
         _('required'), default=False,
@@ -357,7 +293,8 @@ class Notification(models.Model):
         instances = self.get_recipient_instances(content, target, source)
         return dict((key, channel)
                     for recip_key, model in instances.items()
-                    for key, channel in model.get_channels(recip_key).items())
+                    for key, channel in registry.channels[
+                        model.__class__].prefix(recip_key).bind(model).items())
 
     def issue(self, content,
               target: VoxModelN=None,
@@ -399,11 +336,11 @@ class Notification(models.Model):
             raise RuntimeError('Notification required, but no message sent')
 
     def send_messages(
-            self, contacts: Mapping[Contact, AbstractContactable],
+            self, contacts: Mapping[base.Contact, AbstractContactable],
             generic_params: Mapping[str, Any], template_queryset):
 
         def _get_backend_message(protocol):
-            backends = django_vox.registry.BACKENDS.by_protocol(protocol)
+            backends = django_vox.registry.backends.by_protocol(protocol)
             # now get all the templates for these backends
             for be in backends:
                 tpl = template_queryset.filter(
@@ -445,7 +382,7 @@ class Notification(models.Model):
         return not (self.source_model or self.target_model)
 
     def preview(self, backend_id, message):
-        backend = django_vox.registry.BACKENDS.by_id(backend_id)
+        backend = django_vox.registry.backends.by_id(backend_id)
         params = PreviewParameters(
             self.get_content_model(), self.get_source_model(),
             self.get_target_model())
@@ -471,11 +408,10 @@ class Notification(models.Model):
         mapping = {}
         for target_key, model in recipient_spec.items():
             if model is not None:
-                channel_items = model._vox_meta.get_channels(
-                    target_key, None).items()
-                for key, (name, cls, _func, _obj) in channel_items:
+                channels = registry.channels[model].prefix(target_key)
+                for key, channel in channels.items():
                     mapping[key] = get_model_variables(
-                        'Recipient', 'recipient', cls)
+                        'Recipient', 'recipient', channel.target_class)
         content_name = content_model._meta.verbose_name.title()
         mapping['_static'] = [
             get_model_variables(content_name, 'content', content_model),
@@ -520,7 +456,7 @@ class SiteContactManager(models.Manager, AbstractContactable):
     use_in_migrations = True
 
     def get_contacts_for_notification(
-            self, notification: 'Notification') -> List[Contact]:
+            self, notification: 'Notification') -> List[base.Contact]:
         wlq = Q(enable_filter='whitelist',
                 sitecontactsetting__notification=notification,
                 sitecontactsetting__enabled=False)
@@ -528,7 +464,7 @@ class SiteContactManager(models.Manager, AbstractContactable):
                 sitecontactsetting__notification=notification,
                 sitecontactsetting__enabled=False)
         for sc in SiteContact.objects.filter(blq | wlq).distinct():
-            yield Contact(sc.name, sc.protocol, sc.address)
+            yield base.Contact(sc.name, sc.protocol, sc.address)
 
 
 # can't make this subclass AbstractContact or fields become unset-able
@@ -559,7 +495,8 @@ class SiteContact(VoxModel):
         yield SiteContact.objects
 
 
-SiteContact.add_channel('', func=SiteContact.all_contacts)
+registry.channels[SiteContact].add(
+    '', '', SiteContact, SiteContact.all_contacts)
 
 
 class SiteContactSetting(models.Model):
@@ -592,10 +529,3 @@ class FailedMessage(models.Model):
     def __str__(self):
         return '{}:{} @ {}'.format(self.backend.PROTOCOL,
                                    self.address, self.created_at)
-
-
-def get_recipient_choices(notification):
-    for recipient_key, model in notification.get_recipient_models().items():
-        channel_data = model._vox_meta.get_channels(recipient_key, None)
-        for key, (name, _cls, _func, _obj) in channel_data.items():
-            yield key, name

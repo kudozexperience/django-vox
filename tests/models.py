@@ -8,6 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from django_vox.base import Contact
 from django_vox.models import VoxModel, VoxParam
+from django_vox.registry import channels
 
 
 class UserManager(BaseUserManager):
@@ -206,11 +207,11 @@ class Comment(VoxModel):
         yield self.article.author
 
 
-User.add_channel('')
-Article.add_channel('sub', _('Subscribers'),
-                    Subscriber, Article.get_subscribers)
-Article.add_channel('author', _('Author'), User, Article.get_authors)
-Subscriber.add_channel('')
-Comment.add_channel('poster', _('Poster'), Subscriber, Comment.get_posters)
-Comment.add_channel('author', _('Article author'),
-                    User, Comment.get_article_authors)
+channels[User].add_self()
+channels[Article].add('sub', _('Subscribers'),
+                      Subscriber, Article.get_subscribers)
+channels[Article].add('author', _('Author'), User, Article.get_authors)
+channels[Subscriber].add_self()
+channels[Comment].add('poster', _('Poster'), Subscriber, Comment.get_posters)
+channels[Comment].add('author', _('Article author'),
+                      User, Comment.get_article_authors)

@@ -6,6 +6,8 @@ import django.utils.html
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
+import django_vox.base
+
 __ALL__ = ('PROTOCOLS', 'Backend', 'template_from_string')
 
 PROTOCOLS = {
@@ -41,8 +43,7 @@ class Backend:
         return message
 
     @classmethod
-    def send_message(
-            cls, contact: 'django_vox.base.Contact', message):
+    def send_message(cls, contact: django_vox.base.Contact, message: str):
         raise NotImplementedError
 
 

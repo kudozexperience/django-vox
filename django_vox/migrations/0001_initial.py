@@ -150,10 +150,10 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='sitecontact',
-            unique_together=set([('address', 'protocol')]),
+            unique_together={('address', 'protocol')},
         ),
         migrations.AlterUniqueTogether(
             name='sitecontactsetting',
-            unique_together=set([('site_contact', 'notification')]),
+            unique_together={('site_contact', 'notification')},
         ),
     ]

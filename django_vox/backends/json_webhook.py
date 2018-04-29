@@ -70,4 +70,4 @@ class Backend(base.Backend):
         response = requests.post(contact.address, json=model, headers=headers)
         if not response.ok:
             raise RuntimeError(
-                'HTTP error: {} {}'.format(response.text))
+                'HTTP error: {}'.format(response.text))

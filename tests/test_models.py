@@ -4,6 +4,7 @@ from django.core import mail
 from django.test import Client, TestCase
 
 import django_vox.models
+import django_vox.registry
 
 from . import models
 
@@ -82,13 +83,8 @@ class DemoTests(TestCase):
         assert url.startswith('http://127.0.0.1:8000/2/?token=')
         assert len(url) > 31  # if less, token is blank
 
-    def test_bad_channels(self):
-        # this is bad because it specifies a different
-        # class but no func
-        with self.assertRaises(ValueError):
-            models.Article.add_channel('key', 'Name', models.User)
-
-    def test_choices(self):
+    @staticmethod
+    def test_choices():
         """
         Test the values of the dropdown fields
         """
@@ -98,7 +94,7 @@ class DemoTests(TestCase):
             ct = ContentType.objects.get_for_model(model)
             expected_ids.add(ct.id)
 
-        vox_ct_limit = django_vox.models.content_type_limit()
+        vox_ct_limit = django_vox.registry.channel_type_limit()
         assert 'id__in' in vox_ct_limit
         actual_ids = set(vox_ct_limit['id__in'])
         assert actual_ids == expected_ids
