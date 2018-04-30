@@ -4,6 +4,7 @@
 .pytest_cache
 .settings
 dist
+build
 *.egg-info
 .idea
 .coverage
