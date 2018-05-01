@@ -60,10 +60,7 @@ class MarkdownParameters:
 class CallableMarkdownParameters(MarkdownParameters):
 
     def __call__(self, *args, **kwargs):
-        obj = self._obj.__call__(*args, **kwargs)
-        if callable(obj):
-            return CallableMarkdownParameters(obj)
-        return MarkdownParameters(obj)
+        self.wrap(self._obj.__call__(*args, **kwargs))
 
 
 def email_md(subject: str, body: str, parameters: dict) -> \

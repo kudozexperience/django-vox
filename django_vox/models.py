@@ -24,7 +24,7 @@ def make_model_preview(content_type):
         value = None
         if field.default != NOT_PROVIDED:
             value = field.default
-        if not value:
+        else:
             desc = str(field.description).lower()
             if desc.startswith('string'):
                 value = '{{{}}}'.format(field.verbose_name)

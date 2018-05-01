@@ -18,6 +18,7 @@ class Backend(json_webhook.Backend):
     PROTOCOL = 'email'
     VERBOSE_NAME = _('Email (Postmark Templates)')
     ENDPOINT = 'https://api.postmarkapp.com/email/withTemplate'
+    USE_SUBJECT = True
 
     @classmethod
     def send_message(cls, contact, message):

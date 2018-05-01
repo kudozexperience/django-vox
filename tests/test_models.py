@@ -45,7 +45,6 @@ class DemoTests(TestCase):
             response = client.get(url)
             assert response.status_code == 200
             assert response['Content-Type'] == 'text/html; charset=utf-8'
-            # TODO: continue
 
     @staticmethod
     def test_markdown():
@@ -108,4 +107,17 @@ class DemoTests(TestCase):
         assert pp['contact'].name == 'Contact Name'
         assert pp['content'].title == 'Why are there so many blog demos'
         assert pp['target'].name == 'Subscriber'
+        assert pp['source'].name == 'Author'
+        # now delete the articles and watch it come up with names
+        for article in models.Article.objects.all():
+            article.delete()
+        for sub in models.Subscriber.objects.all():
+            sub.delete()
+        pp = django_vox.models.PreviewParameters(
+            models.Article, models.User, models.Subscriber)
+        assert 'recipient' not in pp
+        assert 'target' in pp
+        assert pp['contact'].name == 'Contact Name'
+        assert pp['content'].title == '{title}'
+        assert pp['target'].secret == ''
         assert pp['source'].name == 'Author'

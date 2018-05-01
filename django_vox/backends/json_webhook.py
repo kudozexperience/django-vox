@@ -7,7 +7,6 @@ import django.template
 import django.utils.html
 import lxml.etree
 import requests
-from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
 from . import base
@@ -35,12 +34,16 @@ class Backend(base.Backend):
     @classmethod
     def build_message(cls, subject: str, body: str, parameters: dict):
         data = cls.parse_message(body)
+        if cls.USE_SUBJECT:
+            subject_html = '<h1>{}</h1>\n'.format(subject)
+        else:
+            subject_html = ''
         def_list = '\n'.join(
-            '<dt>{}</dt><dd>{}</dd>'.format(escape(key), escape(value))
+            '<dt>{}</dt><dd>{}</dd>'.format(key, value)
             for key, value in data.items()
         )
-        html = '<html>\n<h1>{}</h1>\n<dl>\n{}\n</dl>\n</html>'.format(
-            escape(subject), def_list)
+        html = '<html>\n{}<dl>\n{}\n</dl>\n</html>'.format(
+            subject_html, def_list)
         context = django.template.Context(parameters)
         template = base.template_from_string(html)
         return template.render(context)
@@ -52,10 +55,15 @@ class Backend(base.Backend):
     @classmethod
     def extract_model(cls, message):
         tree = lxml.etree.fromstring(message)
-        subject = tree[0].text
+        if tree[0].tag == 'h1':
+            subject = tree[0].text
+            dl_element = tree[1]
+        else:
+            subject = ''
+            dl_element = tree[0]
         model = {}
         key = ''
-        for element in tree[1]:
+        for element in dl_element:
             if element.tag == 'dt':
                 key = element.text
             else:
