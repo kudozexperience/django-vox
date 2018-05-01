@@ -5,7 +5,7 @@ import django.core.mail.backends.base
 import django.core.mail.backends.smtp
 import django.template
 import django.utils.html
-import lxml
+import lxml.etree
 import requests
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
