@@ -9,6 +9,28 @@ import django_vox.registry
 from . import models
 
 
+class FailmailTests(TestCase):
+
+    fixtures = ['test']
+
+    def test_email_failure(self):
+        with self.settings(EMAIL_BACKEND='Can\'t import this!'):
+            assert len(mail.outbox) == 0
+            author = models.User.objects.get(email='author@example.org')
+            models.Article.objects.create(
+                author=author,
+                title='A second article',
+                content='Whoever thought we\'d come this far',
+            )
+            # this should create 3 failed messages
+            assert len(mail.outbox) == 0
+            messages = django_vox.models.FailedMessage.objects.order_by(
+                'created_at')
+            assert len(messages) == 3
+            # ends with date
+            assert str(messages[0]).startswith('admin@example.org @ ')
+
+
 class DemoTests(TestCase):
     """Test the walkthrough in the documentation"""
 

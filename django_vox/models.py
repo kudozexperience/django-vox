@@ -371,7 +371,7 @@ class Notification(models.Model):
                 except Exception as e:
                     FailedMessage.objects.create(
                         backend=backend.ID,
-                        name=contact.name,
+                        contact_name=contact.name,
                         address=contact.address,
                         message=str(message),
                         error=str(e),
@@ -527,5 +527,4 @@ class FailedMessage(models.Model):
     objects = models.Manager()
 
     def __str__(self):
-        return '{}:{} @ {}'.format(self.backend.PROTOCOL,
-                                   self.address, self.created_at)
+        return '{} @ {}'.format(self.address, self.created_at)
