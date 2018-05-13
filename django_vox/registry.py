@@ -12,6 +12,7 @@ PROTOCOLS = {
     'sms': _('SMS'),
     'slack-webhook': _('Slack Webhook'),
     'json-webhook': _('JSON Webhook'),
+    'twitter': _('Twitter'),
 }
 
 PREFIX_NAMES = {

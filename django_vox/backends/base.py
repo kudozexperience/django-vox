@@ -4,18 +4,10 @@ import django.core.mail.backends.smtp
 import django.template
 import django.utils.html
 from django.template import Context
-from django.utils.translation import ugettext_lazy as _
 
 import django_vox.base
 
-__ALL__ = ('PROTOCOLS', 'Backend', 'template_from_string')
-
-PROTOCOLS = {
-    'email': _('Email'),
-    'sms': _('SMS'),
-    'json-webhook': _('Webhook (JSON)'),
-    'slack-webhook': _('Webhook (Slack)'),
-}
+__ALL__ = ('Backend', 'template_from_string')
 
 
 def html_format(text: str):

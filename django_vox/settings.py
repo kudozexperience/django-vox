@@ -4,11 +4,7 @@ import re
 
 import django.conf
 
-URL_PATTERN = re.compile(
-    r'((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]'
-    r'+(:[0-9]+)?|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+'
-    r'~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)')
-
+# Basic settings
 BACKENDS = getattr(django.conf.settings, 'DJANGO_VOX_BACKENDS', None)
 if BACKENDS is None:
     BACKENDS = []
@@ -19,6 +15,7 @@ if BACKENDS is None:
         'django_vox.backends.postmark_email.Backend',
         'django_vox.backends.template_email.Backend',
         'django_vox.backends.twilio.Backend',
+        'django_vox.backends.twitter.Backend',
         'django_vox.backends.slack.Backend',
         'django_vox.backends.json_webhook.Backend',
     ]
@@ -28,6 +25,17 @@ if BACKENDS is None:
             if importlib.util.find_spec(dep) is None:
                 continue
         BACKENDS.append(cls_str)
+
+SENDER_MODEL = getattr(django.conf.settings,
+                       'DJANGO_VOX_SENDER_MODEL', None)
+RECIPIENT_MODEL = getattr(django.conf.settings,
+                          'DJANGO_VOX_RECIPIENT_MODEL', None)
+
+# Markdown settings
+URL_PATTERN = re.compile(
+    r'((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]'
+    r'+(:[0-9]+)?|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+'
+    r'~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)')
 
 MARKDOWN_EXTRAS = getattr(django.conf.settings,
                           'DJANGO_VOX_MARKDOWN_EXTRAS', None)
@@ -39,7 +47,12 @@ MARKDOWN_LINK_PATTERNS = getattr(django.conf.settings,
 if MARKDOWN_LINK_PATTERNS is None:
     MARKDOWN_LINK_PATTERNS = [(URL_PATTERN, r'\1')]
 
-SENDER_MODEL = getattr(django.conf.settings,
-                       'DJANGO_VOX_SENDER_MODEL', None)
-RECIPIENT_MODEL = getattr(django.conf.settings,
-                          'DJANGO_VOX_RECIPIENT_MODEL', None)
+# Twitter settings
+TWITTER_CONSUMER_KEY = getattr(
+    django.conf.settings, 'DJANGO_VOX_TWITTER_CONSUMER_KEY', None)
+TWITTER_CONSUMER_SECRET = getattr(
+    django.conf.settings, 'DJANGO_VOX_TWITTER_CONSUMER_SECRET', None)
+TWITTER_TOKEN_KEY = getattr(
+    django.conf.settings, 'DJANGO_VOX_TWITTER_TOKEN_KEY', None)
+TWITTER_TOKEN_SECRET = getattr(
+    django.conf.settings, 'DJANGO_VOX_TWITTER_TOKEN_SECRET', None)

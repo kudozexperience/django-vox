@@ -481,7 +481,7 @@ class SiteContact(VoxModel):
 
     name = models.CharField(_('name'), blank=True, max_length=500)
     protocol = models.CharField(_('protocol'), max_length=100)
-    address = models.CharField(_('address'), max_length=500)
+    address = models.CharField(_('address'), max_length=500, blank=True)
     enable_filter = models.CharField(choices=ENABLE_CHOICES, max_length=10,
                                      default='blacklist')
 

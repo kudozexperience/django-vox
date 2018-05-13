@@ -55,8 +55,6 @@ HTML Email Backend
 
 Class
     ``django_vox.backends.html_email.Backend``
-Extra
-  ``[html]``
 
 When using this, the content of your template will have to be HTML. If
 you don't, it will be HTML anyways, but it will look real bad, and the
@@ -110,7 +108,6 @@ and the template content should look something like this::
     parameter_one: {{ content.attribute }}
     parameter_two: {{ recipient.name }}
 
-
 Twilio
 ------
 
@@ -131,6 +128,43 @@ all of which needs to be set for proper functioning.
 ``TWILIO_FROM_NUMBER``  Phone # to send Twilio SMS from (required for
                         Twilio backend)
 ======================  ================================================
+
+Twitter
+-------
+
+Protocol
+  ``twitter``
+Class
+    ``django_vox.backends.twitter.Backend``
+Extra
+  ``[twitter]``
+
+The twitter backend allows you to post updates to twitter and (with the
+right permissions), send direct messages to your followers. In order to
+set it up, you first need to create a twitter application. The
+`python-twitter docs`_ explain the process well. Note that you can
+ignore callback URL, and you'll want to set the name, description, and
+website fields to the name, description, and website of your application.
+
+Once you're done that, you may want to turn on "Read, Write and Access
+direct messages" in the "Permissions" tab. Then generate/regenerate your
+access token and secret.
+
+Once you're done that, you'll want to set the following values in your
+settings.py file:
+
+======================================  ============================
+``DJANGO_VOX_TWITTER_CONSUMER_KEY``     Consumer Key (API Key)
+``DJANGO_VOX_TWITTER_CONSUMER_SECRET``  Consumer Secret (API Secret)
+``DJANGO_VOX_TWITTER_TOKEN_KEY``        Access Token
+``DJANGO_VOX_TWITTER_TOKEN_SECRET``     Access Token Secret
+======================================  ============================
+
+.. note::
+   In order to post a message to your wall, make a site contact with
+   the the twitter protocol and a *blank* address. In order to send a
+   direct message, you'll need a address that equals your user's twitter
+   handle (not including the "@" prefix).
 
 Webhook (JSON)
 --------------
@@ -167,3 +201,4 @@ slack-webhook addresses, see the documentation on :doc:`protocols <protocols>`.
 
 
 .. _django settings: https://docs.djangoproject.com/en/1.11/ref/settings/
+.. _python-twitter docs: https://python-twitter.readthedocs.io/en/latest/getting_started.html

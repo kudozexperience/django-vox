@@ -58,6 +58,7 @@
         'postmark-template': markItUpSettingsBasic,
         'json-webhook': markItUpSettingsBasic,
         'twilio': markItUpSettingsBasic,
+        'twitter': markItUpSettingsBasic,
         'slack-webhook': markItUpSettingsBasic,
     };
 
