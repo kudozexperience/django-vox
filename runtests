@@ -16,7 +16,7 @@ FLAKE8_ARGS = ['django_vox', 'tests']
 ISORT_ARGS = ['--recursive', '--check-only', '--diff', '-o' 'uritemplate', '-p', 'tests', 'django_vox', 'tests']
 
 
-def exit_on_failure(ret, message=None):
+def exit_on_failure(ret):
     if ret:
         sys.exit(ret)
 

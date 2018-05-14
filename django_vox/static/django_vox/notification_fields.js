@@ -60,6 +60,7 @@
         'twilio': markItUpSettingsBasic,
         'twitter': markItUpSettingsBasic,
         'slack-webhook': markItUpSettingsBasic,
+        'xmpp': markItUpSettingsBasic,
     };
 
     function parseVariables(recipient, variables) {

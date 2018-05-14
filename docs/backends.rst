@@ -100,10 +100,10 @@ Postmark Templates
 Class
     ``django_vox.backends.postmark_email.Backend``
 
-This backend requires one config setting: ``POSTMARK_API_TOKEN``. It should
-be, unsurprisingly, your token for interacting with the postmark API. When
-using this backend, the 'Subject' field refers to Postmark's "template alias"
-and the template content should look something like this::
+This backend requires one config setting: ``DJANGO_VOX_POSTMARK_TOKEN``. It
+should be, unsurprisingly, your token for interacting with the postmark API.
+When using this backend, the 'Subject' field refers to Postmark's "template
+alias" and the template content should look something like this::
 
     parameter_one: {{ content.attribute }}
     parameter_two: {{ recipient.name }}
@@ -121,13 +121,11 @@ Extra
 The twilio backend uses Twilio's python library. It depends on 3 settings,
 all of which needs to be set for proper functioning.
 
-======================  ================================================
-``TWILIO_ACCOUNT_SID``  Twilio account ID (required for Twilio backend)
-``TWILIO_AUTH_TOKEN``   Twilio authentication token (required for Twilio
-                        backend)
-``TWILIO_FROM_NUMBER``  Phone # to send Twilio SMS from (required for
-                        Twilio backend)
-======================  ================================================
+=================================  ===============================
+``DJANGO_VOX_TWILIO_ACCOUNT_SID``  Twilio account ID
+``DJANGO_VOX_TWILIO_AUTH_TOKEN``   Twilio authentication token
+``DJANGO_VOX_TWILIO_FROM_NUMBER``  Phone # to send Twilio SMS from
+=================================  ===============================
 
 Twitter
 -------
@@ -199,6 +197,28 @@ This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up
 slack-webhook addresses, see the documentation on :doc:`protocols <protocols>`.
 
+
+XMPP
+-------
+
+Protocol
+  ``xmpp``
+Class
+    ``django_vox.backends.xmpp.Backend``
+Extra
+  ``[xmpp]``
+
+This backends lets you send messages over xmpp to other xmpp users. It's
+pretty straightforward; however, it's also pretty slow right now, so
+don't use it unless your also doing notifications in the background.
+
+To set this up, you need to have the XMPP address and password in your
+settings. Here's the relevant settings.
+
+============================  ============
+``DJANGO_VOX_XMPP_JID``       XMPP address
+``DJANGO_VOX_XMPP_PASSWORD``  Password
+============================  ============
 
 .. _django settings: https://docs.djangoproject.com/en/1.11/ref/settings/
 .. _python-twitter docs: https://python-twitter.readthedocs.io/en/latest/getting_started.html

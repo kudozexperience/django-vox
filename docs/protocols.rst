@@ -29,6 +29,19 @@ The contact's address for SMS is the contact's phone number in E.164 format.
 It's recommended to use ``django-phonenumber-field`` if you want to store
 these numbers in a database.
 
+
+Twitter
+=======
+
+Addresses for the twitter protocol can take two forms:
+
+  1. An empty string means the message will get posted as a status update
+     for the account specified in the setting.
+  2. Anything else will be sent as a direct message to the user with that
+     handle. You shouldn't prefix an '@' to the address and you need to
+     have the correct permissions set in order for this to work.
+
+
 Webhook Protocols
 =================
 
@@ -43,3 +56,9 @@ JSON Webhook   ``json-webhook``   Generic JSON data
                                   (specified in template)
 Slack Webhook  ``slack-webhook``  Posting messages to Slack
 =============  =================  =========================
+
+XMPP
+====
+
+XMPP (or Jabber) is a standardized, decentralized chat system. The contact's
+address should just be their XMPP address (or JID, as it's sometimes called).

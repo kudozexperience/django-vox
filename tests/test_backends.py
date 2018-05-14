@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import django.conf
 from django.test import TestCase
@@ -70,7 +70,9 @@ class TestTwilioBackend(TestCase):
         with patch('twilio.rest.Client'):
             with self.assertRaises(django.conf.ImproperlyConfigured):
                 backend.send_message(contact, message)
-            with patch('django.conf.settings'):
+            with self.settings(DJANGO_VOX_TWILIO_ACCOUNT_SID='abc',
+                               DJANGO_VOX_TWILIO_AUTH_TOKEN='secret',
+                               DJANGO_VOX_TWILIO_FROM_NUMBER='+321'):
                 backend.send_message(contact, message)
                 import twilio.rest
                 client = twilio.rest.Client
@@ -80,9 +82,9 @@ class TestTwilioBackend(TestCase):
                 assert fname == '().messages.create'
                 assert args == ()
                 assert len(kwargs) == 3
-                assert kwargs['to'] == '+123'
-                assert isinstance(kwargs['from_'], MagicMock)
-                assert kwargs['body'] == self.MESSAGE
+                assert '+123' == kwargs['to']
+                assert '+321' == kwargs['from_']
+                assert self.MESSAGE == kwargs['body']
 
 
 class TestPostmarkBackend(TestCase):
@@ -129,7 +131,7 @@ class TestPostmarkBackend(TestCase):
         with patch('requests.post', side_effect=mocked_requests_post):
             with self.assertRaises(django.conf.ImproperlyConfigured):
                 backend.send_message(contact, message)
-            with self.settings(POSTMARK_API_TOKEN='token'):
+            with self.settings(DJANGO_VOX_POSTMARK_TOKEN='token'):
                 with self.assertRaises(RuntimeError):
                     backend.send_message(contact, bad_message)
                 backend.send_message(contact, message)

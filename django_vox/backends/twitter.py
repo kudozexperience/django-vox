@@ -13,6 +13,7 @@ class Backend(base.Backend):
     PROTOCOL = 'twitter'
     ESCAPE_HTML = False
     VERBOSE_NAME = _('Twitter')
+    DEPENDS = ('twitter',)
 
     @classmethod
     def send_message(cls, contact, message):

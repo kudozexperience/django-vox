@@ -4,8 +4,9 @@ import django.core.mail.backends.smtp
 import django.template
 import django.utils.html
 import requests
-from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import ugettext_lazy as _
+
+import django_vox.settings
 
 from . import json_webhook
 
@@ -30,10 +31,7 @@ class Backend(json_webhook.Backend):
             'From': from_email,
             'To': contact.address,
         }
-        token = getattr(django.conf.settings, 'POSTMARK_API_TOKEN', None)
-        if token is None:
-            raise ImproperlyConfigured(
-                'Please set POSTMARK_API_TOKEN in your settings')
+        token = django_vox.settings.POSTMARK_TOKEN
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
