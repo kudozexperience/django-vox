@@ -9,6 +9,7 @@ Django Vox Documentation
    backends
    protocols
    templates
+   attachments
    demo
    extras
    comparison

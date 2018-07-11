@@ -7,7 +7,8 @@ from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
 from django_vox.base import Contact
-from django_vox.models import VoxAttach, VoxAttachments, VoxModel, VoxParam
+from django_vox.models import (VoxAttach, VoxAttachments, VoxModel,
+                               VoxNotifications)
 from django_vox.registry import channels
 
 
@@ -102,10 +103,8 @@ class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 class Article(VoxModel):
 
     class VoxMeta:
-        notifications = (
-            VoxParam(
-                'created', _('Notification that a new article was created.'),
-            ),
+        notifications = VoxNotifications(
+            created=_('Notification that a new article was created.'),
         )
 
     author = models.ForeignKey(
@@ -142,11 +141,9 @@ class Subscriber(VoxModel):
         unique_together = (('author', 'email',),)
 
     class VoxMeta:
-        notifications = (
-            VoxParam(
-                'created', _(
-                    'Notification from subscriber that a new subscriber was '
-                    'created. Intended for site admins')),
+        notifications = VoxNotifications(
+            created=_('Notification from subscriber that a new subscriber '
+                      'was created. Intended for site admins'),
         )
 
     author = models.ForeignKey(
@@ -206,10 +203,9 @@ class Subscriber(VoxModel):
 class Comment(VoxModel):
 
     class VoxMeta:
-        notifications = (
-            VoxParam(
-                'created', _('Notification that a comment was posted')),
-            )
+        notifications = VoxNotifications(
+            created=_('Notification that a comment was posted.'),
+        )
 
     content = models.TextField(_('content'))
     poster = models.ForeignKey(to=Subscriber, on_delete=models.CASCADE)

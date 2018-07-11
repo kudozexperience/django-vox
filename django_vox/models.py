@@ -200,12 +200,23 @@ class NotificationManager(models.Manager):
         )
 
 
-class VoxParam:
+class VoxNotifications(list):
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            if not isinstance(value, VoxNotification):
+                value = VoxNotification(value)
+            if not value.params['codename']:
+                value.params['codename'] = key
+            self.append(value)
+
+
+class VoxNotification:
     REQUIRED_PARAMS = {'codename', 'description'}
     OPTIONAL_PARAMS = {'source_model': '', 'target_model': '',
                        'required': False}
 
-    def __init__(self, codename, description, **kwargs):
+    def __init__(self, description, codename='', **kwargs):
         self.params = {
             'codename': codename,
             'description': description,
@@ -254,6 +265,13 @@ class VoxParam:
     @property
     def codename(self):
         return self.params['codename']
+
+
+# Temporarily here for backwards compatibility
+class VoxParam(VoxNotification):
+
+    def __init__(self, codename, description, **kwargs):
+        super().__init__(description, codename=codename, **kwargs)
 
 
 class VoxAttach:

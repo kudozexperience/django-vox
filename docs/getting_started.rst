@@ -107,6 +107,22 @@ instance. The result might look something like::
               self.issue_notification('on_hold')
 
 
+Alternatively, you can use a longwinded form to specify your parameters,
+This is more verbose, but makes it easier to specify extra notification
+parameters (like source & target model) if you need them::
+
+
+  class User(VoxModel):
+
+      class VoxMeta:
+          notifications = VoxNotifications(
+              created=VoxNotification(
+                  _('Notification to that a user created an account'),
+                  source_model='myapp.mymodel'),
+          )
+
+
+
 Once you've finished adding these, you'll need to regenerate the
 notifications table using the ``make_notifications`` management command::
 
