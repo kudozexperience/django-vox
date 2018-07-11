@@ -1,7 +1,7 @@
 """
 URL patterns for testing app.
 
-We don't have any fore now.
+We don't have any for now.
 """
 from django.conf.urls import include, url
 from django.contrib import admin

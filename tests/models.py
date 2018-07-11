@@ -7,7 +7,7 @@ from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
 from django_vox.base import Contact
-from django_vox.models import VoxModel, VoxParam
+from django_vox.models import VoxAttach, VoxAttachments, VoxModel, VoxParam
 from django_vox.registry import channels
 
 
@@ -49,6 +49,12 @@ class UserManager(BaseUserManager):
 
 class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 
+    class VoxMeta:
+        attachments = VoxAttachments(
+            vcard=VoxAttach(attr='make_vcard', mime_string='text/vcard',
+                            label=_('Contact Info')),
+        )
+
     email = models.EmailField(_('email'), max_length=254, unique=True)
     name = models.CharField(_('name'), max_length=254)
     is_staff = models.BooleanField(
@@ -76,6 +82,21 @@ class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 
     def get_contacts_for_notification(self, _notification):
         yield Contact(self.name, 'email', self.email)
+
+    def make_vcard(self) -> str:
+        """
+        Returns the text content for a RFC 2426 vCard
+        """
+        params = {}
+        for field in ('name', 'email'):
+            params[field] = getattr(self, field).replace(
+                ':', '\\:').replace(';', '\\;')
+
+        return "BEGIN:VCARD\n" \
+               "VERSION:3.0\n" \
+               "FN:{name}\n" \
+               "EMAIL;TYPE=internet:{email}\n" \
+               "END:VCARD".format(**params)
 
 
 class Article(VoxModel):

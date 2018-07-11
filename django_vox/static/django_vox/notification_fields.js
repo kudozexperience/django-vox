@@ -142,10 +142,14 @@
     function selectBackend(elem, variables) {
         var opt = elem.options[elem.selectedIndex];
         var use_subject = opt.dataset.subject == 'true';
+        var use_attachment = opt.dataset.attachment == 'true';
         parent = elem.parentNode.parentNode.parentNode;
         // update subject
         subject_div = parent.getElementsByClassName('field-subject');
         django.jQuery(subject_div).toggle(use_subject);
+        // update attachments
+        attachment_div = parent.getElementsByClassName('field-attachments');
+        django.jQuery(attachment_div).toggle(use_attachment);
         // update markitup
         jp = django.jQuery(parent);
         var recipient = jp.find('.field-recipient select').val();

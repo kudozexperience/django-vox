@@ -93,6 +93,11 @@
     content: "A new subscriber {{ content }} has been added on the blog"
     recipient: si
     enabled: true
+- model: django_vox.templateattachment
+  pk: 1
+  fields:
+    template: 1
+    key: content.author.vcard
 - model: django_vox.sitecontact
   pk: 1
   fields:

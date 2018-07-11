@@ -8,6 +8,7 @@ from django.contrib.admin.options import IS_POPUP_VAR
 from django.contrib.admin.utils import unquote
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
@@ -22,12 +23,17 @@ class SelectWithSubjectData(forms.Select):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.use_subjects = {}
+        self.use_attachments = {}
 
     def create_option(self, name, value, label, selected,
                       index, subindex=None, attrs=None):
         index = str(index) if subindex is None else "%s_%s" % (index, subindex)
-        option_attrs = {'data-subject': ('true' if self.use_subjects.get(value)
-                                         else 'false')}
+        option_attrs = {
+            'data-subject': ('true' if self.use_subjects.get(value)
+                             else 'false'),
+            'data-attachment': ('true' if self.use_attachments.get(value)
+                                else 'false'),
+        }
         if selected:
             option_attrs.update(self.checked_attribute)
         if 'id' in option_attrs:
@@ -51,8 +57,11 @@ class BackendChoiceField(forms.ChoiceField):
         backs = list(choices)
         choice_pairs = [(back.ID, back.VERBOSE_NAME) for back in backs]
         use_subjects = dict([(back.ID, back.USE_SUBJECT) for back in backs])
+        use_attachments = dict([(back.ID, back.USE_ATTACHMENTS)
+                                for back in backs])
         super().__init__(choices=choice_pairs, *args, **kwargs)
         self.widget.use_subjects = use_subjects
+        self.widget.use_attachments = use_attachments
 
 
 class TemplateInlineFormSet(forms.BaseInlineFormSet):
@@ -65,16 +74,41 @@ class TemplateInlineFormSet(forms.BaseInlineFormSet):
 class TemplateForm(forms.ModelForm):
     backend = BackendChoiceField(choices=registry.backends.all())
     recipient = forms.ChoiceField()
+    attachments = forms.MultipleChoiceField(
+        required=False,
+        widget=FilteredSelectMultiple(
+            verbose_name=_('Attachments'), is_stacked=False))
 
     class Meta:
         model = models.Template
         fields = ['notification', 'backend', 'subject', 'content',
-                  'recipient', 'enabled']
+                  'attachments', 'recipient', 'enabled']
 
     def __init__(self, notification=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['recipient'].choices = \
             self.get_recipient_choices(notification)
+        self.fields['attachments'].choices = \
+            self.get_attachment_choices(notification)
+        if self.instance:
+            self.initial['attachments'] = [
+                a.key for a in self.instance.attachments.all()]
+
+    def clean_attachments(self):
+        # data will be a set of the added items
+        data = set(self.cleaned_data['attachments'])
+        # we need to sync it with the saved items
+        query = ~Q(key__in=data) & Q(template=self.instance)
+        models.TemplateAttachment.objects.filter(query).delete()
+        added_attachments = []
+        for attachment in self.instance.attachments.all():
+            if attachment.key in data:
+                data.remove(attachment.key)
+        for key in data:
+            added_attachments.append(models.TemplateAttachment(
+                template=self.instance, key=key))
+        if added_attachments:
+            models.TemplateAttachment.objects.bulk_create(added_attachments)
 
     def clean(self):
         data = self.cleaned_data
@@ -91,6 +125,14 @@ class TemplateForm(forms.ModelForm):
             channel_data = registry.channels[model].prefix(recipient_key)
             for key, channel in channel_data.items():
                 yield key, channel.name
+
+    @staticmethod
+    def get_attachment_choices(notification):
+        param_models = notification.get_parameter_models()
+        for model_key, model in param_models.items():
+            label = '' if model_key == 'content' else model_key.title()
+            yield from models.get_model_attachment_choices(
+                label, model_key, model)
 
 
 class SiteContactForm(forms.ModelForm):

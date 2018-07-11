@@ -11,8 +11,30 @@ from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
 import django_vox.backends
+from django_vox.backends.base import AttachmentData
 
 from . import base, registry
+
+
+def resolve_parameter(key, parameters):
+    remainder, _, last = key.rpartition('.')
+    parts = remainder.split('.')
+    for part in parts:
+        try:
+            contains = part in parameters
+        except TypeError:
+            contains = False
+        if contains:
+            parameters = parameters[part]
+        elif hasattr(parameters, part):
+            parameters = getattr(parameters, part)
+        else:
+            return None
+    if hasattr(parameters.__class__, '_vox_meta'):
+        meta = parameters.__class__._vox_meta
+        if last in meta.attachments:
+            return meta.attachments[last].get_data(parameters)
+    return None
 
 
 def make_model_preview(content_type):
@@ -77,6 +99,27 @@ def get_model_variables(label, value, cls, ancestors=set()):
             'rels': children}
 
 
+def get_model_attachment_choices(label, value, cls, ancestors=set()):
+    sub_ancestors = ancestors.copy()
+    sub_ancestors.add(cls)
+    if hasattr(cls, '_vox_meta'):
+        fields = cls._vox_meta.attachments
+        for field in fields:
+            label = ('{}/{}'.format(label, field.label)
+                     if label else field.label)
+            yield (value + '.' + field.key), label
+    if hasattr(cls, '_meta') and len(sub_ancestors) < 4:
+        for field in cls._meta.fields:
+            if field.is_relation and field.related_model not in ancestors:
+                sub_label = field.verbose_name.title()
+                sub_label = ('{}/{}'.format(label, sub_label)
+                             if label else sub_label)
+                sub_value = '{}.{}'.format(value, field.name)
+                yield from get_model_attachment_choices(
+                    sub_label, sub_value, field.related_model,
+                    ancestors=sub_ancestors)
+
+
 class AbstractContactable(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
@@ -90,15 +133,15 @@ class VoxOptions(object):
     Options for Vox extensions
     """
 
-    ALL_OPTIONS = ('notifications',)
+    ALL_OPTIONS = ('notifications', 'attachments')
     # list of notification code names
     notifications = []
+    attachments = {}
 
     def __init__(self, meta):
         """
         Set any options provided, replacing the default values
         """
-        self.notifications = []
         if meta is not None:
             for key, value in meta.__dict__.items():
                 if key in self.ALL_OPTIONS:
@@ -213,6 +256,59 @@ class VoxParam:
         return self.params['codename']
 
 
+class VoxAttach:
+    def __init__(self, attr: str=None,
+                 mime_attr: str='', mime_string: str='', label=''):
+        self.key = ''  # gets set later
+        self.attr = attr
+        if bool(mime_attr) == bool(mime_string):
+            raise RuntimeError(
+                'Either mime_attr must be set or mime_string (not both)')
+        self.mime_attr = mime_attr
+        self.mime_string = mime_string
+        self._label = label
+
+    @property
+    def label(self):
+        return self._label if self._label else self.key
+
+    def get_data(self, model_instance: VoxModel):
+        data = getattr(model_instance, self.attr)
+        if callable(data):
+            data = data()
+        # force bytes
+        if not isinstance(data, bytes):
+            if not isinstance(data, str):
+                data = str(data)
+            data = data.encode()
+        if self.mime_attr:
+            mime = getattr(model_instance, self.mime_attr)
+            if callable(mime):
+                mime = mime()
+        else:
+            mime = self.mime_string
+        return AttachmentData(data, mime)
+
+
+class VoxAttachments:
+    def __init__(self, **kwargs: Mapping[str, VoxAttach]):
+        self.items = {}
+        for key, value in kwargs.items():
+            value.key = key
+            if value.attr is None:
+                value.attr = key
+            self.items[key] = value
+
+    def __iter__(self):
+        yield from self.items.values()
+
+    def __contains__(self, item: str):
+        return self.items.__contains__(item)
+
+    def __getitem__(self, item: str):
+        return self.items.__getitem__(item)
+
+
 class Notification(models.Model):
     """
     Base class for all notifications
@@ -261,6 +357,15 @@ class Notification(models.Model):
         }
         return dict((key, value) for (key, value)
                     in recipient_spec.items() if value is not None)
+
+    def get_parameter_models(self):
+        spec = {
+            'target': self.get_target_model(),
+            'source': self.get_source_model(),
+            'content': self.get_content_model(),
+        }
+        return dict((key, value) for (key, value)
+                    in spec.items() if value is not None)
 
     def get_recipient_instances(self, content, target, source):
         choices = {
@@ -361,8 +466,14 @@ class Notification(models.Model):
                 cache[proto] = _get_backend_message(proto)
             if cache[proto] is not None:
                 backend, template = cache[proto]
+                attachments = []
+                if backend.USE_ATTACHMENTS:
+                    for attachment in template.attachments.all():
+                        data = resolve_parameter(attachment.key, params)
+                        if data is not None:
+                            attachments.append(data)
                 message = backend.build_message(
-                    template.subject, template.content, params)
+                    template.subject, template.content, params, attachments)
                 # We're catching all exceptions here because some people
                 # are bad people and can't subclass properly
                 try:
@@ -450,6 +561,17 @@ class Template(models.Model):
         template = django_vox.backends.base.template_from_string(content)
         context = Context(parameters, autoescape=autoescape)
         return template.render(context)
+
+
+class TemplateAttachment(models.Model):
+
+    class Meta:
+        verbose_name = _('template attachment')
+
+    template = models.ForeignKey(
+        to=Template, on_delete=models.CASCADE,
+        verbose_name=_('template'), related_name='attachments')
+    key = models.CharField(_('key'), max_length=500)
 
 
 class SiteContactManager(models.Manager, AbstractContactable):

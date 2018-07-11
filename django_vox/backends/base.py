@@ -1,3 +1,5 @@
+from typing import List
+
 import django.conf
 import django.core.mail.backends.base
 import django.core.mail.backends.smtp
@@ -15,24 +17,36 @@ def html_format(text: str):
     return escaped.replace('\r\n', '<br/>').replace('\n', '<br/>')
 
 
+class AttachmentData:
+    def __init__(self, data: bytes, mime: str):
+        self.data = data
+        self.mime = mime
+
+
 class Backend:
 
     USE_SUBJECT = False
+    USE_ATTACHMENTS = False
     ESCAPE_HTML = True
     DEPENDS = ()
 
     @classmethod
-    def build_message(cls, _subject: str, body: str, parameters: dict):
+    def build_message(cls, subject: str, body: str, parameters: dict,
+                      attachments: List[AttachmentData]):
         template = template_from_string(body)
         context = Context(parameters, autoescape=cls.ESCAPE_HTML)
         return template.render(context)
 
     @classmethod
     def preview_message(cls, subject: str, body: str, parameters: dict):
-        message = cls.build_message(subject, body, parameters)
+        message = cls.build_message(subject, body, parameters, [])
         if not cls.ESCAPE_HTML:
             message = html_format(message)
         return message
+
+    @classmethod
+    def add_attachment(cls, data: bytes, mime: str):
+        pass  # not supported
 
     @classmethod
     def send_message(cls, contact: django_vox.base.Contact, message: str):

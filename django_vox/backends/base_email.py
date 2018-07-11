@@ -1,4 +1,6 @@
+import base64
 import json
+from typing import List
 
 import django.conf
 import django.core.mail.backends.base
@@ -17,6 +19,7 @@ class MultipartMessage:
         self.subject = ''
         self.text = ''
         self.html = ''
+        self.attachments = []
 
     @classmethod
     def from_dict(cls, obj):
@@ -24,6 +27,11 @@ class MultipartMessage:
         result.subject = obj.get('subject')
         result.text = obj.get('text')
         result.html = obj.get('html')
+        result.attachments = [
+            base.AttachmentData(
+                base64.b64decode(a['data'].encode()),
+                a['mime']) for a in obj.get('attachments', ())
+        ]
         return result
 
     @classmethod
@@ -31,7 +39,16 @@ class MultipartMessage:
         return cls.from_dict(json.loads(string))
 
     def to_dict(self):
-        return {'subject': self.subject, 'text': self.text, 'html': self.html}
+        result = {
+            'subject': self.subject,
+            'text': self.text,
+            'html': self.html,
+        }
+        if self.attachments:
+            result['attachments'] = [
+                {'data': base64.b64encode(a.data).decode(), 'mime': a.mime}
+                for a in self.attachments]
+        return result
 
     def __str__(self):
         return json.dumps(self.to_dict())
@@ -46,7 +63,16 @@ class MultipartMessage:
         elif self.html:
             email.body = self.html
             email.content_subtype = 'html'
+        for attachment in self.attachments:
+            # workaround for django 1.10 problem
+            data, mime = attachment.data, attachment.mime
+            if mime.startswith('text/'):
+                data = data.decode()
+            email.attach(content=data, mimetype=mime)
         return email
+
+    def attach(self, data: base.AttachmentData):
+        self.attachments.append(data)
 
 
 class Backend(base.Backend):
@@ -55,6 +81,7 @@ class Backend(base.Backend):
     PROTOCOL = 'email'
     VERBOSE_NAME = _('Email (Basic)')
     USE_SUBJECT = True
+    USE_ATTACHMENTS = True
 
     @classmethod
     def build_multipart(cls, subject: str, body: str,
@@ -62,8 +89,12 @@ class Backend(base.Backend):
         raise NotImplementedError()
 
     @classmethod
-    def build_message(cls, subject: str, body: str, parameters: dict):
-        return str(cls.build_multipart(subject, body, parameters))
+    def build_message(cls, subject: str, body: str, parameters: dict,
+                      attachments: List[base.AttachmentData]):
+        mpm = cls.build_multipart(subject, body, parameters)
+        for attachment in attachments:
+            mpm.attach(attachment)
+        return str(mpm)
 
     @classmethod
     def preview_message(cls, subject: str, body: str, parameters: dict):

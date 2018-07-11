@@ -32,7 +32,8 @@ class Backend(base.Backend):
         return data
 
     @classmethod
-    def build_message(cls, subject: str, body: str, parameters: dict):
+    def build_message(cls, subject: str, body: str, parameters: dict,
+                      attachments):
         data = cls.parse_message(body)
         if cls.USE_SUBJECT:
             subject_html = '<h1>{}</h1>\n'.format(subject)
@@ -50,7 +51,7 @@ class Backend(base.Backend):
 
     @classmethod
     def preview_message(cls, subject: str, body: str, parameters: dict):
-        return cls.build_message(subject, body, parameters)
+        return cls.build_message(subject, body, parameters, [])
 
     @classmethod
     def extract_model(cls, message):

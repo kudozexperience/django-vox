@@ -54,7 +54,7 @@ class TestTwilioBackend(TestCase):
     @classmethod
     def test_build_message(cls):
         backend = django_vox.backends.twilio.Backend()
-        message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
+        message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
@@ -65,7 +65,8 @@ class TestTwilioBackend(TestCase):
 
     def test_send_message(self):
         backend = django_vox.backends.twilio.Backend()
-        message = backend.build_message(self.SUBJECT, self.TEXT, self.PARAMS)
+        message = backend.build_message(
+            self.SUBJECT, self.TEXT, self.PARAMS, [])
         contact = base.Contact('George', 'sms', '+123')
         with patch('twilio.rest.Client'):
             with self.assertRaises(django.conf.ImproperlyConfigured):
@@ -114,7 +115,8 @@ class TestPostmarkBackend(TestCase):
     @classmethod
     def test_build_message(cls):
         backend = django_vox.backends.postmark_email.Backend()
-        message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
+        message = backend.build_message(
+            cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
@@ -125,8 +127,10 @@ class TestPostmarkBackend(TestCase):
 
     def test_send_message(self):
         backend = django_vox.backends.postmark_email.Backend()
-        bad_message = backend.build_message('', self.TEXT, self.PARAMS)
-        message = backend.build_message(self.SUBJECT, self.TEXT, self.PARAMS)
+        bad_message = backend.build_message(
+            '', self.TEXT, self.PARAMS, [])
+        message = backend.build_message(
+            self.SUBJECT, self.TEXT, self.PARAMS, [])
         contact = base.Contact('George', 'email', 'george@example.org')
         with patch('requests.post', side_effect=mocked_requests_post):
             with self.assertRaises(django.conf.ImproperlyConfigured):
@@ -165,7 +169,7 @@ class TestJsonWebhookBackend(TestCase):
     @classmethod
     def test_build_message(cls):
         backend = django_vox.backends.json_webhook.Backend()
-        message = backend.build_message('', cls.TEXT, cls.PARAMS)
+        message = backend.build_message('', cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
@@ -176,7 +180,7 @@ class TestJsonWebhookBackend(TestCase):
 
     def test_send_message(self):
         backend = django_vox.backends.json_webhook.Backend()
-        message = backend.build_message('', self.TEXT, self.PARAMS)
+        message = backend.build_message('', self.TEXT, self.PARAMS, [])
         bad_contact = base.Contact('Bad', 'json-webhook',
                                    'https://not.example')
         contact = base.Contact('George', 'json-webhook',
@@ -214,7 +218,7 @@ class TestTemplateEmailBackend(TestCase):
     @classmethod
     def test_build_message(cls):
         backend = django_vox.backends.template_email.Backend()
-        message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
+        message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
         obj = json.loads(message)
         assert cls.MESSAGE == obj
 

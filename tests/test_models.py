@@ -98,6 +98,9 @@ class DemoTests(TestCase):
         site_mail = mail_by_subject['Hi Subscriber']
         assert len(site_mail.alternatives) == 1
         soup = BeautifulSoup(site_mail.alternatives[0][0], 'html.parser')
+        assert len(site_mail.attachments) == 1
+        assert site_mail.attachments[0][2] == 'text/vcard'
+        assert 'FN:Author' in site_mail.attachments[0][1]
         anchors = soup.find_all('a')
         assert len(anchors) == 1
         url = anchors[0].get('href')
