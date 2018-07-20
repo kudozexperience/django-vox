@@ -131,10 +131,12 @@
 
     function setup(variables) {
         // show subject based on backends
-        var recipientSelects = django.jQuery('.field-recipient select')
+        var recipientSelects = django.jQuery(
+            '.field-recipient select, .grp-row.recipient select')
         recipientSelects.on('change', function() {
             selectRecipient(this, variables);});
-        var backendSelects = django.jQuery('.field-backend select');
+        var backendSelects = django.jQuery(
+            '.field-backend select, .grp-row.backend select');
         backendSelects.each(function() {selectBackend(this, variables);});
         backendSelects.on('change', function() {selectBackend(this, variables);});
     }
@@ -143,17 +145,20 @@
         var opt = elem.options[elem.selectedIndex];
         var use_subject = opt.dataset.subject == 'true';
         var use_attachment = opt.dataset.attachment == 'true';
-        parent = elem.parentNode.parentNode.parentNode;
+        var fieldset = $(elem).closest('fieldset')
         // update subject
-        subject_div = parent.getElementsByClassName('field-subject');
-        django.jQuery(subject_div).toggle(use_subject);
+        var subject_div = django.jQuery(
+            '.field-subject, .grp-row.subject');
+        subject_div.toggle(use_subject);
         // update attachments
-        attachment_div = parent.getElementsByClassName('field-attachments');
-        django.jQuery(attachment_div).toggle(use_attachment);
+        var attachment_div = django.jQuery(
+            '.field-attachments, .grp-row.attachments');
+        attachment_div.toggle(use_attachment);
         // update markitup
-        jp = django.jQuery(parent);
-        var recipient = jp.find('.field-recipient select').val();
-        var textarea = jp.find('.field-content textarea');
+        var recipient = fieldset.find(
+            '.field-recipient select, .grp-row.recipient select').val();
+        var textarea = fieldset.find(
+            '.field-content textarea, .grp-row.content textarea');
         textarea.markItUpRemove();
         if (elem.value in markItUpSettings) {
             textarea.markItUp(getMarkItUpSettings(
@@ -162,10 +167,11 @@
     }
 
     function selectRecipient(elem, variables) {
-        parent = elem.parentNode.parentNode.parentNode;
-        jp = django.jQuery(parent);
-        var backend = jp.find('.field-backend select').val()
-        var textarea = jp.find('.field-content textarea');
+        var fieldset = $(elem).closest('fieldset')
+        var backend = fieldset.find(
+            '.field-backend select, .grp-row.backend select').val()
+        var textarea = fieldset.find(
+            '.field-content textarea, .grp-row.content textarea');
         textarea.markItUpRemove();
         if (backend in markItUpSettings) {
             textarea.markItUp(getMarkItUpSettings(
