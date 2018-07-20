@@ -16,6 +16,13 @@ from django_vox.backends.base import AttachmentData
 from . import base, registry
 
 
+def get_model_from_relation(field):
+    # code copied from django's admin
+    if not hasattr(field, 'get_path_info'):
+        raise RuntimeError('Field is not a relation')
+    return field.get_path_info()[-1].to_opts.model
+
+
 def resolve_parameter(key, parameters):
     remainder, _, last = key.rpartition('.')
     parts = remainder.split('.')
@@ -84,15 +91,15 @@ def get_model_variables(label, value, cls, ancestors=set()):
     skip_relations = len(ancestors) > 2
     children = []
     for field in cls._meta.fields:
-        sub_label = field.verbose_name.title(),
+        sub_label = field.verbose_name.title()
         sub_value = '{}.{}'.format(value, field.name)
         if field.is_relation:
+            model = get_model_from_relation(field)
             # prevent super long/circular references
-            if skip_relations or field.related_model in ancestors:
+            if skip_relations or model in ancestors:
                 continue
             children.append(get_model_variables(
-                sub_label, sub_value, field.related_model,
-                ancestors=sub_ancestors))
+                sub_label, sub_value, model, ancestors=sub_ancestors))
         else:
             attrs.append({'label': sub_label, 'value': sub_value})
     return {'label': label, 'value': value, 'attrs': attrs,
@@ -110,14 +117,16 @@ def get_model_attachment_choices(label, value, cls, ancestors=set()):
             yield (value + '.' + field.key), label
     if hasattr(cls, '_meta') and len(sub_ancestors) < 4:
         for field in cls._meta.fields:
-            if field.is_relation and field.related_model not in ancestors:
-                sub_label = field.verbose_name.title()
-                sub_label = ('{}/{}'.format(label, sub_label)
-                             if label else sub_label)
-                sub_value = '{}.{}'.format(value, field.name)
-                yield from get_model_attachment_choices(
-                    sub_label, sub_value, field.related_model,
-                    ancestors=sub_ancestors)
+            if field.is_relation:
+                model = get_model_from_relation(field)
+                if model not in ancestors:
+                    sub_label = field.verbose_name.title()
+                    sub_label = ('{}/{}'.format(label, sub_label)
+                                 if label else sub_label)
+                    sub_value = '{}.{}'.format(value, field.name)
+                    yield from get_model_attachment_choices(
+                        sub_label, sub_value, field.related_model,
+                        ancestors=sub_ancestors)
 
 
 class AbstractContactable(metaclass=abc.ABCMeta):
