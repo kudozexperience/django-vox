@@ -94,21 +94,25 @@ class TemplateForm(forms.ModelForm):
             self.initial['attachments'] = [
                 a.key for a in self.instance.attachments.all()]
 
-    def clean_attachments(self):
+    def save(self, commit=True):
         # data will be a set of the added items
-        data = set(self.cleaned_data['attachments'])
-        # we need to sync it with the saved items
-        query = ~Q(key__in=data) & Q(template=self.instance)
-        models.TemplateAttachment.objects.filter(query).delete()
-        added_attachments = []
-        for attachment in self.instance.attachments.all():
-            if attachment.key in data:
-                data.remove(attachment.key)
-        for key in data:
-            added_attachments.append(models.TemplateAttachment(
-                template=self.instance, key=key))
-        if added_attachments:
-            models.TemplateAttachment.objects.bulk_create(added_attachments)
+        instance = super().save(commit=commit)
+        if commit:
+            data = set(self.cleaned_data['attachments'])
+            # we need to sync it with the saved items
+            query = ~Q(key__in=data) & Q(template=instance)
+            models.TemplateAttachment.objects.filter(query).delete()
+            added_attachments = []
+            for attachment in instance.attachments.all():
+                if attachment.key in data:
+                    data.remove(attachment.key)
+            for key in data:
+                added_attachments.append(models.TemplateAttachment(
+                    template=instance, key=key))
+            if added_attachments:
+                models.TemplateAttachment.objects.bulk_create(
+                    added_attachments)
+        return instance
 
     def clean(self):
         data = self.cleaned_data

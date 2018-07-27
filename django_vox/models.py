@@ -115,7 +115,7 @@ def get_model_attachment_choices(label, value, cls, ancestors=set()):
             label = ('{}/{}'.format(label, field.label)
                      if label else field.label)
             yield (value + '.' + field.key), label
-    if hasattr(cls, '_meta') and len(sub_ancestors) < 4:
+    if hasattr(cls, '_meta') and len(sub_ancestors) < 3:
         for field in cls._meta.fields:
             if field.is_relation:
                 model = get_model_from_relation(field)
