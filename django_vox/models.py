@@ -428,6 +428,13 @@ class Notification(models.Model):
                     for key, channel in registry.channels[
                         model.__class__].prefix(recip_key).bind(model).items())
 
+    def get_recipient_choices(self):
+        recipient_models = self.get_recipient_models()
+        for recipient_key, model in recipient_models.items():
+            channel_data = registry.channels[model].prefix(recipient_key)
+            for key, channel in channel_data.items():
+                yield key, channel.name
+
     def issue(self, content,
               target: VoxModelN=None,
               source: VoxModelN=None):
@@ -588,6 +595,14 @@ class Template(models.Model):
         template = django_vox.backends.base.template_from_string(content)
         context = Context(parameters, autoescape=autoescape)
         return template.render(context)
+
+    def __str__(self):
+        choices = {}
+        if self.notification:
+            choices = dict(self.notification.get_recipient_choices())
+        recipient = choices.get(self.recipient, self.recipient)
+        backend = registry.backends.by_id(self.backend)
+        return '{} for {}'.format(backend.VERBOSE_NAME, recipient)
 
 
 class TemplateAttachment(models.Model):

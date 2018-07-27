@@ -81,13 +81,13 @@ class TemplateForm(forms.ModelForm):
 
     class Meta:
         model = models.Template
-        fields = ['notification', 'backend', 'subject', 'content',
-                  'attachments', 'recipient', 'enabled']
+        fields = ['notification', 'backend', 'recipient', 'subject',
+                  'content', 'attachments', 'enabled']
 
     def __init__(self, notification=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['recipient'].choices = \
-            self.get_recipient_choices(notification)
+            notification.get_recipient_choices()
         self.fields['attachments'].choices = \
             self.get_attachment_choices(notification)
         if self.instance:
@@ -121,14 +121,6 @@ class TemplateForm(forms.ModelForm):
             notification.preview(data['backend'], data['content'])
         except Exception as exc:
             raise ValidationError(str(exc))
-
-    @staticmethod
-    def get_recipient_choices(notification):
-        recipient_models = notification.get_recipient_models()
-        for recipient_key, model in recipient_models.items():
-            channel_data = registry.channels[model].prefix(recipient_key)
-            for key, channel in channel_data.items():
-                yield key, channel.name
 
     @staticmethod
     def get_attachment_choices(notification):
