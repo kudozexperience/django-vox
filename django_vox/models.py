@@ -696,6 +696,7 @@ class FailedMessage(models.Model):
     def resend(self):
         # find backend
         backend = django_vox.registry.backends.by_id(self.backend)
-        contact = base.Contact(self.contact_name, backend.PROTOCOL, self.address)
+        contact = base.Contact(
+            self.contact_name, backend.PROTOCOL, self.address)
         backend.send_message(contact, self.message)
         self.delete()

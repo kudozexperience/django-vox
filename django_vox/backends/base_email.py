@@ -9,6 +9,7 @@ import django.template
 import django.utils.html
 from django.core import mail
 from django.utils.translation import ugettext_lazy as _
+from django.utils.text import re_newlines
 
 from . import base
 
@@ -55,7 +56,7 @@ class MultipartMessage:
 
     def to_mail(self) -> mail.EmailMultiAlternatives:
         email = mail.EmailMultiAlternatives()
-        email.subject = self.subject
+        email.subject = re_newlines.sub(' ', self.subject)
         if self.text:
             email.body = self.text
             if self.html:
