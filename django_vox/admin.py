@@ -335,9 +335,15 @@ class SiteContactAdmin(admin.ModelAdmin):
     list_display = ('name', 'address', 'protocol')
 
 
+def resend(_admin, _request, queryset):
+    for failed in queryset.all():
+        failed.resend()
+
+
 class FailedMessageAdmin(admin.ModelAdmin):
     list_display = ('backend', 'address', 'created_at')
     list_filter = ('backend', 'address')
+    actions = (resend,)
 
 
 admin.site.register(models.SiteContact, SiteContactAdmin)
