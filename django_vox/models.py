@@ -623,7 +623,7 @@ class SiteContactManager(models.Manager, AbstractContactable):
             self, notification: 'Notification') -> List[base.Contact]:
         wlq = Q(enable_filter='whitelist',
                 sitecontactsetting__notification=notification,
-                sitecontactsetting__enabled=False)
+                sitecontactsetting__enabled=True)
         blq = Q(enable_filter='blacklist') & ~Q(
                 sitecontactsetting__notification=notification,
                 sitecontactsetting__enabled=False)
