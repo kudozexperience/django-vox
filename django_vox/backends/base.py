@@ -29,6 +29,7 @@ class Backend:
     USE_ATTACHMENTS = False
     ESCAPE_HTML = True
     DEPENDS = ()
+    EDITOR_TYPE = 'basic'
 
     @classmethod
     def build_message(cls, subject: str, body: str, parameters: dict,

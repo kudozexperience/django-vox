@@ -14,13 +14,13 @@ class MakeNotificationTests(TestCase):
     @staticmethod
     def test_make_notifications():
         cmd = make_notifications.Command()
-        assert Notification.objects.all().count() == 0
+        assert 0 == Notification.objects.all().count()
         # dry run
         cmd.handle(dry_run=True)
-        assert Notification.objects.all().count() == 0
+        assert 0 == Notification.objects.all().count()
         # test basic notification making
         cmd.handle(verbose=True)
-        assert Notification.objects.all().count() == 3
+        assert 3 == Notification.objects.all().count()
         # gather some general things
         article_ct = ContentType.objects.get_for_model(
             tests.models.Article)
@@ -30,7 +30,7 @@ class MakeNotificationTests(TestCase):
         # make a notification to delete
         Notification.objects.create(
             codename='foo',
-            content_type=article_ct,
+            object_type=article_ct,
             from_code=True,
         )
         assert Notification.objects.all().count() == 4
@@ -39,7 +39,7 @@ class MakeNotificationTests(TestCase):
         # here's one that shouldn't get deleted
         Notification.objects.create(
             codename='foo',
-            content_type=article_ct,
+            object_type=article_ct,
             from_code=False,
         )
         assert Notification.objects.all().count() == 4
@@ -47,13 +47,13 @@ class MakeNotificationTests(TestCase):
         assert Notification.objects.all().count() == 4
         # now we'll change one and it should get reverted
         acn = Notification.objects.get_by_natural_key(
-            'tests', 'article', 'created')
-        acn.source_model = user_ct
+            'tests', 'article', 'create')
+        acn.object_model = user_ct
         acn.save()
         cmd.handle(verbose=True)
         acn = Notification.objects.get_by_natural_key(
-            'tests', 'article', 'created')
-        assert acn.source_model is None
+            'tests', 'article', 'create')
+        assert acn.actor_type is not None
 
     @staticmethod
     def test_bad_appconfig():

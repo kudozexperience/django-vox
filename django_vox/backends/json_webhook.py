@@ -18,6 +18,7 @@ class Backend(base.Backend):
 
     ID = 'json-webhook'
     PROTOCOL = 'json-webhook'
+    EDITOR_TYPE = 'basic'
     VERBOSE_NAME = _('Generic Webhook (JSON)')
 
     @classmethod

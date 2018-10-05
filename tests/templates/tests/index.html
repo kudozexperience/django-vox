@@ -1,8 +1,8 @@
-<h1>My lovely demo blog</h1>
+<h1>{% if author %}Articles by {{ author.name }}{% else %}My lovely demo blog{% endif %}</h1>
 {% if articles %}
     <ul>
     {% for article in articles %}
-        <li><a href="{% url 'tests:detail' article.id %}">{{ article.title }}</a></li>
+        <li><a href="{% url 'tests:article' article.id %}">{{ article.title }}</a></li>
     {% endfor %}
     </ul>
 {% else %}

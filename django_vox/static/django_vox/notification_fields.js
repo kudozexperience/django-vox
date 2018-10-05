@@ -51,16 +51,34 @@
         ]
     };
 
+    var markItUpSettingsHtmlLight = {
+        onShiftEnter:  	{keepDefault:false, replaceWith:'<br />\n'},
+        onCtrlEnter:  	{keepDefault:false, openWith:'\n<p>', closeWith:'</p>'},
+        onTab:    		{keepDefault:false, replaceWith:'    '},
+        markupSet:  [
+            {name:'Bold', key:'B', className:'button-b', openWith:'<strong>', closeWith:'</strong>' },
+            {name:'Italic', key:'I', className: 'button-i', openWith:'<em>', closeWith:'</em>'  },
+            {name:'Link', key:'L', className: 'button-a',
+                openWith:'<a href="[![Link:!:http://]!]"(!( title="[![Title]!]")!)>',
+                closeWith:'</a>', placeHolder:'Your text to link...' },
+        ]
+    };
+
     var markItUpSettings = {
-        'email': markItUpSettingsHtml,
-        'email-html': markItUpSettingsHtml,
-        'email-md': markItUpSettingsMarkdown,
-        'postmark-template': markItUpSettingsBasic,
-        'json-webhook': markItUpSettingsBasic,
-        'twilio': markItUpSettingsBasic,
-        'twitter': markItUpSettingsBasic,
-        'slack-webhook': markItUpSettingsBasic,
-        'xmpp': markItUpSettingsBasic,
+        'html-light': markItUpSettingsHtmlLight,
+        'html': markItUpSettingsHtml,
+        'markdown': markItUpSettingsMarkdown,
+        'basic': markItUpSettingsBasic,
+
+//        'email': markItUpSettingsHtml,
+//        'email-html': markItUpSettingsHtml,
+//        'email-md': markItUpSettingsMarkdown,
+//        'postmark-template': markItUpSettingsBasic,
+//        'json-webhook': markItUpSettingsBasic,
+//        'twilio': markItUpSettingsBasic,
+//        'twitter': markItUpSettingsBasic,
+//        'slack-webhook': markItUpSettingsBasic,
+//        'xmpp': markItUpSettingsBasic,
     };
 
     function parseVariables(recipient, variables) {
@@ -101,8 +119,8 @@
     }
 
 
-    function getMarkItUpSettings(backend, recipient, variables) {
-        var settings = Object.assign({}, markItUpSettings[backend]);
+    function getMarkItUpSettings(backend, editor, recipient, variables) {
+        var settings = Object.assign({}, markItUpSettings[editor]);
         settings.previewParserPath = '../preview/' + backend + '/';
         settings.previewParserVar = 'body';
         var variableList = parseVariables(recipient, variables);
@@ -143,39 +161,44 @@
 
     function selectBackend(elem, variables) {
         var opt = elem.options[elem.selectedIndex];
-        var use_subject = opt.dataset.subject == 'true';
-        var use_attachment = opt.dataset.attachment == 'true';
+        var backend = elem.value;
+        var editor = opt.dataset.editor;
+        var useSubject = opt.dataset.subject == 'true';
+        var useAttachment = opt.dataset.attachment == 'true';
         var fieldset = $(elem).closest('fieldset')
         // update subject
         var subject_div = django.jQuery(
             '.field-subject, .grp-row.subject');
-        subject_div.toggle(use_subject);
+        subject_div.toggle(useSubject);
         // update attachments
         var attachment_div = django.jQuery(
             '.field-attachments, .grp-row.attachments');
-        attachment_div.toggle(use_attachment);
+        attachment_div.toggle(useAttachment);
         // update markitup
         var recipient = fieldset.find(
             '.field-recipient select, .grp-row.recipient select').val();
         var textarea = fieldset.find(
             '.field-content textarea, .grp-row.content textarea');
         textarea.markItUpRemove();
-        if (elem.value in markItUpSettings) {
+        if (editor in markItUpSettings) {
             textarea.markItUp(getMarkItUpSettings(
-                elem.value, recipient, variables));
+                backend, editor, recipient, variables));
         }
     }
 
     function selectRecipient(elem, variables) {
         var fieldset = $(elem).closest('fieldset')
-        var backend = fieldset.find(
-            '.field-backend select, .grp-row.backend select').val()
+        var backendSelect = fieldset.find(
+            '.field-backend select, .grp-row.backend select')[0]
+        var opt = backendSelect.selectedOptions[0]
+        var backend = opt.value;
+        var editor = opt.dataset.editor;
         var textarea = fieldset.find(
             '.field-content textarea, .grp-row.content textarea');
         textarea.markItUpRemove();
-        if (backend in markItUpSettings) {
+        if (editor in markItUpSettings) {
             textarea.markItUp(getMarkItUpSettings(
-                backend, elem.value, variables));
+                backend, editor, elem.value, variables));
         }
     }
 

@@ -15,7 +15,7 @@ class FailmailTests(TestCase):
 
     def test_email_failure(self):
         with self.settings(EMAIL_BACKEND='Can\'t import this!'):
-            assert len(mail.outbox) == 0
+            assert 0 == len(mail.outbox)
             author = models.User.objects.get(email='author@example.org')
             models.Article.objects.create(
                 author=author,
@@ -23,16 +23,16 @@ class FailmailTests(TestCase):
                 content='Whoever thought we\'d come this far',
             )
             # this should create 3 failed messages
-            assert len(mail.outbox) == 0
+            assert 0 == len(mail.outbox)
             messages = django_vox.models.FailedMessage.objects.order_by(
                 'created_at')
-            assert len(messages) == 3
+            assert 3 == len(messages)
             # ends with date
             assert str(messages[0]).startswith('admin@example.org @ ')
 
     def test_email_fail_resend(self):
         with self.settings(EMAIL_BACKEND='Can\'t import this!'):
-            assert len(mail.outbox) == 0
+            assert 0 == len(mail.outbox)
             author = models.User.objects.get(email='author@example.org')
             models.Article.objects.create(
                 author=author,
@@ -41,7 +41,7 @@ class FailmailTests(TestCase):
             # this should create 3 failed messages
             messages = django_vox.models.FailedMessage.objects.order_by(
                 'created_at')
-            assert len(messages) == 3
+            assert 3 == len(messages)
             assert str(messages[0]).startswith('admin@example.org @ ')
             # try resending the first one (to admin)
             with self.assertRaises(Exception):
@@ -50,7 +50,7 @@ class FailmailTests(TestCase):
         messages = django_vox.models.FailedMessage.objects.order_by(
             'created_at')
         messages[0].resend()
-        assert len(mail.outbox) == 1
+        assert 1 == len(mail.outbox)
 
 
 class DemoTests(TestCase):

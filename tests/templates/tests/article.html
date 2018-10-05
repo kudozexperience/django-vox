@@ -1,10 +1,15 @@
 <h1>{{ article.title }}</h1>
-<p>By: {{ article.author }}</p>
+<p>By:
+  <a href="{% url 'tests:user' article.author.id %}">{{ article.author }}</a>
+</p>
 <p>{{ article.content }}</p>
 {% if comments %}
     <h2>Comments</h2>
     {% for comment in comments %}
-        <div><a href="mailto:{{ comment.poster.email }}">{{ comment.poster.name }}</a></div>
+        <div>
+          <a href="{% url 'tests:comment' article.id comment.id %}"
+             id="comment-{{ comment.id }}">#{{ comment.id }}</a>
+          <a href="mailto:{{ comment.poster.email }}">{{ comment.poster.name }}</a></div>
         <p>{{ comment.content }}</p>
     {% endfor %}
     </ul>
@@ -12,7 +17,7 @@
 {% endif %}
 {% if token %}
     <h2>Add a comment</h2>
-    <form action="{% url 'tests:comment' article.id %}" method="post">
+    <form action="{% url 'tests:post-comment' article.id %}" method="post">
         {% csrf_token %}
         <input type="hidden" name="token" value="{{ token }}"/>
         <label for="content">Content</label><input type="text" id="content" name="content"/>

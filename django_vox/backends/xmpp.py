@@ -16,6 +16,7 @@ class Backend(base.Backend):
 
     ID = 'xmpp'
     PROTOCOL = 'xmpp'
+    EDITOR_TYPE = 'basic'
     ESCAPE_HTML = False
     VERBOSE_NAME = _('XMPP')
     DEPENDS = ('sleekxmpp',)

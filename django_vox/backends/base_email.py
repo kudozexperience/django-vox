@@ -8,8 +8,8 @@ import django.core.mail.backends.smtp
 import django.template
 import django.utils.html
 from django.core import mail
-from django.utils.translation import ugettext_lazy as _
 from django.utils.text import re_newlines
+from django.utils.translation import ugettext_lazy as _
 
 from . import base
 

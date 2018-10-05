@@ -37,28 +37,28 @@ def make_notifications(app_config, verbosity=1, dry_run=False,
         return
 
     # This will hold the notifications we're looking for as
-    # (content_type, codename)
+    # (object_type, codename)
     searched_notifications = []
     # The code names and content types that should exist.
-    content_types = set()
+    object_types = set()
     for cls in app_config.get_models():
         meta = getattr(cls, '_vox_meta', None)
         if meta is not None:
             # Force looking up the content types in the current database
             # before creating foreign keys to them.
-            content_type = contenttype_class.objects.db_manager(
+            object_type = contenttype_class.objects.db_manager(
                 using).get_for_model(cls)
-            content_types.add(content_type)
+            object_types.add(object_type)
             for params in meta.notifications:
-                searched_notifications.append((content_type, params))
+                searched_notifications.append((object_type, params))
 
-    # Find all the Notification that have a content_type for a model we're
+    # Find all the Notification that have a object_type for a model we're
     # looking for.  We don't need to check for code names since we already have
     # a list of the ones we're going to create.
     all_notifications = {}
     for item in notification_class.objects.using(using).filter(
-            content_type__in=content_types):
-        all_notifications[(item.content_type_id, item.codename)] = item
+            object_type__in=object_types):
+        all_notifications[(item.object_type_id, item.codename)] = item
 
     new_notifications = []
     for ct, params in searched_notifications:

@@ -1,0 +1,8 @@
+<h1>Posts by {{ subscriber.title }}</h1>
+{% for comment in comments %}
+    <div>
+      <a href="{% url 'tests:comment' article.id comment.id %}"
+         id="comment-{{ comment.id }}">#{{ comment.id }}</a>
+      <a href="mailto:{{ comment.poster.email }}">{{ comment.poster.name }}</a></div>
+    <p>{{ comment.content }}</p>
+{% endfor %}

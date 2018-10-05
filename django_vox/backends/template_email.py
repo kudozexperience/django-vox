@@ -9,6 +9,7 @@ __all__ = ('Backend',)
 class Backend(base_email.Backend):
 
     ID = 'email'
+    EDITOR_TYPE = 'html'
     VERBOSE_NAME = _('Email (Template-based)')
 
     @classmethod

@@ -12,8 +12,9 @@ Most of these backends require extra dependencies that are not required
 for the base package. The specific extras are listed in the documentation,
 and you can mix/match them. For example::
 
-    # adds dependencies for html email backend and the twilio backend
-    pip3 install django-vox[html,twilio]
+    # adds dependencies for markdown email, xmpp, twitter and the twilio
+    # backends
+    pip3 install django-vox[xmpp,markdown,twitter,twilio]
 
 In order to add or remove backends, you need to set the
 ``DJANGO_VOX_BACKENDS`` setting in your projects ``settings.py``
@@ -22,15 +23,32 @@ in-use/enabled. If not set, the default is (assuming you have the
 required dependencies)::
 
     DJANGO_VOX_BACKENDS = (
-        'django_vox.backends.EmailBackend',
-        'django_vox.backends.MarkdownEmailBackend',
-        'django_vox.backends.HtmlEmailBackend',
-        'django_vox.backends.TwilioBackend',
-        'django_vox.backends.SlackWebhookBackend',
+        # disabled by default
+        # 'django_vox.backends.activity.Backend',
+        'django_vox.backends.html_email.Backend',
+        'django_vox.backends.markdown_email.Backend',
+        'django_vox.backends.postmark_email.Backend',
+        'django_vox.backends.template_email.Backend',
+        'django_vox.backends.twilio.Backend',
+        'django_vox.backends.twitter.Backend',
+        'django_vox.backends.slack.Backend',
+        'django_vox.backends.json_webhook.Backend',
+        'django_vox.backends.xmpp.Backend',
     )
 
 Django-vox provides a few built-in backends. Here's how to
 set them up and use them.
+
+Activity Backend
+----------------
+
+Protocol
+  ``activity``
+Class
+    ``django_vox.backends.activity.Backend``
+
+This is the backend for Activity Streams support. Setup is covered on
+the :doc:`activities` page.
 
 Email Backends
 --------------

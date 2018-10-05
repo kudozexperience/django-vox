@@ -111,10 +111,6 @@ some specific alternatives.
 
 * `django-heythere <http://pypi.python.org/pypi/django-heythere>`_
 
-  - Upsides:
-
-    + Provides in-app notifications
-
   - Downsides:
 
     + Notification types and templates are stored in ``settings.py``

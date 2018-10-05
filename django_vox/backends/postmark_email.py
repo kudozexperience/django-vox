@@ -17,6 +17,7 @@ class Backend(json_webhook.Backend):
 
     ID = 'postmark-template'
     PROTOCOL = 'email'
+    EDITOR_TYPE = 'html'
     VERBOSE_NAME = _('Email (Postmark Templates)')
     ENDPOINT = 'https://api.postmarkapp.com/email/withTemplate'
     USE_SUBJECT = True

@@ -1,9 +1,12 @@
 import abc
 import collections
+import inspect
 import random
 from typing import Any, List, Mapping, TypeVar, cast
 
+import aspy
 from django.apps import apps
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import NOT_PROVIDED, Q
@@ -14,6 +17,23 @@ import django_vox.backends
 from django_vox.backends.base import AttachmentData
 
 from . import base, registry
+
+__all__ = ('find_activity_type', 'get_model_from_relation',
+           'resolve_parameter', 'make_model_preview', 'PreviewParameters',
+           'get_model_variables', 'get_model_attachment_choices',
+           'AbstractContactable', 'VoxOptions', 'VoxModelBase', 'VoxModel',
+           'VoxNotification', 'VoxNotifications', 'VoxAttach',
+           'VoxAttachments', 'NotificationManager', 'Notification',
+           'Template', 'TemplateAttachment', 'SiteContactManager',
+           'SiteContact', 'SiteContactSetting', 'FailedMessage', 'InboxItem')
+
+
+def find_activity_type(url):
+    for item in aspy.__dict__.values():
+        if inspect.isclass(item):
+            if issubclass(item, (aspy.Object, aspy.Link)):
+                if item.get_type() == url:
+                    return item
 
 
 def get_model_from_relation(field):
@@ -44,12 +64,12 @@ def resolve_parameter(key, parameters):
     return None
 
 
-def make_model_preview(content_type):
-    obj = content_type.objects.first()
+def make_model_preview(object_type):
+    obj = object_type.objects.first()
     if obj is not None:
         return obj
-    obj = content_type()
-    for field in content_type._meta.fields:
+    obj = object_type()
+    for field in object_type._meta.fields:
         value = None
         if field.default != NOT_PROVIDED:
             value = field.default
@@ -67,17 +87,21 @@ def make_model_preview(content_type):
 
 class PreviewParameters:
 
-    def __init__(self, content_type, source_model, target_model):
-        self.target = (make_model_preview(target_model)
-                       if target_model else {})
-        self.source = (make_model_preview(source_model)
-                       if source_model else {})
+    def __init__(self, object_type, actor_type, target_type):
+        self.target = (make_model_preview(target_type)
+                       if target_type else {})
+        self.actor = (make_model_preview(actor_type)
+                      if actor_type else {})
         self.contact = base.Contact(
             'Contact Name', 'email', 'contact@example.org')
-        self.content = make_model_preview(content_type)
+        self.object = make_model_preview(object_type)
+        # for backwards compatibility
+        self.source = self.actor
+        self.content = self.object
 
     def __contains__(self, item):
-        return item in ('contact', 'target', 'source', 'content')
+        return item in ('contact', 'target', 'actor', 'object',
+                        'content', 'source')
 
     def __getitem__(self, attr):
         return getattr(self, attr)
@@ -189,24 +213,38 @@ class VoxModel(models.Model, metaclass=VoxModelBase):
     def get_notification(cls, codename: str) -> 'Notification':
         ct = ContentType.objects.get_for_model(cls)
         return Notification.objects.get(
-            codename=codename, content_type=ct)
+            codename=codename, object_type=ct)
 
     def issue_notification(self, codename: str,
                            target: VoxModelN = None,
-                           source: VoxModelN = None):
+                           actor: VoxModelN = None):
         notification = self.get_notification(codename)
-        notification.issue(self, target, source)
+        notification.issue(self, target, actor)
 
+    def get_activity_object(self, codename, actor, target):
+        """Return an aspy.Object object for the activity.
 
-class NotificationManager(models.Manager):
-    use_in_migrations = True
+        The parameters actor and target may be None.
+        """
+        return self.__activity__()
 
-    def get_by_natural_key(self, app_label, model, codename):
-        return self.get(
-            codename=codename,
-            content_type=ContentType.objects.db_manager(
-                self.db).get_by_natural_key(app_label, model),
-        )
+    def get_actor_address(self):
+        if self.__class__ not in registry.actors:
+            raise RuntimeError(
+                '{} is not a registered actor, use '
+                'django_vox.registry.actors[{}].set_regex(...)'.format(
+                    self, self.__class__))
+        url = registry.actors[self.__class__].reverse(self)
+        return django_vox.base.full_iri(url)
+
+    def __activity__(self):
+        if self.__class__ in registry.actors:
+            # this is safer, and probably faster
+            iri = self.get_actor_address()
+        else:
+            iri = django_vox.base.full_iri(self.get_absolute_url())
+
+        return aspy.Object(name=str(self), id=iri)
 
 
 class VoxNotifications(list):
@@ -222,8 +260,8 @@ class VoxNotifications(list):
 
 class VoxNotification:
     REQUIRED_PARAMS = {'codename', 'description'}
-    OPTIONAL_PARAMS = {'source_model': '', 'target_model': '',
-                       'required': False}
+    OPTIONAL_PARAMS = {'actor_type': '', 'target_type': '',
+                       'activity_type': '', 'required': False}
 
     def __init__(self, description, codename='', **kwargs):
         self.params = {
@@ -244,30 +282,34 @@ class VoxNotification:
         for key in self.params:
             value = getattr(notification, key)
             my_value = self.params[key]
-            if key in ('source_model', 'target_model'):
+            if key in ('actor_type', 'target_type'):
                 if value is None:
                     value = ''
                 else:
                     value = '{}.{}'.format(value.app_label, value.model)
+            if key == 'action_type':
+                value = value.get_type()
             if value != my_value:
                 return False
         return True
 
     def param_value(self, key):
         value = self.params[key]
-        if key in ('source_model', 'target_model'):
+        if key in ('actor_type', 'target_type'):
             if value == '':
                 return None
             model = apps.get_model(value)
             return ContentType.objects.get_for_model(model)
+        if key == 'action_type':
+            return find_activity_type(value)
         return value
 
     def set_params(self, notification):
         for key in self.params:
             setattr(notification, key, self.param_value(key))
 
-    def create(self, content_type):
-        new = Notification(content_type=content_type)
+    def create(self, object_type):
+        new = Notification(object_type=object_type)
         self.set_params(new)
         return new
 
@@ -336,29 +378,46 @@ class VoxAttachments:
         return self.items.__getitem__(item)
 
 
+class NotificationManager(models.Manager):
+    use_in_migrations = True
+
+    def get_by_natural_key(self, app_label, model, codename):
+        return self.get(
+            codename=codename,
+            object_type=ContentType.objects.db_manager(
+                self.db).get_by_natural_key(app_label, model),
+        )
+
+
 class Notification(models.Model):
     """
     Base class for all notifications
     """
 
     codename = models.CharField(_('codename'), max_length=100)
-    content_type = models.ForeignKey(
+    object_type = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE,
         limit_choices_to=registry.channel_type_limit,
-        verbose_name=_('content type'))
+        verbose_name=_('object type'))
     description = models.TextField(_('description'))
-    source_model = models.ForeignKey(
+    actor_type = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE, related_name='+',
         limit_choices_to=registry.channel_type_limit,
-        verbose_name=_('source model'), null=True, blank=True)
-    target_model = models.ForeignKey(
+        verbose_name=_('actor model'), null=True, blank=True)
+    target_type = models.ForeignKey(
         to=ContentType, on_delete=models.CASCADE, related_name='+',
         limit_choices_to=registry.channel_type_limit,
         verbose_name=_('target model'), null=True, blank=True)
+    activity_type = models.CharField(_('activity_type'), max_length=500)
     required = models.BooleanField(
         _('required'), default=False,
         help_text=_('If true, triggering the notification will throw an '
                     'error if there is no available template/contact'))
+    activity_type = models.URLField(
+        _('activity type'), default='', blank=True,
+        help_text=_('Full URL for activity type (i.e. '
+                    'https://www.w3.org/ns/activitystreams#Object)')
+    )
     from_code = models.BooleanField(
         _('from code'), default=False,
         help_text=_('True if the notification is defined in the code and '
@@ -368,61 +427,61 @@ class Notification(models.Model):
 
     def __str__(self):
         return "{} | {} | {}".format(
-            self.content_type.app_label, self.content_type, self.codename)
+            self.object_type.app_label, self.object_type, self.codename)
 
     def natural_key(self):
-        return self.content_type.natural_key() + (self.codename,)
+        return self.object_type.natural_key() + (self.codename,)
 
     natural_key.dependencies = ['contenttypes.contenttype']
 
     def get_recipient_models(self):
         recipient_spec = {
             'si': SiteContact,
-            're': self.get_target_model(),
-            'se': self.get_source_model(),
-            'c': self.get_content_model(),
+            're': self.get_target_type(),
+            'se': self.get_actor_type(),
+            'c': self.get_object_model(),
         }
         return dict((key, value) for (key, value)
                     in recipient_spec.items() if value is not None)
 
     def get_parameter_models(self):
         spec = {
-            'target': self.get_target_model(),
-            'source': self.get_source_model(),
-            'content': self.get_content_model(),
+            'target': self.get_target_type(),
+            'actor': self.get_actor_type(),
+            'object': self.get_object_model(),
         }
         return dict((key, value) for (key, value)
                     in spec.items() if value is not None)
 
-    def get_recipient_instances(self, content, target, source):
+    def get_recipient_instances(self, obj, target, actor):
         choices = {
             'si': SiteContact(),
-            'c': content,
+            'c': obj,
         }
-        if self.target_model and (target is not None):
+        if self.target_type and (target is not None):
             choices['re'] = target
-        elif self.target_model:
+        elif self.target_type:
             raise RuntimeError(
-                'Model specified "target_model" for notification but '
+                'Model specified "target_type" for notification but '
                 'target missing on issue_notification ')
         elif target is not None:
             raise RuntimeError('Recipient added to issue_notification, '
                                'but is not specified in VoxMeta')
-        if self.source_model and (source is not None):
-            choices['se'] = source
-        elif self.source_model:
+        if self.actor_type and (actor is not None):
+            choices['se'] = actor
+        elif self.actor_type:
             raise RuntimeError(
-                'Model specified "source_model" for notification but source '
+                'Model specified "actor_type" for notification but actor '
                 'missing on issue_notification ')
-        elif source is not None:
-            raise RuntimeError('Sender added to issue_notification, but is '
+        elif actor is not None:
+            raise RuntimeError('Actor added to issue_notification, but is '
                                'not specified in VoxMeta')
 
         return dict((key, model) for (key, model)
                     in choices.items() if model is not None)
 
-    def get_recipient_channels(self, content, target, source):
-        instances = self.get_recipient_instances(content, target, source)
+    def get_recipient_channels(self, obj, target, actor):
+        instances = self.get_recipient_instances(obj, target, actor)
         return dict((key, channel)
                     for recip_key, model in instances.items()
                     for key, channel in registry.channels[
@@ -435,28 +494,37 @@ class Notification(models.Model):
             for key, channel in channel_data.items():
                 yield key, channel.name
 
-    def issue(self, content,
+    def issue(self, obj: VoxModel,
               target: VoxModelN=None,
-              source: VoxModelN=None):
+              actor: VoxModelN=None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template
         to send (and has the said notification). Send that template with
         the parameters with the backend.
 
-        :param content: model object that the notification is about
+        :param obj: model object that the notification is about
         :param target: either a user, or None if no logical target
-        :param source: user who initiated the notification
+        :param actor: user who initiated the notification
         :return: None
         """
         # check
-        parameters = {'content': content}
+        parameters = {
+            'content': obj,
+            'object': obj,
+        }
         if target is not None:
             parameters['target'] = target
-        if source is not None:
-            parameters['source'] = source
+        if actor is not None:
+            parameters['actor'] = actor
+            # backwards compatibility
+            parameters['source'] = actor
 
-        channels = self.get_recipient_channels(content, target, source)
+        parameters['activity_object'] = obj.get_activity_object(
+            self.codename, actor, target)
+        parameters['activity_type'] = self.get_activity_type()
+
+        channels = self.get_recipient_channels(obj, target, actor)
         contactable_list = dict((key, channel.contactables())
                                 for (key, channel) in channels.items())
 
@@ -495,6 +563,7 @@ class Notification(models.Model):
             params = generic_params.copy()
             params['contact'] = contact
             params['recipient'] = contactable
+            params['notification'] = self
             proto = contact.protocol
             if proto not in cache:
                 cache[proto] = _get_backend_message(proto)
@@ -524,32 +593,35 @@ class Notification(models.Model):
         return sent
 
     def can_issue_custom(self):
-        return not (self.source_model or self.target_model)
+        return not (self.actor_type or self.target_type)
 
     def preview(self, backend_id, message):
-        backend = django_vox.registry.backends.by_id(backend_id)
+        backend = registry.backends.by_id(backend_id)
         params = PreviewParameters(
-            self.get_content_model(), self.get_source_model(),
-            self.get_target_model())
+            self.get_object_model(), self.get_actor_type(),
+            self.get_target_type())
         return backend.preview_message('', message, params)
 
-    def get_source_model(self):
-        return (self.source_model.model_class() if self.source_model_id
+    def get_actor_type(self):
+        return (self.actor_type.model_class() if self.actor_type_id
                 else None)
 
-    def get_target_model(self):
-        return (self.target_model.model_class() if self.target_model_id
+    def get_target_type(self):
+        return (self.target_type.model_class() if self.target_type_id
                 else None)
 
-    def get_content_model(self):
-        return (self.content_type.model_class() if self.content_type_id
+    def get_object_model(self):
+        return (self.object_type.model_class() if self.object_type_id
                 else None)
+
+    def get_activity_type(self):
+        return find_activity_type(self.activity_type)
 
     def get_recipient_variables(self):
         recipient_spec = self.get_recipient_models()
-        source_model = self.get_source_model()
-        target_model = self.get_target_model()
-        content_model = self.get_content_model()
+        actor_type = self.get_actor_type()
+        target_type = self.get_target_type()
+        content_model = self.get_object_model()
         mapping = {}
         for target_key, model in recipient_spec.items():
             if model is not None:
@@ -559,14 +631,14 @@ class Notification(models.Model):
                         'Recipient', 'recipient', channel.target_class)
         content_name = content_model._meta.verbose_name.title()
         mapping['_static'] = [
-            get_model_variables(content_name, 'content', content_model),
+            get_model_variables(content_name, 'object', content_model),
         ]
-        if source_model:
+        if actor_type:
             mapping['_static'].append(
-                get_model_variables('Source', 'source', source_model))
-        if target_model:
+                get_model_variables('Actor', 'actor', actor_type))
+        if target_type:
             mapping['_static'].append(
-                get_model_variables('Target', 'target', target_model))
+                get_model_variables('Target', 'target', target_type))
         return mapping
 
 
@@ -700,3 +772,26 @@ class FailedMessage(models.Model):
             self.contact_name, backend.PROTOCOL, self.address)
         backend.send_message(contact, self.message)
         self.delete()
+
+
+class InboxItem(models.Model):
+    # these two fields tell you who's inbox it is
+    owner_id = models.CharField(
+        _('owner id'), max_length=2048, db_index=True)
+    owner_type = models.ForeignKey(
+        to=ContentType, on_delete=models.CASCADE, related_name='+',
+        verbose_name=_('owner type'))
+    owner = GenericForeignKey('owner_type', 'owner_id')
+    # the following fields are denormalized in case you want them
+    # for queries
+    actor_id = models.CharField(
+        _('actor id'), max_length=2048, db_index=True)
+    object_id = models.CharField(
+        _('object id'), max_length=2048, db_index=True)
+    type = models.CharField(
+        _('type'), max_length=512, db_index=True)
+    # here's where the actual data is stored
+    json = models.TextField()
+    # and a timestamp, maybe useful
+    timestamp = models.DateTimeField(
+        _('timestamp'), db_index=True, auto_now_add=True)

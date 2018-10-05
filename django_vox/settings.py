@@ -5,7 +5,8 @@ import sys
 
 import django.conf
 
-__all__ = ('BACKENDS', 'MARKDOWN_EXTRAS', 'MARKDOWN_LINK_PATTERNS',
+__all__ = ('BACKENDS', 'VIEW_OWN_INBOX', 'INBOX_LIMIT',
+           'MARKDOWN_EXTRAS', 'MARKDOWN_LINK_PATTERNS',
            'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER',
            'TWITTER_CONSUMER_KEY', 'TWITTER_CONSUMER_SECRET',
            'TWITTER_TOKEN_KEY', 'TWITTER_TOKEN_SECRET',
@@ -14,6 +15,8 @@ __all__ = ('BACKENDS', 'MARKDOWN_EXTRAS', 'MARKDOWN_LINK_PATTERNS',
 
 # General settings
 BACKENDS = []
+VIEW_OWN_INBOX = True
+INBOX_LIMIT = 500
 
 # Markdown settings
 URL_PATTERN = re.compile(
@@ -59,17 +62,20 @@ class _Sneaky:
             if hasattr(django.conf.settings, django_setting_name):
                 return getattr(django.conf.settings, django_setting_name)
             elif name == 'BACKENDS':
-                return super().__getattr__(name)
+                return _Sneaky.get_backends()
         result = getattr(self.module, name)
         if result is None:
             raise django.conf.ImproperlyConfigured(
                 'Please set {} in your settings'.format(django_setting_name))
         return result
 
-    def get_backends(self):
+    @staticmethod
+    def get_backends():
         result = []
         # Automatically set based on libraries available
         default_backends = [
+            # activity backend intentionally left out because
+            # it requires lot of setup
             'django_vox.backends.html_email.Backend',
             'django_vox.backends.markdown_email.Backend',
             'django_vox.backends.postmark_email.Backend',
@@ -87,8 +93,6 @@ class _Sneaky:
                     continue
             result.append(cls_str)
         return result
-
-    BACKENDS = property(get_backends, doc="hello world")
 
 
 _Sneaky(__name__)

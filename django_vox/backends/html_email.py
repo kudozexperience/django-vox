@@ -10,6 +10,7 @@ class Backend(base_email.Backend):
 
     ID = 'email-html'
     VERBOSE_NAME = _('Email (HTML)')
+    EDITOR_TYPE = 'html'
     DEPENDS = ('august',)
 
     @classmethod

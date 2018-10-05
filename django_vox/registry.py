@@ -1,6 +1,10 @@
 import collections
 import pydoc
 
+import django.urls.base
+import django.urls.resolvers
+import django.utils.encoding
+import django.utils.regex_helper
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_lazy as _
@@ -14,21 +18,26 @@ PROTOCOLS = {
     'json-webhook': _('JSON Webhook'),
     'twitter': _('Twitter'),
     'xmpp': _('XMPP'),
+    'activity': _('Activity Stream'),
 }
 
 PREFIX_NAMES = {
     'si': _('Site Contacts'),
     'c': '__content__',
-    'se': _('Source'),
+    'se': _('Actor'),
     're': _('Target'),
 }
 PREFIX_FORMATS = {
     'c': '{}',
-    'se': _('Source\'s {}'),
+    'se': _('Actor\'s {}'),
     're': _('Target\'s {}'),
 }
 
 _CHANNEL_TYPE_IDS = None
+
+
+class ActorNotFound(Exception):
+    pass
 
 
 class BackendManager:
@@ -121,10 +130,68 @@ class ChannelManager(dict):
         return item
 
 
+class ActorManagerItem:
+
+    def __init__(self, cls):
+        self.cls = cls
+        self.matcher = None
+        self.pattern = ''
+        self.reverse_form = ''
+        self.reverse_params = ()
+
+    def set_regex(self, pattern: str):
+        self.pattern = pattern
+        if hasattr(django.urls.resolvers, 'RegexPattern'):
+            self.matcher = django.urls.resolvers.RegexPattern(pattern)
+        else:
+            self.matcher = django.urls.resolvers.RegexURLPattern(pattern, None)
+        normal = django.utils.regex_helper.normalize(pattern)
+        self.reverse_form, self.reverse_params = next(iter(normal), ('', ()))
+
+    def match(self, path: str):
+        if hasattr(django.urls.resolvers, 'RegexPattern'):
+            return self.matcher.match(path)
+        return self.matcher.resolve(path)
+
+    def reverse(self, obj):
+        kwargs = dict(((param, getattr(obj, param, None))
+                      for param in self.reverse_params))
+        return '/' + (self.reverse_form % kwargs)
+
+
+class ActorManager(dict):
+
+    def __missing__(self, key):
+        item = ActorManagerItem(key)
+        self[key] = item
+        return item
+
+    def get_local_actor(self, path):
+        matched_patterns = []
+        for key, value in self.items():
+            match = value.match(path)
+            if match:
+                matched_patterns.append(value.pattern)
+                # RegexURLPattern vs RegexPattern
+                kwargs = match.kwargs if hasattr(match, 'kwargs') else match[2]
+                try:
+                    return key.objects.get(**kwargs)
+                except key.__class__.DoesNotExist:
+                    continue
+        msg = _('Unable to find actor for {}.').format(path)
+        if matched_patterns:
+            msg = msg + ' ' + _(
+                'We tried the following patterns: {}.').format(
+                ', '.join(matched_patterns))
+        raise ActorNotFound(msg)
+
+
 backends = BackendManager(
     pydoc.locate(name) for name in settings.BACKENDS)
 
 channels = ChannelManager()
+
+actors = ActorManager()
 
 
 def get_protocol_choices():

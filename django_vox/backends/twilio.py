@@ -17,6 +17,7 @@ class Backend(base.Backend):
     ID = 'twilio'
     PROTOCOL = 'sms'
     ESCAPE_HTML = False
+    EDITOR_TYPE = 'basic'
     VERBOSE_NAME = _('Twilio')
     DEPENDS = ('twilio',)
 

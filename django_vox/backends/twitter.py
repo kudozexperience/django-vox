@@ -11,6 +11,7 @@ class Backend(base.Backend):
 
     ID = 'twitter'
     PROTOCOL = 'twitter'
+    EDITOR_TYPE = 'basic'
     ESCAPE_HTML = False
     VERBOSE_NAME = _('Twitter')
     DEPENDS = ('twitter',)

@@ -30,10 +30,10 @@
 
 <fieldset class="module aligned">
 <div class="form-row">
-  {{ form.contents.errors }}
-  {{ form.contents.label_tag }} {{ form.contents }}
-  {% if form.contents.help_text %}
-  <div class="help">{{ form.contents.help_text|safe }}</div>
+  {{ form.objects.errors }}
+  {{ form.objects.label_tag }} {{ form.objects }}
+  {% if form.objects.help_text %}
+  <div class="help">{{ form.objects.help_text|safe }}</div>
   {% endif %}
 </div>
 

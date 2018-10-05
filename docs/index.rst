@@ -10,6 +10,7 @@ Django Vox Documentation
    protocols
    templates
    attachments
+   activities
    demo
    extras
    comparison

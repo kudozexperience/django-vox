@@ -13,6 +13,7 @@ class Backend(base.Backend):
     ID = 'slack-webhook'
     PROTOCOL = 'slack-webhook'
     ESCAPE_HTML = False
+    EDITOR_TYPE = 'basic'
     VERBOSE_NAME = _('Slack')
 
     @classmethod

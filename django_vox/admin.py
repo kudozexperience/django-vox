@@ -33,6 +33,7 @@ class SelectWithSubjectData(forms.Select):
                              else 'false'),
             'data-attachment': ('true' if self.use_attachments.get(value)
                                 else 'false'),
+            'data-editor': self.editor_types.get(value),
         }
         if selected:
             option_attrs.update(self.checked_attribute)
@@ -59,9 +60,11 @@ class BackendChoiceField(forms.ChoiceField):
         use_subjects = dict([(back.ID, back.USE_SUBJECT) for back in backs])
         use_attachments = dict([(back.ID, back.USE_ATTACHMENTS)
                                 for back in backs])
+        editor_types = dict([(back.ID, back.EDITOR_TYPE) for back in backs])
         super().__init__(choices=choice_pairs, *args, **kwargs)
         self.widget.use_subjects = use_subjects
         self.widget.use_attachments = use_attachments
+        self.widget.editor_types = editor_types
 
 
 class TemplateInlineFormSet(forms.BaseInlineFormSet):
@@ -126,7 +129,7 @@ class TemplateForm(forms.ModelForm):
     def get_attachment_choices(notification):
         param_models = notification.get_parameter_models()
         for model_key, model in param_models.items():
-            label = '' if model_key == 'content' else model_key.title()
+            label = '' if model_key == 'object' else model_key.title()
             yield from models.get_model_attachment_choices(
                 label, model_key, model)
 
@@ -143,12 +146,12 @@ class NotificationForm(forms.ModelForm):
 
     class Meta:
         model = models.Notification
-        fields = ['codename', 'content_type', 'description', 'target_model']
+        fields = ['codename', 'object_type', 'description', 'target_type']
 
 
 class NotificationIssueForm(forms.Form):
 
-    contents = forms.ModelMultipleChoiceField(
+    objects = forms.ModelMultipleChoiceField(
         queryset=None, label=_('Objects'),
         widget=FilteredSelectMultiple(
             verbose_name=_('Objects'), is_stacked=False),
@@ -157,16 +160,16 @@ class NotificationIssueForm(forms.Form):
 
     def __init__(self, notification, *args, **kwargs):
         self.notification = notification
-        model_cls = notification.content_type.model_class()
-        self.declared_fields['contents'].queryset = model_cls.objects
+        model_cls = notification.object_type.model_class()
+        self.declared_fields['objects'].queryset = model_cls.objects
         super().__init__(*args, **kwargs)
 
     def save(self, commit=True):
         if not commit:
             return
-        contents = self.cleaned_data['contents']
-        for content in contents:
-            self.notification.issue(content)
+        objects = self.cleaned_data['objects']
+        for obj in objects:
+            self.notification.issue(obj)
 
 
 class TemplateInline(admin.StackedInline):
@@ -180,13 +183,13 @@ class TemplateInline(admin.StackedInline):
 class NotificationAdmin(admin.ModelAdmin):
     change_form_template = 'django_vox/notification/change_form.html'
     list_display = ('__str__', 'description', 'required', 'template_count')
-    list_filter = ('content_type',)
+    list_filter = ('object_type',)
     inlines = [TemplateInline]
     form = NotificationForm
     issue_form = NotificationIssueForm
     issue_template = 'django_vox/notification/issue.html'
 
-    fields = ['codename', 'content_type', 'description']
+    fields = ['codename', 'object_type', 'description']
 
     class Media:
         css = {
@@ -301,13 +304,15 @@ class NotificationAdmin(admin.ModelAdmin):
         context.update(self.admin_site.each_context(request))
         request.current_app = self.admin_site.name
 
-        return TemplateResponse(request, self.issue_template, context)
+        status = 200 if form.is_valid() else 400
+        return TemplateResponse(request, self.issue_template, context,
+                                status=status)
 
     def get_readonly_fields(self, request, obj=None):
         if self.has_delete_permission(request, obj):
-            return ['content_type'] if obj else []
-        return ['codename', 'content_type', 'description', 'required',
-                'source_model', 'target_model']
+            return ['object_type'] if obj else []
+        return ['codename', 'object_type', 'description', 'required',
+                'actor_type', 'target_type']
 
     def has_delete_permission(self, request, obj=None):
         if obj is None:

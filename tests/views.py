@@ -6,6 +6,16 @@ from . import models
 def article_list(request):
     context = {
         'articles': models.Article.objects.order_by('-id'),
+        'author': None,
+    }
+    return render(request, 'tests/index.html', context)
+
+
+def user_detail(request, user_id):
+    user = get_object_or_404(models.User, pk=user_id)
+    context = {
+        'articles': models.Article.objects.filter(author=user).order_by('-id'),
+        'author': user,
     }
     return render(request, 'tests/index.html', context)
 
@@ -14,8 +24,15 @@ def article_detail(request, article_id):
     article = get_object_or_404(models.Article, pk=article_id)
     comments = models.Comment.objects.filter(article=article).order_by('id')
     token = request.GET.get('token')
-    return render(request, 'tests/detail.html', {
+    return render(request, 'tests/article.html', {
         'article': article, 'comments': comments, 'token': token})
+
+
+def subscriber_detail(request, sub_id):
+    subscriber = get_object_or_404(models.Subscriber, pk=sub_id)
+    comments = models.Comment.objects.filter(poster=subscriber).order_by('id')
+    return render(request, 'tests/subscriber.html', {
+        'subscriber': subscriber, 'comments': comments})
 
 
 def comment(request, article_id):
@@ -28,7 +45,7 @@ def comment(request, article_id):
         poster=subscriber,
         article=article,
     )
-    return redirect('tests:detail', article.id)
+    return redirect('tests:article', article.id)
 
 
 def subscribe(request):

@@ -8,21 +8,23 @@
   fields: {app_label: tests, model: comment}
 - model: django_vox.notification
   fields:
-    codename: created
-    content_type: [tests, article]
+    codename: create
+    object_type: [tests, article]
+    actor_type: [tests, user]
     description: Notification that a new article was created
     from_code: true
 - model: django_vox.notification
   fields:
-    codename: created
-    content_type: [tests, subscriber]
+    codename: create
+    object_type: [tests, subscriber]
     description: Notification from subscriber that a new subscriber was created. Intended
       for site admins
     from_code: true
 - model: django_vox.notification
   fields:
-    codename: created
-    content_type: [tests, comment]
+    codename: create
+    object_type: [tests, comment]
+    actor_type: [tests, subscriber]
     description: Notification from subscriber to author that a comment was posted
     from_code: true
 - model: tests.user
@@ -54,7 +56,7 @@
 - model: django_vox.template
   pk: 1
   fields:
-    notification: [tests, article, created]
+    notification: [tests, article, create]
     backend: "email-html"
     subject: "Subscriber email"
     content: "<p>Hi {{ contact.name }},</p>
@@ -66,7 +68,7 @@
 - model: django_vox.template
   pk: 2
   fields:
-    notification: [tests, article, created]
+    notification: [tests, article, create]
     backend: email-md
     content: "{{ content.author.name }} has posted a new article.
 
@@ -77,21 +79,31 @@
 - model: django_vox.template
   pk: 3
   fields:
-    notification: [tests, comment, created]
+    notification: [tests, comment, create]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
       <p>{{ content.poster.name }} has posted a comment on your article <a
       href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
       content.article.name }}</a>. Go check it out!</p>{% endblock %}"
-    recipient: c:poster
+    recipient: c:author
     enabled: true
 - model: django_vox.template
   pk: 4
   fields:
-    notification: [tests, subscriber, created]
+    notification: [tests, subscriber, create]
     backend: email
     content: "A new subscriber {{ content }} has been added on the blog"
     recipient: si
+    enabled: true
+- model: django_vox.template
+  pk: 5
+  fields:
+    notification: [tests, comment, create]
+    backend: activity
+    subject: New comment posted
+    content: "{{ content.poster.name }} has added a new comment to
+      {{ content.title }}"
+    recipient: c:author
     enabled: true
 - model: django_vox.templateattachment
   pk: 1
@@ -108,11 +120,11 @@
   pk: 1
   fields:
     site_contact: 1
-    notification: [tests, subscriber, created]
+    notification: [tests, subscriber, create]
     enabled: true
 - model: django_vox.sitecontactsetting
   pk: 2
   fields:
     site_contact: 1
-    notification: [tests, article, created]
+    notification: [tests, article, create]
     enabled: true

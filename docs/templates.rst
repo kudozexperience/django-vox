@@ -41,8 +41,8 @@ Several variables are provided to you in the template context.
     practice, it will probably be some sort of user/user-profile object.
     When site contacts are the recipient, the value is a ``SiteContact``
     object.
-``source``
-    This is only available if source_model is specified for the notification.
+``actor``
+    This is only available if actor_type is specified for the notification.
     It refers to whoever or whatever is causing action associated with the
     notification.
 ``target``
@@ -51,7 +51,7 @@ Several variables are provided to you in the template context.
     notification is affecting.
 
 Most of the time, it's recommended to just try and use a field on the
-``content`` variable instead of ``target`` or ``source``. Sometimes, though,
+``content`` variable instead of ``target`` or ``actor``. Sometimes, though,
 this is just not possible, and you want to be able to differentiate between
 the two at runtime, so that's why they exist.
 

@@ -42,16 +42,18 @@ class VariableTests(TestCase):
 
     @staticmethod
     def test_variables():
-        notification = models.Article.get_notification('created')
+        notification = models.Article.get_notification('create')
         variables = notification.get_recipient_variables()
-        assert {'si', 'c:sub', 'c:author', '_static'} == variables.keys()
+        assert {'si', 'se', 'c:sub', 'c:author', '_static'} == variables.keys()
         # check recipient variables first:
-        for key in ('si', 'c:sub', 'c:author'):
+        for key in ('si', 'se', 'c:sub', 'c:author'):
             assert variables[key]['value'] == 'recipient'
         static = variables['_static']
-        assert len(static) == 1
+        assert len(static) == 2
         assert static[0]['label'] == 'Article'
-        assert static[0]['value'] == 'content'
+        assert static[0]['value'] == 'object'
+        assert static[1]['label'] == 'Actor'
+        assert static[1]['value'] == 'actor'
 
 
 class NotificationAdminTests(TestCase):
@@ -67,7 +69,7 @@ class NotificationAdminTests(TestCase):
 
     def test_template_count(self):
         model_obj = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'created')
+            'tests', 'article', 'create')
         assert 2 == self.admin.template_count(model_obj)
 
     def test_get_urls(self):
@@ -80,29 +82,29 @@ class NotificationAdminTests(TestCase):
         assert expected == name_set
 
     def test_fields(self):
-        base_fields = ['codename', 'content_type', 'description']
-        from_code_ro = ['codename', 'content_type', 'description',
-                        'required', 'source_model', 'target_model']
+        base_fields = ['codename', 'object_type', 'description']
+        from_code_ro = ['codename', 'object_type', 'description',
+                        'required', 'actor_type', 'target_type']
         new_obj = self.model_class()
         model_obj = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'created')
+            'tests', 'article', 'create')
         request = MockRequest('GET')
         assert base_fields == self.admin.get_fields(request)
         assert [] == self.admin.get_readonly_fields(request)
-        assert ['content_type'] == self.admin.get_readonly_fields(
+        assert ['object_type'] == self.admin.get_readonly_fields(
             request, new_obj)
         assert from_code_ro == self.admin.get_readonly_fields(
             request, model_obj)
 
     def test_issue(self):
         notification = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'created')
+            'tests', 'article', 'create')
         obj = models.Article.objects.first()
         with mock.patch('django_vox.models.Notification.issue'):
             # no POST parameters, so won't be valid
             request = MockRequest('POST', {})
             response = self.admin.issue(request, str(notification.id))
-            assert response.status_code == 200
+            assert response.status_code == 400
             assert 'This field is required' in response.rendered_content
             # this should 404
             with self.assertRaises(django.http.Http404):
@@ -110,7 +112,7 @@ class NotificationAdminTests(TestCase):
             # this POST should work
             # we have to perform some malarky because of an isinstance
             # check in django 1.10
-            request = MockRequest('POST', {'contents': (obj.id,)})
+            request = MockRequest('POST', {'objects': (obj.id,)})
             mock_request = mock.Mock(spec=django.http.HttpRequest)
             for attr in request.__dir__():
                 if not attr.startswith('_'):

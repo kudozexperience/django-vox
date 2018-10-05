@@ -11,6 +11,19 @@ Each protocol has it's own kind of addresses. When a contact is sent a
 message, django-vox automatically selects a backend that matches the
 available contacts (and addresses by extension) for that protocol.
 
+Activity
+========
+
+ID: ``activity``
+
+This protocol is for `Activity Streams`_ (and only slightly supported
+`ActivityPub`_). Message are stored locally in the database and are retrievable
+from an inbox. Setting this up is a bit of work, see the section on
+:doc:`activities`.
+
+.. _Activity Streams: https://www.w3.org/TR/activitystreams-core/
+.. _ActivityPub: https://www.w3.org/TR/2018/REC-activitypub-20180123/
+
 Email
 =====
 

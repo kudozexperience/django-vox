@@ -15,6 +15,7 @@ __all__ = ('Backend',)
 class Backend(base_email.Backend):
 
     ID = 'email-md'
+    EDITOR_TYPE = 'markdown'
     VERBOSE_NAME = _('Email (Markdown)')
     DEPENDS = ('markdown2',)
 

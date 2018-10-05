@@ -63,63 +63,65 @@ provides a measure of sanity to whoever is editing them.
 To add notifications to a model, change the parent class from
 ``django.db.models.Model`` to ``django_vox.models.VoxModel``.
 Also, add ``VoxMeta`` inner class (much like django's ``Meta``)
-which contains one attribute, a tuple named ``notifications``. Each
-item in the tuple should be a ``django_vox.models.VoxParam``
-instance. The result might look something like::
+which contains an attribute, named ``notifications``. Set it to
+a ``VoxNotifications`` object, and each parameter you pass to
+it will specify the parameters for another notification. The
+parameter keys are the notification’s codename and the values
+are the the description (if they’re a plain string) or you can
+use a ``VoxNotification`` object to specify more parameters.
 
-  class User(VoxModel):
+.. code-block:: python
 
-      class VoxMeta:
-          notifications = (
-              VoxParam(
-                  'created',
-                  'Notification to that a user created an account'),
-          )
+   class User(VoxModel):
 
-      ...
+       class VoxMeta:
+           notifications = VoxNotifications(
+               create=_('Notification to that a user created an account'),
+           )
 
-      def save(self, *args, **kwargs):
-          new = self.id is None
-          super().save(*args, **kwargs)
-          if new:
-              self.issue_notification('created')
+       ...
 
-  ...
+       def save(self, *args, **kwargs):
+           new = self.id is None
+           super().save(*args, **kwargs)
+           if new:
+               self.issue_notification('create')
 
-  class PurchaseOrder(VoxModel):
+   ...
 
-      class VoxMeta:
-          notifications = (
-              VoxParam(
-                  'received', 'Notification that an order was received.'),
-              VoxParam(
-                  'on_hold',  'Notification that an order is on hold.'),
-          )
+   class PurchaseOrder(VoxModel):
 
-      def save(self, *args, **kwargs):
-          new = self.id is None
-          if not new:
-              old = PurchaseOrder.objects.get(pk=self.pk)
-          super().save(*args, **kwargs)
-          if new:
-              self.issue_notification('received')
-          if not new and not old.on_hold and self.on_hold:
-              self.issue_notification('on_hold')
+       class VoxMeta:
+           notifications = VoxNotifications(
+               received = _('Notification that an order was received.'),
+               on_hold = _('Notification that an order is on hold.'),
+           )
+
+       def save(self, *args, **kwargs):
+           new = self.id is None
+           if not new:
+               old = PurchaseOrder.objects.get(pk=self.pk)
+           super().save(*args, **kwargs)
+           if new:
+               self.issue_notification('received')
+           if not new and not old.on_hold and self.on_hold:
+               self.issue_notification('on_hold')
 
 
-Alternatively, you can use a longwinded form to specify your parameters,
+Here’s an example of the long-winded form to specify your parameters,
 This is more verbose, but makes it easier to specify extra notification
-parameters (like source & target model) if you need them::
+parameters (like actor & target model) if you need them.
 
+.. code-block:: python
 
-  class User(VoxModel):
+   class User(VoxModel):
 
-      class VoxMeta:
-          notifications = VoxNotifications(
-              created=VoxNotification(
-                  _('Notification to that a user created an account'),
-                  source_model='myapp.mymodel'),
-          )
+       class VoxMeta:
+           notifications = VoxNotifications(
+               create=VoxNotification(
+                   _('Notification to that a user created an account'),
+                   actor_type='myapp.mymodel'),
+           )
 
 
 
@@ -198,8 +200,8 @@ class to look like this::
           return Contact(self.name, 'email', self.email)
 
 
-.. note:: We haven't covered sources or targets, but this example should
-   be enough to get you started.
+.. note:: We haven't covered actors or targets, but this example should
+          be enough to get you started.
 
 And there you have it. Now, in order for this to do anything useful,
 you'll need to add some appropriate :doc:`templates <templates>`.

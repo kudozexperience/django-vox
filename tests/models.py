@@ -1,15 +1,18 @@
+import aspy
+import rules
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core import signing
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import crypto
 from django.utils.translation import ugettext_lazy as _
 
-from django_vox.base import Contact
+from django_vox.base import Contact, full_iri
 from django_vox.models import (VoxAttach, VoxAttachments, VoxModel,
-                               VoxNotifications)
-from django_vox.registry import channels
+                               VoxNotification, VoxNotifications)
+from django_vox.registry import actors, channels
 
 
 class UserManager(BaseUserManager):
@@ -52,8 +55,9 @@ class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 
     class VoxMeta:
         attachments = VoxAttachments(
-            vcard=VoxAttach(attr='make_vcard', mime_string='text/vcard',
-                            label=_('Contact Info')),
+            vcard=VoxAttach(
+                attr='make_vcard', mime_string='text/vcard',
+                label=_('Contact Info')),
         )
 
     email = models.EmailField(_('email'), max_length=254, unique=True)
@@ -83,6 +87,15 @@ class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 
     def get_contacts_for_notification(self, _notification):
         yield Contact(self.name, 'email', self.email)
+        yield Contact(self.name, 'activity', self.get_actor_address())
+
+    def __activity__(self):
+        return aspy.Person(
+            id=self.get_actor_address(),
+            name=self.name)
+
+    def get_absolute_url(self):
+        return reverse('tests:user', args=[str(self.id)])
 
     def make_vcard(self) -> str:
         """
@@ -103,8 +116,12 @@ class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 class Article(VoxModel):
 
     class VoxMeta:
+        # we're going to use auto generated activity entries here
         notifications = VoxNotifications(
-            created=_('Notification that a new article was created.'),
+            create=VoxNotification(
+                _('Notification that a new article was created.'),
+                actor_type='tests.user')
+
         )
 
     author = models.ForeignKey(
@@ -119,7 +136,10 @@ class Article(VoxModel):
         new = self.id is None
         super().save(*args, **kwargs)
         if new:
-            self.issue_notification('created')
+            self.issue_notification('create', actor=self.author)
+
+    def get_absolute_url(self):
+        return reverse('tests:article', args=[str(self.id)])
 
     def get_subscribers(self):
         return Subscriber.objects.filter(
@@ -142,8 +162,10 @@ class Subscriber(VoxModel):
 
     class VoxMeta:
         notifications = VoxNotifications(
-            created=_('Notification from subscriber that a new subscriber '
-                      'was created. Intended for site admins'),
+            create=VoxNotification(
+                _('Notification from subscriber that a new subscriber '
+                  'was created. Intended for site admins'),
+                activity_type=aspy.Create),
         )
 
     author = models.ForeignKey(
@@ -163,7 +185,7 @@ class Subscriber(VoxModel):
         new = self.id is None
         super().save(*args, **kwargs)
         if new:
-            self.issue_notification('created')
+            self.issue_notification('create')
 
     @classmethod
     def load_from_token(cls, token):
@@ -198,13 +220,23 @@ class Subscriber(VoxModel):
 
     def get_contacts_for_notification(self, _notification):
         yield Contact(self.name, 'email', self.email)
+        yield Contact(self.name, 'activity', self.get_actor_address())
+
+    def __activity__(self):
+        return aspy.Person(
+            name=self.name, id=full_iri(self.get_absolute_url()))
+
+    def get_absolute_url(self):
+        return reverse('tests:subscriber', args=[str(self.id)])
 
 
 class Comment(VoxModel):
 
     class VoxMeta:
         notifications = VoxNotifications(
-            created=_('Notification that a comment was posted.'),
+            create=VoxNotification(
+                _('Notification that a comment was posted.'),
+                actor_type='tests.subscriber')
         )
 
     content = models.TextField(_('content'))
@@ -215,13 +247,26 @@ class Comment(VoxModel):
         new = self.id is None
         super().save(*args, **kwargs)
         if new:
-            self.issue_notification('created')
+            self.issue_notification('create', actor=self.poster)
 
     def get_posters(self):
         yield self.poster
 
     def get_article_authors(self):
         yield self.article.author
+
+    def get_absolute_url(self):
+        frag = '#comment-{}'.format(self.id)
+        return reverse('tests:article', args=[str(self.article.id)]) + frag
+
+    def __activity__(self):
+        # we're being hacky here to test out the automatic
+        # id stuff
+        obj = super().__activity__()
+        return aspy.Note(
+            id=obj['id'],
+            name='Note',
+            content=self.content)
 
 
 channels[User].add_self()
@@ -232,3 +277,20 @@ channels[Subscriber].add_self()
 channels[Comment].add('poster', _('Poster'), Subscriber, Comment.get_posters)
 channels[Comment].add('author', _('Article author'),
                       User, Comment.get_article_authors)
+
+actors[User].set_regex(r'^~(?P<id>[0-9]+)/$')
+actors[Subscriber].set_regex(r'^\.(?P<id>[0-9]+)/$')
+
+
+# set up permissions for accessing user inboxes
+# note that this only works for the user inboxes
+# the subscriber ones are unreachable
+# NOTE: these shenanigans are actually unnecessary,
+# you could achieve this by removing DJANGO_VOX_VIEW_OWN_INBOX = False
+# in the settings, is is just here to test the feature
+@rules.predicate
+def inbox_owner(user, inbox_actor):
+    return user == inbox_actor
+
+
+rules.add_perm('django_vox.view_inbox', inbox_owner)

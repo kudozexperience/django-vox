@@ -20,20 +20,21 @@ To add notifications to a model, change the parent class from
 Also, add ``VoxMeta`` inner class (much like django's ``Meta``)
 which contains one attribute, a tuple named ``notifications``. Each
 item in the tuple should be a ``django_vox.models.VoxParam``
-instance. The result might look something like::
+instance. The result might look something like:
 
+.. code-block:: python
 
-  class User(VoxModel):
+   class User(VoxModel):
 
-      class VoxMeta:
-          attachments = VoxAttachments(
-              vcard=VoxAttach(attr='make_vcard', mime_string='text/vcard',
-                  label=_('Contact Info')),
-              photo=VoxAttach(mime_attr='photo_mimetype'))
+       class VoxMeta:
+           attachments = VoxAttachments(
+               vcard=VoxAttach(attr='make_vcard', mime_string='text/vcard',
+                   label=_('Contact Info')),
+               photo=VoxAttach(mime_attr='photo_mimetype'))
 
-          notifications = (
-          ...
-          )
+           notifications = (
+           ...
+           )
 
 
 In this case, there are two attachment options. The first, get's the file

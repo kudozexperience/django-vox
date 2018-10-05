@@ -12,8 +12,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 SECRET_KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
 
-INTERNAL_IPS = ['127.0.0.1']
-ALLOWED_HOSTS = ['127.0.0.1']
+SITE_DOMAIN = '127.0.0.1'
+INTERNAL_IPS = [SITE_DOMAIN]
+ALLOWED_HOSTS = [SITE_DOMAIN]
+SITE_SSL = False
 
 LOGGING_CONFIG = None   # avoids spurious output in tests
 DEBUG = True
@@ -26,6 +28,7 @@ BASE_INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'rules',
     'django_vox',
 ]
 
@@ -45,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_vox.middleware.activity_inbox_middleware',
 ]
 
 ROOT_URLCONF = 'tests.root_urls'
@@ -89,3 +93,22 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
     }
 }
+
+AUTHENTICATION_BACKENDS = (
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+DJANGO_VOX_BACKENDS = [
+    'django_vox.backends.activity.Backend',
+    'django_vox.backends.html_email.Backend',
+    'django_vox.backends.markdown_email.Backend',
+    'django_vox.backends.postmark_email.Backend',
+    'django_vox.backends.template_email.Backend',
+    'django_vox.backends.twilio.Backend',
+    # 'django_vox.backends.twitter.Backend',
+    # 'django_vox.backends.slack.Backend',
+    'django_vox.backends.json_webhook.Backend',
+    # 'django_vox.backends.xmpp.Backend',
+]
+DJANGO_VOX_VIEW_INBOX = False
