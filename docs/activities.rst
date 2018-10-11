@@ -2,6 +2,15 @@
  Activities
 ============
 
+The activities backend provides support for the `Activity Streams`_ (and very
+slightly `ActivityPub`_) standards. Message are stored locally in the database
+and are retrievable from an inbox. References to notions like actors and
+inboxes refer to the ideas in that standard.
+
+.. _Activity Streams: https://www.w3.org/TR/activitystreams-core/
+.. _ActivityPub: https://www.w3.org/TR/2018/REC-activitypub-20180123/
+
+
 Setting up the activities is fairly involved, and also entirely optional
 unless you actually want to use the activity backend. As a result, it’s
 got its own documentation. Note that this backend is somewhat experimental.
@@ -24,12 +33,12 @@ solution is to just set these two settings:
 ``SITE_SSL``     True if you use HTTPS, False otherwise
 ===============  ======================================
 
-Note that ``SITE_SSL`` should nearly always be True (the default) unless
-you’re in development testing on localhost.
+.. caution:: ``SITE_SSL`` should nearly always be True (the default) unless
+   you’re in development testing on localhost.
 
 Also, because this backend isn’t enabled by default, you’ll need to
 alter ``DJANGO_VOX_BACKENDS`` and add
-``'django_vox.backends.html_email.Backend',``. You can see an example on the
+``'django_vox.backends.activity.Backend',``. You can see an example on the
 :doc:`backends` page.
 
 Registering actors
