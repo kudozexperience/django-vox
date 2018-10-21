@@ -43,7 +43,7 @@ def issue_notification(
         model = apps.get_model(target_cls_str)
         target = model.objects.get(pk=target_id)
     actor = None
-    if target_cls_str != '':
+    if actor_cls_str != '':
         model = apps.get_model(actor_cls_str)
         actor = model.objects.get(pk=actor_id)
 
