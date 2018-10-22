@@ -50,7 +50,23 @@ def inbox(request, path):
     ct = ContentType.objects.get_for_model(owner.__class__)
     query = models.InboxItem.objects.filter(
         owner_type=ct, owner_id=owner.id).order_by('-id')
-    items = [json.loads(item.json) for item in query[:settings.INBOX_LIMIT]]
+    items = []
+    for record in query[:settings.INBOX_LIMIT]:
+        # this is a bit hackish because we're using dicts and not aspy
+        # objects
+        item = {
+            'published': aspy.datetime_property(record.timestamp, None)
+        }
+        for field in ('actor', 'object', 'target'):
+            value = getattr(record, field + '_json')
+            if value:
+                item[field] = json.loads(value)
+        for field in 'summary', 'name':
+            value = getattr(record, field)
+            if value:
+                item[field] = value
+        items.append(item)
+
     collection = aspy.OrderedCollection(
         summary='Inbox for {}'.format(owner),
         items=items)

@@ -111,25 +111,21 @@ class Backend(base.Backend):
         # put the message in the relevant inbox
         owner = django_vox.registry.actors.get_local_actor(path)
         json_data = json.loads(message)
-        kwargs = {'owner': owner, 'json': message}
+        kwargs = {'owner': owner}
 
-        actor_data = json_data.get('actor')
-        if isinstance(actor_data, str):
-            kwargs['actor_id'] = actor_data
-        elif isinstance(actor_data, dict):
-            actor_id = actor_data.get('id')
-            if actor_id is not None:
-                kwargs['actor_id'] = actor_id
+        for field in ('actor', 'object', 'target'):
+            field_data = json_data.get(field)
+            if isinstance(field_data, str):
+                kwargs[field + '_id'] = field_data
+                kwargs[field + '_json'] = ''
+            elif isinstance(field_data, dict):
+                field_id = field_data.get('id')
+                if field_id is not None:
+                    kwargs[field + '_id'] = field_id
+                kwargs[field + '_json'] = json.dumps(field_data)
 
-        object_data = json_data.get('object')
-        if isinstance(object_data, str):
-            kwargs['object_id'] = object_data
-        elif isinstance(object_data, dict):
-            object_id = object_data.get('id')
-            if object_id is not None:
-                kwargs['object_id'] = object_id
-
-        if 'type' in json_data:
-            kwargs['type'] = json_data['type']
+        for field in ('name', 'summary', 'type'):
+            if field in json_data:
+                kwargs[field] = json_data[field]
 
         django_vox.models.InboxItem.objects.create(**kwargs)

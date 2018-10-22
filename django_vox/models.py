@@ -782,16 +782,23 @@ class InboxItem(models.Model):
         to=ContentType, on_delete=models.CASCADE, related_name='+',
         verbose_name=_('owner type'))
     owner = GenericForeignKey('owner_type', 'owner_id')
-    # the following fields are denormalized in case you want them
-    # for queries
-    actor_id = models.CharField(
-        _('actor id'), max_length=2048, db_index=True)
-    object_id = models.CharField(
-        _('object id'), max_length=2048, db_index=True)
+    # basic activity fields
+    name = models.CharField(
+        _('name'), max_length=512, blank=True)
+    summary = models.TextField(blank=True)
     type = models.CharField(
         _('type'), max_length=512, db_index=True)
-    # here's where the actual data is stored
-    json = models.TextField()
+    # the json fields should be able to be referenced and
+    # repopulated by the id fields
+    actor_id = models.CharField(
+        _('actor id'), max_length=2048, db_index=True)
+    actor_json = models.TextField(blank=True)
+    target_id = models.CharField(
+        _('actor id'), max_length=2048, db_index=True)
+    target_json = models.TextField(blank=True)
+    object_id = models.CharField(
+        _('object id'), max_length=2048, db_index=True)
+    object_json = models.TextField(blank=True)
     # and a timestamp, maybe useful
     timestamp = models.DateTimeField(
         _('timestamp'), db_index=True, auto_now_add=True)
