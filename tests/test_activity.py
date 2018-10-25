@@ -100,7 +100,7 @@ class WebTests(TestCase):
         item_id = items[0]['id']
         # now mark the message as read
         activity = aspy.Read(object=item_id)
-        response = client.post('/~1/inbox', activity.to_dict(), **EXTRA)
+        response = client.post('/~1/outbox', activity.to_dict(), **EXTRA)
         assert 200 == response.status_code
         # now we should have one read item
         inbox = django_vox.models.InboxItem.objects.all()

@@ -41,6 +41,21 @@ def endpoint(_request, path):
 
 
 @fix_path
+def outbox(request, path):
+    try:
+        owner = registry.objects.get_local_object(path)
+    except registry.ObjectNotFound:
+        return django.http.HttpResponseNotFound()
+    if request.user != owner:
+        return django.http.HttpResponseForbidden()
+    elif request.method == 'POST':
+        return outbox_post(request, owner)
+    else:
+        return django.http.HttpResponseNotAllowed(
+            permitted_methods=('POST',))
+
+
+@fix_path
 def inbox(request, path):
     try:
         owner = registry.objects.get_local_object(path)
@@ -50,11 +65,9 @@ def inbox(request, path):
         return django.http.HttpResponseForbidden()
     if request.method == 'GET':
         return inbox_get(request, owner)
-    elif request.method == 'POST':
-        return inbox_post(request, owner)
     else:
         return django.http.HttpResponseNotAllowed(
-            permitted_methods=('GET', 'POST'))
+            permitted_methods=('GET',))
 
 
 def inbox_get(_request, owner):
@@ -71,7 +84,7 @@ def inbox_get(_request, owner):
         str(collection), content_type='application/activity+json')
 
 
-def inbox_post(request, owner):
+def outbox_post(request, owner):
     obj = request.POST.get('object')
     activity_type = request.POST.get('type')
     if not obj:

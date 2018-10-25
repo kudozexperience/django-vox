@@ -1,7 +1,5 @@
 """
-URL patterns for testing app.
-
-We don't have any for now.
+URL patterns for activitypub, some of them aren't implemented
 """
 from django.conf.urls import include, url
 
@@ -12,7 +10,7 @@ sub_patterns = [
     url(r'^followers$', views.empty),
     url(r'^liked$', views.empty),
     url(r'^inbox$', views.inbox),
-    url(r'^outbox$', views.empty),
+    url(r'^outbox$', views.outbox),
     url(r'^$', views.endpoint),
 ]
 urlpatterns = [
