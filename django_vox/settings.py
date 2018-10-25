@@ -5,7 +5,7 @@ import sys
 
 import django.conf
 
-__all__ = ('BACKENDS', 'VIEW_OWN_INBOX', 'INBOX_LIMIT',
+__all__ = ('BACKENDS', 'INBOX_LIMIT', 'THROW_EXCEPTIONS', 'ACTIVITY_REGEX',
            'MARKDOWN_EXTRAS', 'MARKDOWN_LINK_PATTERNS',
            'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER',
            'TWITTER_CONSUMER_KEY', 'TWITTER_CONSUMER_SECRET',
@@ -15,8 +15,9 @@ __all__ = ('BACKENDS', 'VIEW_OWN_INBOX', 'INBOX_LIMIT',
 
 # General settings
 BACKENDS = []
-VIEW_OWN_INBOX = True
 INBOX_LIMIT = 500
+THROW_EXCEPTIONS = getattr(django.conf.settings, 'DEBUG', False)
+ACTIVITY_REGEX = r'activity/(?P<id>[0-9a-z\-]+)/$'
 
 # Markdown settings
 URL_PATTERN = re.compile(

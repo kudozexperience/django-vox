@@ -1,3 +1,5 @@
+import warnings
+
 from bs4 import BeautifulSoup
 from django.contrib.contenttypes.models import ContentType
 from django.core import mail
@@ -14,30 +16,49 @@ class FailmailTests(TestCase):
     fixtures = ['test']
 
     def test_email_failure(self):
+        assert 0 == len(mail.outbox)
+        author = models.User.objects.get(email='author@example.org')
+        # by default, with the test config, we throw errors
         with self.settings(EMAIL_BACKEND='Can\'t import this!'):
-            assert 0 == len(mail.outbox)
-            author = models.User.objects.get(email='author@example.org')
-            models.Article.objects.create(
-                author=author,
-                title='A second article',
-                content='Whoever thought we\'d come this far',
-            )
+            with self.assertRaises(ImportError):
+                models.Article.objects.create(
+                    author=author,
+                    title='A second article',
+                    content='Whoever thought we\'d come this far',
+                )
+        assert 0 == len(mail.outbox)
+        assert 3 == django_vox.models.FailedMessage.objects.count()
+        # we can change that though
+        with self.settings(
+                DJANGO_VOX_THROW_EXCEPTIONS=False,
+                EMAIL_BACKEND='Can\'t import this!'):
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                models.Article.objects.create(
+                    author=author,
+                    title='A second article',
+                    content='Whoever thought we\'d come this far',
+                )
             # this should create 3 failed messages
             assert 0 == len(mail.outbox)
             messages = django_vox.models.FailedMessage.objects.order_by(
                 'created_at')
-            assert 3 == len(messages)
+            assert 6 == len(messages)
             # ends with date
             assert str(messages[0]).startswith('admin@example.org @ ')
 
     def test_email_fail_resend(self):
-        with self.settings(EMAIL_BACKEND='Can\'t import this!'):
+        with self.settings(
+                DJANGO_VOX_THROW_EXCEPTIONS=False,
+                EMAIL_BACKEND='Can\'t import this!'):
             assert 0 == len(mail.outbox)
             author = models.User.objects.get(email='author@example.org')
-            models.Article.objects.create(
-                author=author,
-                title='A second article',
-                content='Whoever thought we\'d come this far',)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                models.Article.objects.create(
+                    author=author,
+                    title='A second article',
+                    content='Whoever thought we\'d come this far',)
             # this should create 3 failed messages
             messages = django_vox.models.FailedMessage.objects.order_by(
                 'created_at')

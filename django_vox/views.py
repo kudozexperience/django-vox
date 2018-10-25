@@ -1,12 +1,15 @@
-import json
 import urllib.parse
 
 import aspy
 import django.http
 import django.shortcuts
-from django.contrib.contenttypes.models import ContentType
 
 from . import models, registry, settings
+
+
+def get_local_urlpart(full_uri):
+    _, _, path, query, fragment = urllib.parse.urlsplit(full_uri)
+    return urllib.parse.urlunsplit(('', '', path, query, fragment))
 
 
 def fix_path(func):
@@ -24,8 +27,8 @@ def fix_path(func):
 @fix_path
 def endpoint(_request, path):
     try:
-        actor = registry.actors.get_local_actor(path)
-    except registry.ActorNotFound:
+        actor = registry.objects.get_local_object(path)
+    except registry.ObjectNotFound:
         return django.http.HttpResponseNotFound()
     obj = actor.__activity__()
     obj_id = obj['id']
@@ -40,38 +43,61 @@ def endpoint(_request, path):
 @fix_path
 def inbox(request, path):
     try:
-        owner = registry.actors.get_local_actor(path)
-    except registry.ActorNotFound:
+        owner = registry.objects.get_local_object(path)
+    except registry.ObjectNotFound:
         return django.http.HttpResponseNotFound()
-    if not ((settings.VIEW_OWN_INBOX and (request.user == owner)) or
-            request.user.has_perm('django_vox.view_inbox', owner)):
+    if request.user != owner:
         return django.http.HttpResponseForbidden()
+    if request.method == 'GET':
+        return inbox_get(request, owner)
+    elif request.method == 'POST':
+        return inbox_post(request, owner)
+    else:
+        return django.http.HttpResponseNotAllowed(
+            permitted_methods=('GET', 'POST'))
 
-    ct = ContentType.objects.get_for_model(owner.__class__)
-    query = models.InboxItem.objects.filter(
-        owner_type=ct, owner_id=owner.id).order_by('-id')
+
+def inbox_get(_request, owner):
+    query = models.InboxItem.objects.select_related('activity').filter(
+        owner=owner, read=False).order_by('-id')
     items = []
     for record in query[:settings.INBOX_LIMIT]:
-        # this is a bit hackish because we're using dicts and not aspy
-        # objects
-        item = {
-            'published': aspy.datetime_property(record.timestamp, None)
-        }
-        for field in ('actor', 'object', 'target'):
-            value = getattr(record, field + '_json')
-            if value:
-                item[field] = json.loads(value)
-        for field in 'summary', 'name':
-            value = getattr(record, field)
-            if value:
-                item[field] = value
-        items.append(item)
+        items.append(record.activity.__activity__())
 
     collection = aspy.OrderedCollection(
         summary='Inbox for {}'.format(owner),
         items=items)
     return django.http.HttpResponse(
         str(collection), content_type='application/activity+json')
+
+
+def inbox_post(request, owner):
+    obj = request.POST.get('object')
+    activity_type = request.POST.get('type')
+    if not obj:
+        return django.http.HttpResponseBadRequest('Object field required')
+    if not activity_type:
+        return django.http.HttpResponseBadRequest('Type field required')
+    if isinstance(obj, str):
+        iri = obj
+    elif isinstance(obj, dict):
+        iri = obj.get('id')
+    else:
+        return django.http.HttpResponseBadRequest(
+            'Unrecognized format for object')
+    if not iri:
+        return django.http.HttpResponseBadRequest('Object missing ID')
+    # now we have to strip our domain
+    local_iri = get_local_urlpart(iri)
+    if activity_type == 'Create':
+        local_object = registry.objects.create_local_object(local_iri)
+    else:
+        local_object = registry.objects.get_local_object(local_iri)
+    func = 'activity_{}'.format(activity_type.lower())
+    method = getattr(local_object, func)
+    if method and callable(method):
+        method(request.POST, owner)
+        return django.http.HttpResponse(status=200, content='')
 
 
 @fix_path

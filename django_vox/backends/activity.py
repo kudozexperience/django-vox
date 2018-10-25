@@ -6,6 +6,7 @@ import aspy
 import django.utils.encoding
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
+import django.db.transaction
 
 import django_vox.base
 import django_vox.models
@@ -109,10 +110,9 @@ class Backend(base.Backend):
         if path.startswith('/'):
             path = path[1:]
         # put the message in the relevant inbox
-        owner = django_vox.registry.actors.get_local_actor(path)
+        owner = django_vox.registry.objects.get_local_object(path)
         json_data = json.loads(message)
-        kwargs = {'owner': owner}
-
+        kwargs = {}
         for field in ('actor', 'object', 'target'):
             field_data = json_data.get(field)
             if isinstance(field_data, str):
@@ -128,4 +128,7 @@ class Backend(base.Backend):
             if field in json_data:
                 kwargs[field] = json_data[field]
 
-        django_vox.models.InboxItem.objects.create(**kwargs)
+        with django.db.transaction.atomic():
+            activity = django_vox.models.Activity.objects.create(**kwargs)
+            django_vox.models.InboxItem.objects.create(
+                activity=activity, owner=owner)

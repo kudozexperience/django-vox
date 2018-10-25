@@ -1,5 +1,4 @@
 import aspy
-import rules
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core import signing
@@ -12,7 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 from django_vox.base import Contact, full_iri
 from django_vox.models import (VoxAttach, VoxAttachments, VoxModel,
                                VoxNotification, VoxNotifications)
-from django_vox.registry import actors, channels
+from django_vox.registry import objects, channels
 
 
 class UserManager(BaseUserManager):
@@ -87,11 +86,11 @@ class User(VoxModel, AbstractBaseUser, PermissionsMixin):
 
     def get_contacts_for_notification(self, _notification):
         yield Contact(self.name, 'email', self.email)
-        yield Contact(self.name, 'activity', self.get_actor_address())
+        yield Contact(self.name, 'activity', self.get_object_address())
 
     def __activity__(self):
         return aspy.Person(
-            id=self.get_actor_address(),
+            id=self.get_object_address(),
             name=self.name)
 
     def get_absolute_url(self):
@@ -220,7 +219,7 @@ class Subscriber(VoxModel):
 
     def get_contacts_for_notification(self, _notification):
         yield Contact(self.name, 'email', self.email)
-        yield Contact(self.name, 'activity', self.get_actor_address())
+        yield Contact(self.name, 'activity', self.get_object_address())
 
     def __activity__(self):
         return aspy.Person(
@@ -278,19 +277,5 @@ channels[Comment].add('poster', _('Poster'), Subscriber, Comment.get_posters)
 channels[Comment].add('author', _('Article author'),
                       User, Comment.get_article_authors)
 
-actors[User].set_regex(r'^~(?P<id>[0-9]+)/$')
-actors[Subscriber].set_regex(r'^\.(?P<id>[0-9]+)/$')
-
-
-# set up permissions for accessing user inboxes
-# note that this only works for the user inboxes
-# the subscriber ones are unreachable
-# NOTE: these shenanigans are actually unnecessary,
-# you could achieve this by removing DJANGO_VOX_VIEW_OWN_INBOX = False
-# in the settings, is is just here to test the feature
-@rules.predicate
-def inbox_owner(user, inbox_actor):
-    return user == inbox_actor
-
-
-rules.add_perm('django_vox.view_inbox', inbox_owner)
+objects[User].set_regex(r'^~(?P<id>[0-9]+)/$')
+objects[Subscriber].set_regex(r'^\.(?P<id>[0-9]+)/$')

@@ -36,7 +36,7 @@ PREFIX_FORMATS = {
 _CHANNEL_TYPE_IDS = None
 
 
-class ActorNotFound(Exception):
+class ObjectNotFound(Exception):
     pass
 
 
@@ -130,7 +130,7 @@ class ChannelManager(dict):
         return item
 
 
-class ActorManagerItem:
+class ObjectManagerItem:
 
     def __init__(self, cls):
         self.cls = cls
@@ -159,14 +159,24 @@ class ActorManagerItem:
         return '/' + (self.reverse_form % kwargs)
 
 
-class ActorManager(dict):
+class ObjectManager(dict):
 
     def __missing__(self, key):
-        item = ActorManagerItem(key)
+        item = ObjectManagerItem(key)
         self[key] = item
         return item
 
-    def get_local_actor(self, path):
+    def create_local_object(self, path):
+        for key, value in self.items():
+            match = value.match(path)
+            if match:
+                # RegexURLPattern vs RegexPattern
+                kwargs = match.kwargs if hasattr(match, 'kwargs') else match[2]
+                return key.__class__(**kwargs)
+        msg = _('Unable to find class for {}.').format(path)
+        raise ObjectNotFound(msg)
+
+    def get_local_object(self, path):
         matched_patterns = []
         for key, value in self.items():
             match = value.match(path)
@@ -177,13 +187,13 @@ class ActorManager(dict):
                 try:
                     return key.objects.get(**kwargs)
                 except key.__class__.DoesNotExist:
-                    continue
-        msg = _('Unable to find actor for {}.').format(path)
+                    pass
+        msg = _('Unable to find object for {}.').format(path)
         if matched_patterns:
             msg = msg + ' ' + _(
                 'We tried the following patterns: {}.').format(
                 ', '.join(matched_patterns))
-        raise ActorNotFound(msg)
+        raise ObjectNotFound(msg)
 
 
 backends = BackendManager(
@@ -191,7 +201,7 @@ backends = BackendManager(
 
 channels = ChannelManager()
 
-actors = ActorManager()
+objects = ObjectManager()
 
 
 def get_protocol_choices():

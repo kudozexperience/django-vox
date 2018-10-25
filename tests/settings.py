@@ -28,7 +28,6 @@ BASE_INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'rules',
     'django_vox',
 ]
 
@@ -95,7 +94,6 @@ DATABASES = {
 }
 
 AUTHENTICATION_BACKENDS = (
-    'rules.permissions.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 

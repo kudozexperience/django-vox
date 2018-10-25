@@ -1,22 +1,25 @@
 import abc
 import collections
 import inspect
+import json
 import random
+import uuid
+import warnings
 from typing import Any, List, Mapping, TypeVar, cast
 
 import aspy
 from django.apps import apps
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import NOT_PROVIDED, Q
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
+import django.conf
 
 import django_vox.backends
 from django_vox.backends.base import AttachmentData
 
-from . import base, registry
+from . import base, registry, settings
 
 __all__ = ('find_activity_type', 'get_model_from_relation',
            'resolve_parameter', 'make_model_preview', 'PreviewParameters',
@@ -26,6 +29,15 @@ __all__ = ('find_activity_type', 'get_model_from_relation',
            'VoxAttachments', 'NotificationManager', 'Notification',
            'Template', 'TemplateAttachment', 'SiteContactManager',
            'SiteContact', 'SiteContactSetting', 'FailedMessage', 'InboxItem')
+
+
+def load_aspy_object(json_str):
+    data = json.loads(json_str)
+    obj = getattr(aspy, data.get('type', 'Object'))()
+    for key, value in data.items():
+        if key not in ('type', '@context'):
+            obj[key] = value
+    return obj
 
 
 def find_activity_type(url):
@@ -228,19 +240,19 @@ class VoxModel(models.Model, metaclass=VoxModelBase):
         """
         return self.__activity__()
 
-    def get_actor_address(self):
-        if self.__class__ not in registry.actors:
+    def get_object_address(self):
+        if self.__class__ not in registry.objects:
             raise RuntimeError(
-                '{} is not a registered actor, use '
-                'django_vox.registry.actors[{}].set_regex(...)'.format(
+                '{} is not a registered object, use '
+                'django_vox.registry.object[{}].set_regex(...)'.format(
                     self, self.__class__))
-        url = registry.actors[self.__class__].reverse(self)
+        url = registry.objects[self.__class__].reverse(self)
         return django_vox.base.full_iri(url)
 
     def __activity__(self):
-        if self.__class__ in registry.actors:
+        if self.__class__ in registry.objects:
             # this is safer, and probably faster
-            iri = self.get_actor_address()
+            iri = self.get_object_address()
         else:
             iri = django_vox.base.full_iri(self.get_absolute_url())
 
@@ -326,8 +338,8 @@ class VoxParam(VoxNotification):
 
 
 class VoxAttach:
-    def __init__(self, attr: str=None,
-                 mime_attr: str='', mime_string: str='', label=''):
+    def __init__(self, attr: str = None,
+                 mime_attr: str = '', mime_string: str = '', label=''):
         self.key = ''  # gets set later
         self.attr = attr
         if bool(mime_attr) == bool(mime_string):
@@ -495,8 +507,8 @@ class Notification(models.Model):
                 yield key, channel.name
 
     def issue(self, obj: VoxModel,
-              target: VoxModelN=None,
-              actor: VoxModelN=None):
+              target: VoxModelN = None,
+              actor: VoxModelN = None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template
@@ -534,11 +546,16 @@ class Notification(models.Model):
                 for contact in c_able.get_contacts_for_notification(self):
                     contact_set[key][contact] = c_able
 
-        sent = False
+        all_exceptions = []
+        all_sent = False
         for key, contact_dict in contact_set.items():
-            if self.send_messages(contact_dict, parameters,
-                                  Template.objects.filter(recipient=key)):
-                sent = True
+            sent, exceptions = self.send_messages(
+                contact_dict, parameters,
+                Template.objects.filter(recipient=key))
+            all_sent = all_sent or sent
+            all_exceptions += exceptions
+        if all_exceptions:
+            raise all_exceptions[0]
         if not sent and self.required:
             raise RuntimeError('Notification required, but no message sent')
 
@@ -557,6 +574,7 @@ class Notification(models.Model):
             return None
 
         # per-protocol message cache
+        exceptions = []
         cache = {}
         sent = False
         for contact, contactable in contacts.items():
@@ -590,7 +608,11 @@ class Notification(models.Model):
                         message=str(message),
                         error=str(e),
                     )
-        return sent
+                    if settings.THROW_EXCEPTIONS:
+                        exceptions.append(e)
+                    else:
+                        warnings.warn(RuntimeWarning(e))
+        return sent, exceptions
 
     def can_issue_custom(self):
         return not (self.actor_type or self.target_type)
@@ -731,10 +753,6 @@ class SiteContact(VoxModel):
         yield SiteContact.objects
 
 
-registry.channels[SiteContact].add(
-    '', '', SiteContact, SiteContact.all_contacts)
-
-
 class SiteContactSetting(models.Model):
 
     class Meta:
@@ -774,15 +792,9 @@ class FailedMessage(models.Model):
         self.delete()
 
 
-class InboxItem(models.Model):
-    # these two fields tell you who's inbox it is
-    owner_id = models.CharField(
-        _('owner id'), max_length=2048, db_index=True)
-    owner_type = models.ForeignKey(
-        to=ContentType, on_delete=models.CASCADE, related_name='+',
-        verbose_name=_('owner type'))
-    owner = GenericForeignKey('owner_type', 'owner_id')
-    # basic activity fields
+class Activity(models.Model):
+    id = models.UUIDField(
+        _('ID'), primary_key=True, serialize=True, default=uuid.uuid4)
     name = models.CharField(
         _('name'), max_length=512, blank=True)
     summary = models.TextField(blank=True)
@@ -794,7 +806,7 @@ class InboxItem(models.Model):
         _('actor id'), max_length=2048, db_index=True)
     actor_json = models.TextField(blank=True)
     target_id = models.CharField(
-        _('actor id'), max_length=2048, db_index=True)
+        _('target id'), max_length=2048, db_index=True)
     target_json = models.TextField(blank=True)
     object_id = models.CharField(
         _('object id'), max_length=2048, db_index=True)
@@ -802,3 +814,47 @@ class InboxItem(models.Model):
     # and a timestamp, maybe useful
     timestamp = models.DateTimeField(
         _('timestamp'), db_index=True, auto_now_add=True)
+
+    def get_full_url(self):
+        return django_vox.base.full_iri(
+            registry.objects[Activity].reverse(self))
+
+    def __activity__(self):
+        # this is a bit hackish because we're using dicts and not aspy
+        # objects
+        aspy_class = getattr(aspy, self.type, aspy.Object)
+        obj = aspy_class(id=self.get_full_url(), published=self.timestamp)
+        for field in ('actor', 'object', 'target'):
+            value = getattr(self, field + '_json')
+            if value:
+                obj[field] = load_aspy_object(value)
+        for field in 'summary', 'name':
+            value = getattr(self, field)
+            if value:
+                obj[field] = value
+        return obj
+
+    def activity_read(self, _activity, user):
+        inbox_item = InboxItem.objects.get(owner=user, activity=self)
+        inbox_item.read = True
+        inbox_item.save()
+
+
+class InboxItem(models.Model):
+
+    class Meta:
+        unique_together = ('owner', 'activity')
+
+    owner = models.ForeignKey(
+        to=django.conf.settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE, related_name='+',
+        verbose_name=_('owner'))
+    activity = models.ForeignKey(
+        to=Activity, on_delete=models.CASCADE, related_name='+',
+        verbose_name=_('activity'))
+    read = models.BooleanField(default=False)
+
+
+registry.channels[SiteContact].add(
+    '', '', SiteContact, SiteContact.all_contacts)
+registry.objects[Activity].set_regex(settings.ACTIVITY_REGEX)

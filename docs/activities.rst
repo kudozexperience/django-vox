@@ -65,7 +65,7 @@ send them all the possible notification, then add the following code:
 .. code-block:: python
 
    def get_contacts_for_notification(self, _notification):
-       yield Contact(self.name, 'activity', self.get_actor_address())
+       yield Contact(self.name, 'activity', self.get_object_address())
 
 
 Setting up models
@@ -96,12 +96,13 @@ Finally, there’s a few rare cases where the same model might need to give
 you different objects for different kinds of notifications. If you need to
 do this, you can override ``VoxModel.get_activity_object()``.
 
-.. note:: If your model is also an actor, it’s recommended to use
-          ``VoxModel.get_actor_address()`` to get the object’s ID, otherwise
-          you can use ``django_vox.base.full_iri(self.get_absolute_url())``
+.. note:: If your model is registered with ``django_vox.registry.objects``,
+          it’s recommended to use ``VoxModel.get_object_address()``
+          to get the object’s ID, otherwise you can use
+          ``django_vox.base.full_iri(self.get_absolute_url())``.
 
 
-Accessing the inboxes
+Accessing the Inboxes
 =====================
 
 At this point, you should be able to make up activity notifications, issue
@@ -117,27 +118,6 @@ settings.py:
        'django_vox.middleware.activity_inbox_middleware',
    ]
 
-
-That’s probably it, but if your setup is more complicated than “each user has
-their own inbox” (for example, you have an organization-wide actor and you
-need several users to be able to access the inbox) you’ll have to add support
-for object level permissions and give each user access to the permission
-``django_vox.view_inbox`` for the specific actor involved. Django doesn’t
-support this by default. We recommend using `rules`_ but there are other
-authentication backends that work too. Here’s an example with rules:
-
-.. code-block:: python
-
-   @rules.predicate
-   def inbox_owner(user, inbox_actor):
-       # one set of rules for organization actors
-       if isinstance(inbox_actor, models.Organization):
-           return user.organization == inbox_actor
-       # another for user actors
-       return user == inbox_actor
-
-   rules.add_perm('django_vox.view_inbox', inbox_owner)
-
-That’s it folks.
-
-.. _rules: https://pypi.org/project/rules/
+There‘s still a few things that remain to be documented, like reading inbox
+items, and adding the ability to perform actions on data in your models by
+posting to the inbox.
