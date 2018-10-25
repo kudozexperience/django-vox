@@ -14,6 +14,7 @@ from django.db import models
 from django.db.models import NOT_PROVIDED, Q
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
+import django.utils.timezone
 import django.conf
 
 import django_vox.backends
@@ -836,7 +837,7 @@ class Activity(models.Model):
 
     def activity_read(self, _activity, user):
         inbox_item = InboxItem.objects.get(owner=user, activity=self)
-        inbox_item.read = True
+        inbox_item.read_at = django.utils.timezone.now()
         inbox_item.save()
 
 
@@ -852,7 +853,8 @@ class InboxItem(models.Model):
     activity = models.ForeignKey(
         to=Activity, on_delete=models.CASCADE, related_name='+',
         verbose_name=_('activity'))
-    read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(
+        _('date read'), db_index=True, null=True, blank=True)
 
 
 registry.channels[SiteContact].add(

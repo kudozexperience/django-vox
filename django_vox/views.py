@@ -72,10 +72,13 @@ def inbox(request, path):
 
 def inbox_get(_request, owner):
     query = models.InboxItem.objects.select_related('activity').filter(
-        owner=owner, read=False).order_by('-id')
+        owner=owner).order_by('-id')
     items = []
     for record in query[:settings.INBOX_LIMIT]:
-        items.append(record.activity.__activity__())
+        item = record.activity.__activity__()
+        if record.read_at:
+            item['https://schema.org/dateRead'] = record.read_at
+        items.append(item)
 
     collection = aspy.OrderedCollection(
         summary='Inbox for {}'.format(owner),

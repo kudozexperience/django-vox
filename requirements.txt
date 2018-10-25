@@ -2,4 +2,4 @@ Django>=1.10,<2.1
 requests
 lxml
 august
-aspy>=0.3
+aspy>=0.4

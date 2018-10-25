@@ -98,6 +98,10 @@ class WebTests(TestCase):
         items = json_obj['items']
         assert 1 == len(items)
         item_id = items[0]['id']
+        # check db
+        inbox = django_vox.models.InboxItem.objects.all()
+        assert 1 == len(inbox)
+        assert inbox[0].read_at is None
         # now mark the message as read
         activity = aspy.Read(object=item_id)
         response = client.post('/~1/outbox', activity.to_dict(), **EXTRA)
@@ -105,4 +109,4 @@ class WebTests(TestCase):
         # now we should have one read item
         inbox = django_vox.models.InboxItem.objects.all()
         assert 1 == len(inbox)
-        assert True, inbox[0].read
+        assert inbox[0].read_at is not None
