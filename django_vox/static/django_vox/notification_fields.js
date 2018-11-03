@@ -69,22 +69,15 @@
         'html': markItUpSettingsHtml,
         'markdown': markItUpSettingsMarkdown,
         'basic': markItUpSettingsBasic,
-
-//        'email': markItUpSettingsHtml,
-//        'email-html': markItUpSettingsHtml,
-//        'email-md': markItUpSettingsMarkdown,
-//        'postmark-template': markItUpSettingsBasic,
-//        'json-webhook': markItUpSettingsBasic,
-//        'twilio': markItUpSettingsBasic,
-//        'twitter': markItUpSettingsBasic,
-//        'slack-webhook': markItUpSettingsBasic,
-//        'xmpp': markItUpSettingsBasic,
     };
 
-    function parseVariables(recipient, variables) {
+    function parseVariables(recipients, variables) {
         var result = [];
-        if (Object.keys(variables).includes(recipient)) {
-            result = result.concat(parseSubVariables([variables[recipient]]));
+        for (var i=0; i<recipients.length; i++) {
+            var rec = recipients[i];
+            if (Object.keys(variables).includes(rec)) {
+                result = result.concat(parseSubVariables([variables[rec]]));
+            }
         }
         result = result.concat(parseSubVariables(variables._static));
         return result;
@@ -119,11 +112,11 @@
     }
 
 
-    function getMarkItUpSettings(backend, editor, recipient, variables) {
+    function getMarkItUpSettings(backend, editor, recipients, variables) {
         var settings = Object.assign({}, markItUpSettings[editor]);
         settings.previewParserPath = '../preview/' + backend + '/';
         settings.previewParserVar = 'body';
-        var variableList = parseVariables(recipient, variables);
+        var variableList = parseVariables(recipients, variables);
         settings.markupSet = [
             {name:'Variables', className:'variable', openWith:'{{ ', closeWith:' }}',
                 dropMenu: variableList},
@@ -149,9 +142,13 @@
 
     function setup(variables) {
         // show subject based on backends
-        var recipientSelects = django.jQuery(
-            '.field-recipient select, .grp-row.recipient select')
-        recipientSelects.on('change', function() {
+        var recipientBoxes = django.jQuery(
+            '.field-recipients input, .grp-row.recipients input')
+        recipientBoxes.on('change', function() {
+            selectRecipient(this, variables);});
+        var bulkBox = django.jQuery(
+            '.field-bulk input, .grp-row.bulk input')
+        bulkBox.on('change', function() {
             selectRecipient(this, variables);});
         var backendSelects = django.jQuery(
             '.field-backend select, .grp-row.backend select');
@@ -160,12 +157,11 @@
     }
 
     function selectBackend(elem, variables) {
+        // show/hide fields
         var opt = elem.options[elem.selectedIndex];
-        var backend = elem.value;
-        var editor = opt.dataset.editor;
         var useSubject = opt.dataset.subject == 'true';
         var useAttachment = opt.dataset.attachment == 'true';
-        var fieldset = $(elem).closest('fieldset')
+        var useFromAddress = opt.dataset.from_address == 'true';
         // update subject
         var subject_div = django.jQuery(
             '.field-subject, .grp-row.subject');
@@ -174,23 +170,33 @@
         var attachment_div = django.jQuery(
             '.field-attachments, .grp-row.attachments');
         attachment_div.toggle(useAttachment);
+        // update from address
+        var from_address_div = django.jQuery(
+            '.field-from_address, .grp-row.from_address');
+        from_address_div.toggle(useFromAddress);
         // update markitup
-        var recipient = fieldset.find(
-            '.field-recipient select, .grp-row.recipient select').val();
-        var textarea = fieldset.find(
-            '.field-content textarea, .grp-row.content textarea');
-        textarea.markItUpRemove();
-        if (editor in markItUpSettings) {
-            textarea.markItUp(getMarkItUpSettings(
-                backend, editor, recipient, variables));
-        }
+        var fieldset = $(elem).closest('fieldset')
+        refreshMarkItUp(fieldset, variables);
     }
 
     function selectRecipient(elem, variables) {
-        var fieldset = $(elem).closest('fieldset')
+        var fieldset = $(elem).closest('fieldset');
+        refreshMarkItUp(fieldset, variables);
+    }
+
+    function refreshMarkItUp(fieldset, variables) {
+        var bulk = fieldset.find(
+            '.field-bulk input, .grp-row.backend input')[0];
+        // find value
+        var recipients = [];
+        if (!bulk.checked)
+            recipients = fieldset.find(
+                '.field-recipients input, .grp-row.recipients input').filter(
+                    function() { return this.checked; }).map(
+                    function() { return this.value; }).get();
         var backendSelect = fieldset.find(
-            '.field-backend select, .grp-row.backend select')[0]
-        var opt = backendSelect.selectedOptions[0]
+            '.field-backend select, .grp-row.backend select')[0];
+        var opt = backendSelect.selectedOptions[0];
         var backend = opt.value;
         var editor = opt.dataset.editor;
         var textarea = fieldset.find(
@@ -198,7 +204,7 @@
         textarea.markItUpRemove();
         if (editor in markItUpSettings) {
             textarea.markItUp(getMarkItUpSettings(
-                backend, editor, elem.value, variables));
+                backend, editor, recipients, variables));
         }
     }
 

@@ -3,10 +3,10 @@ from typing import List
 from urllib.parse import urlsplit
 
 import aspy
+import django.db.transaction
 import django.utils.encoding
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
-import django.db.transaction
 
 import django_vox.base
 import django_vox.models
@@ -15,6 +15,21 @@ import django_vox.registry
 from . import base
 
 __ALL__ = ('make_contact', 'Backend',)
+
+PUBLIC_ADDRESS = 'https://www.w3.org/ns/activitystreams#Public'
+
+
+def id_to_user(ids: List[str]):
+    for identifier in ids:
+        url = django.utils.encoding.iri_to_uri(identifier)
+        # I'm pretty sure we're only path matching, but this might change
+        path = urlsplit(url)[2]
+        # there should be a '/' in the beginning of the path, but that's
+        # not normally part of the regex
+        if path.startswith('/'):
+            path = path[1:]
+        # put the message in the relevant inbox
+        yield django_vox.registry.objects.get_local_object(path)
 
 
 class Backend(base.Backend):
@@ -101,16 +116,13 @@ class Backend(base.Backend):
         pass  # not supported
 
     @classmethod
-    def send_message(cls, contact: django_vox.base.Contact, message: str):
-        url = django.utils.encoding.iri_to_uri(contact.address)
-        # I'm pretty sure we're only path matching, but this might change
-        path = urlsplit(url)[2]
-        # there should be a '/' in the beginning of the path, but that's
-        # not normally part of the regex
-        if path.startswith('/'):
-            path = path[1:]
-        # put the message in the relevant inbox
-        owner = django_vox.registry.objects.get_local_object(path)
+    def send_message(cls, _from_address: str,
+                     to_addresses: List[str], message: str):
+        address_set = set(to_addresses)
+        # note: we don't support public addressing yet, just strip them
+        if PUBLIC_ADDRESS in address_set:
+            address_set.remove(PUBLIC_ADDRESS)
+        users = id_to_user(address_set)
         json_data = json.loads(message)
         kwargs = {}
         for field in ('actor', 'object', 'target'):
@@ -130,5 +142,6 @@ class Backend(base.Backend):
 
         with django.db.transaction.atomic():
             activity = django_vox.models.Activity.objects.create(**kwargs)
-            django_vox.models.InboxItem.objects.create(
-                activity=activity, owner=owner)
+            for user in users:
+                django_vox.models.InboxItem.objects.create(
+                    activity=activity, owner=user)

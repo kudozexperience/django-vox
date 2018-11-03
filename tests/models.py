@@ -11,7 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 from django_vox.base import Contact, full_iri
 from django_vox.models import (VoxAttach, VoxAttachments, VoxModel,
                                VoxNotification, VoxNotifications)
-from django_vox.registry import objects, channels
+from django_vox.registry import channels, objects
 
 
 class UserManager(BaseUserManager):

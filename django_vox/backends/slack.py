@@ -17,9 +17,10 @@ class Backend(base.Backend):
     VERBOSE_NAME = _('Slack')
 
     @classmethod
-    def send_message(cls, contact, message):
+    def send_message(cls, _from_address, to_addresses, message):
         data = json.dumps({'text': message})
         headers = {'Content-Type': 'application/json'}
-        result = requests.post(contact.address, data=data, headers=headers)
-        if not result.ok:
-            raise requests.HTTPError(result.text)
+        for address in to_addresses:
+            result = requests.post(address, data=data, headers=headers)
+            if not result.ok:
+                raise requests.HTTPError(result.text)

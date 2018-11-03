@@ -5,17 +5,17 @@ import json
 import random
 import uuid
 import warnings
-from typing import Any, List, Mapping, TypeVar, cast
+from typing import List, Mapping, TypeVar, cast
 
 import aspy
+import django.conf
+import django.utils.timezone
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import NOT_PROVIDED, Q
 from django.template import Context
 from django.utils.translation import ugettext_lazy as _
-import django.utils.timezone
-import django.conf
 
 import django_vox.backends
 from django_vox.backends.base import AttachmentData
@@ -105,8 +105,6 @@ class PreviewParameters:
                        if target_type else {})
         self.actor = (make_model_preview(actor_type)
                       if actor_type else {})
-        self.contact = base.Contact(
-            'Contact Name', 'email', 'contact@example.org')
         self.object = make_model_preview(object_type)
         # for backwards compatibility
         self.source = self.actor
@@ -391,6 +389,33 @@ class VoxAttachments:
         return self.items.__getitem__(item)
 
 
+class ChannelContactSet:
+
+    def __init__(self, notification, obj, target, actor):
+        # make a dictionary where the keys are protocol, 'recipient key'
+        # pairs, the values are address => contactable dictionaries
+        channels = notification.get_recipient_channels(obj, target, actor)
+        self._set = collections.defaultdict(dict)
+        contactable_list = dict((key, channel.contactables())
+                                for (key, channel) in channels.items())
+        for recipient_key, contactables in contactable_list.items():
+            for c_able in contactables:
+                for contact in c_able.get_contacts_for_notification(
+                        notification):
+                    self._set[contact.protocol, recipient_key][
+                        contact.address] = c_able
+
+    def get_addresses(self, protocol: str, recipients: List[str]):
+        for recipient in recipients:
+            if (protocol, recipient) in self._set:
+                yield from self._set[protocol, recipient].keys()
+
+    def get_address_items(self, protocol: str, recipients: List[str]):
+        for recipient in recipients:
+            if (protocol, recipient) in self._set:
+                yield from self._set[protocol, recipient].items()
+
+
 class NotificationManager(models.Manager):
     use_in_migrations = True
 
@@ -493,7 +518,8 @@ class Notification(models.Model):
         return dict((key, model) for (key, model)
                     in choices.items() if model is not None)
 
-    def get_recipient_channels(self, obj, target, actor):
+    def get_recipient_channels(self, obj, target, actor)\
+            -> Mapping[str, registry.Channel]:
         instances = self.get_recipient_instances(obj, target, actor)
         return dict((key, channel)
                     for recip_key, model in instances.items()
@@ -525,6 +551,7 @@ class Notification(models.Model):
         parameters = {
             'content': obj,
             'object': obj,
+            'notification': self,
         }
         if target is not None:
             parameters['target'] = target
@@ -536,84 +563,74 @@ class Notification(models.Model):
         parameters['activity_object'] = obj.get_activity_object(
             self.codename, actor, target)
         parameters['activity_type'] = self.get_activity_type()
+        # load up all the templates so we can see available recipients
+        templates = self.template_set.filter(enabled=True)
+        contact_set = ChannelContactSet(self, obj, target, actor)
 
-        channels = self.get_recipient_channels(obj, target, actor)
-        contactable_list = dict((key, channel.contactables())
-                                for (key, channel) in channels.items())
+        exceptions = []
+        sent = False
 
-        contact_set = collections.defaultdict(dict)
-        for key, contactables in contactable_list.items():
-            for c_able in contactables:
-                for contact in c_able.get_contacts_for_notification(self):
-                    contact_set[key][contact] = c_able
+        for template in templates:
+            backend = django_vox.registry.backends.by_id(template.backend)
+            recipients = template.recipients.split(',')
+            # items is a list of address list, contactable pairs
+            if template.bulk:
+                items = ((contact_set.get_addresses(
+                    backend.PROTOCOL, recipients), None),)
+            else:
+                items = list(((address,), contactable) for
+                             (address, contactable) in
+                             contact_set.get_address_items(
+                                 backend.PROTOCOL, recipients))
+            for addresses, contactable in items:
+                if contactable is not None:
+                    local_params = parameters.copy()
+                    local_params['recipient'] = contactable
+                else:
+                    local_params = parameters
 
-        all_exceptions = []
-        all_sent = False
-        for key, contact_dict in contact_set.items():
-            sent, exceptions = self.send_messages(
-                contact_dict, parameters,
-                Template.objects.filter(recipient=key))
-            all_sent = all_sent or sent
-            all_exceptions += exceptions
-        if all_exceptions:
-            raise all_exceptions[0]
+                exception = self.send_message(
+                    addresses, local_params, template, backend)
+                if exception is None:
+                    sent = True
+                elif settings.THROW_EXCEPTIONS:
+                    exceptions.append(exception)
+                else:
+                    warnings.warn(RuntimeWarning(exception))
+
+        if exceptions:
+            raise exceptions[0]
+
         if not sent and self.required:
             raise RuntimeError('Notification required, but no message sent')
 
-    def send_messages(
-            self, contacts: Mapping[base.Contact, AbstractContactable],
-            generic_params: Mapping[str, Any], template_queryset):
-
-        def _get_backend_message(protocol):
-            backends = django_vox.registry.backends.by_protocol(protocol)
-            # now get all the templates for these backends
-            for be in backends:
-                tpl = template_queryset.filter(
-                    backend=be.ID, notification=self, enabled=True).first()
-                if tpl is not None:
-                    return be, tpl
-            return None
-
-        # per-protocol message cache
-        exceptions = []
-        cache = {}
-        sent = False
-        for contact, contactable in contacts.items():
-            params = generic_params.copy()
-            params['contact'] = contact
-            params['recipient'] = contactable
-            params['notification'] = self
-            proto = contact.protocol
-            if proto not in cache:
-                cache[proto] = _get_backend_message(proto)
-            if cache[proto] is not None:
-                backend, template = cache[proto]
-                attachments = []
-                if backend.USE_ATTACHMENTS:
-                    for attachment in template.attachments.all():
-                        data = resolve_parameter(attachment.key, params)
-                        if data is not None:
-                            attachments.append(data)
-                message = backend.build_message(
-                    template.subject, template.content, params, attachments)
-                # We're catching all exceptions here because some people
-                # are bad people and can't subclass properly
-                try:
-                    backend.send_message(contact, message)
-                    sent = True
-                except Exception as e:
-                    FailedMessage.objects.create(
-                        backend=backend.ID,
-                        contact_name=contact.name,
-                        address=contact.address,
-                        message=str(message),
-                        error=str(e),
-                    )
-                    if settings.THROW_EXCEPTIONS:
-                        exceptions.append(e)
-                    else:
-                        warnings.warn(RuntimeWarning(e))
-        return sent, exceptions
+    @staticmethod
+    def send_message(addresses: List[str],
+                     parameters: dict, template, backend) -> Exception:
+        attachments = []
+        if backend.USE_ATTACHMENTS:
+            for attachment in template.attachments.all():
+                data = resolve_parameter(attachment.key, parameters)
+                if data is not None:
+                    attachments.append(data)
+        message = backend.build_message(
+            template.subject, template.content, parameters, attachments)
+        from_address = backend.get_from_address(
+            template.from_address, parameters)
+        # We're catching all exceptions here because some people
+        # are bad people and can't subclass properly
+        try:
+            backend.send_message(from_address, addresses, message)
+        except Exception as e:
+            FailedMessage.objects.create(
+                backend=backend.ID,
+                from_address=from_address,
+                to_addresses=','.join(addresses),
+                message=str(message),
+                error=str(e),
+            )
+            return e
+        return None
 
     def can_issue_custom(self):
         return not (self.actor_type or self.target_type)
@@ -650,8 +667,9 @@ class Notification(models.Model):
             if model is not None:
                 channels = registry.channels[model].prefix(target_key)
                 for key, channel in channels.items():
+                    label = str(_('Recipient {}')).format(channel.name)
                     mapping[key] = get_model_variables(
-                        'Recipient', 'recipient', channel.target_class)
+                        label, 'recipient', channel.target_class)
         content_name = content_model._meta.verbose_name.title()
         mapping['_static'] = [
             get_model_variables(content_name, 'object', content_model),
@@ -676,12 +694,17 @@ class Template(models.Model):
     backend = models.CharField(_('backend'), max_length=100)
     subject = models.CharField(_('subject'), max_length=500, blank=True)
     content = models.TextField(_('content'))
-    recipient = models.CharField(
-        verbose_name=_('recipient'), max_length=103, default='re',
+    recipients = models.TextField(
+        verbose_name=_('recipients'), default='re', blank=True,
         help_text=_('Who this message actually gets sent to.'))
+    from_address = models.CharField(
+        _('from address'), max_length=500, blank=True)
     enabled = models.BooleanField(
         _('enabled'), default=True,
         help_text=_('When not active, the template will be ignored'))
+    bulk = models.BooleanField(
+        _('bulk'), default=True,
+        help_text=_('Send the same message to all recipients'))
 
     objects = models.Manager()
 
@@ -695,9 +718,10 @@ class Template(models.Model):
         choices = {}
         if self.notification:
             choices = dict(self.notification.get_recipient_choices())
-        recipient = choices.get(self.recipient, self.recipient)
+        recipients = ', '.join(str(choices.get(r, r)) for r
+                               in self.recipients.split(','))
         backend = registry.backends.by_id(self.backend)
-        return '{} for {}'.format(backend.VERBOSE_NAME, recipient)
+        return '{} for {}'.format(backend.VERBOSE_NAME, recipients)
 
 
 class TemplateAttachment(models.Model):
@@ -773,8 +797,9 @@ class FailedMessage(models.Model):
         verbose_name = _('failed message')
 
     backend = models.CharField(_('backend'), max_length=100)
-    contact_name = models.CharField(_('contact name'), max_length=500)
-    address = models.CharField(_('address'), max_length=500)
+    from_address = models.CharField(_('from address'),
+                                    max_length=500, blank=True)
+    to_addresses = models.TextField(_('to addresses'))
     message = models.TextField(_('message'))
     error = models.TextField(_('error'))
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
@@ -782,14 +807,12 @@ class FailedMessage(models.Model):
     objects = models.Manager()
 
     def __str__(self):
-        return '{} @ {}'.format(self.address, self.created_at)
+        return '{} @ {}'.format(self.to_addresses, self.created_at)
 
     def resend(self):
-        # find backend
         backend = django_vox.registry.backends.by_id(self.backend)
-        contact = base.Contact(
-            self.contact_name, backend.PROTOCOL, self.address)
-        backend.send_message(contact, self.message)
+        to_addresses = list(self.to_addresses.split(','))
+        backend.send_message(self.from_address, to_addresses, self.message)
         self.delete()
 
 

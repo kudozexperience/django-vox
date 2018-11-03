@@ -27,7 +27,7 @@ class SettingsSite:
 
     def __init__(self):
         self.domain = self.name = getattr(
-            settings, 'SITE_DOMAIN', '127.0.0.1')
+            settings, 'SITE_DOMAIN', '127.0.0.1:8000')
 
     def __str__(self):
         return self.name
@@ -73,4 +73,4 @@ class Contact:
         return '{} <{}:{}>'.format(self.name, self.protocol, self.address)
 
     def __hash__(self):
-        return hash(str(self))
+        return hash((self.name, self.protocol, self.address))

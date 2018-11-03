@@ -8,7 +8,6 @@ from django.test import TestCase
 import django_vox.backends.postmark_email
 import django_vox.backends.template_email
 import django_vox.backends.twilio
-from django_vox import base
 
 
 def mocked_requests_post(url, _data=None, json=None, **_kwargs):
@@ -67,14 +66,12 @@ class TestTwilioBackend(TestCase):
         backend = django_vox.backends.twilio.Backend()
         message = backend.build_message(
             self.SUBJECT, self.TEXT, self.PARAMS, [])
-        contact = base.Contact('George', 'sms', '+123')
         with patch('twilio.rest.Client'):
             with self.assertRaises(django.conf.ImproperlyConfigured):
-                backend.send_message(contact, message)
+                backend.send_message('+321', ['+123'], message)
             with self.settings(DJANGO_VOX_TWILIO_ACCOUNT_SID='abc',
-                               DJANGO_VOX_TWILIO_AUTH_TOKEN='secret',
-                               DJANGO_VOX_TWILIO_FROM_NUMBER='+321'):
-                backend.send_message(contact, message)
+                               DJANGO_VOX_TWILIO_AUTH_TOKEN='secret'):
+                backend.send_message('+321', ['+123'], message)
                 import twilio.rest
                 client = twilio.rest.Client
                 assert len(client.mock_calls) > 1
@@ -131,14 +128,16 @@ class TestPostmarkBackend(TestCase):
             '', self.TEXT, self.PARAMS, [])
         message = backend.build_message(
             self.SUBJECT, self.TEXT, self.PARAMS, [])
-        contact = base.Contact('George', 'email', 'george@example.org')
+        from_address = django.conf.settings.DEFAULT_FROM_EMAIL
+        to_addresses = ['george@example.org']
         with patch('requests.post', side_effect=mocked_requests_post):
             with self.assertRaises(django.conf.ImproperlyConfigured):
-                backend.send_message(contact, message)
+                backend.send_message(from_address, to_addresses, message)
             with self.settings(DJANGO_VOX_POSTMARK_TOKEN='token'):
                 with self.assertRaises(RuntimeError):
-                    backend.send_message(contact, bad_message)
-                backend.send_message(contact, message)
+                    backend.send_message(from_address, to_addresses,
+                                         bad_message)
+                backend.send_message(from_address, to_addresses, message)
                 import requests
                 check_model = requests.post.mock_calls[1][2]['json'][
                     'TemplateModel']
@@ -181,14 +180,12 @@ class TestJsonWebhookBackend(TestCase):
     def test_send_message(self):
         backend = django_vox.backends.json_webhook.Backend()
         message = backend.build_message('', self.TEXT, self.PARAMS, [])
-        bad_contact = base.Contact('Bad', 'json-webhook',
-                                   'https://not.example')
-        contact = base.Contact('George', 'json-webhook',
-                               'https://webhook.example')
+        bad_address = 'https://not.example'
+        address = 'https://webhook.example'
         with patch('requests.post', side_effect=mocked_requests_post):
             with self.assertRaises(RuntimeError):
-                backend.send_message(bad_contact, message)
-            backend.send_message(contact, message)
+                backend.send_message('', [bad_address], message)
+            backend.send_message('', [address], message)
             import requests
             check_model = requests.post.mock_calls[0][2]['json']
             assert check_model['birthday'] == \

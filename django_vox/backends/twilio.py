@@ -16,21 +16,26 @@ class Backend(base.Backend):
 
     ID = 'twilio'
     PROTOCOL = 'sms'
+    USE_FROM_ADDRESS = True
     ESCAPE_HTML = False
     EDITOR_TYPE = 'basic'
     VERBOSE_NAME = _('Twilio')
     DEPENDS = ('twilio',)
 
     @classmethod
-    def send_message(cls, contact, message):
+    def send_message(cls, from_address, to_addresses, message):
         from twilio.rest import Client
         account_sid = settings.TWILIO_ACCOUNT_SID
         auth_token = settings.TWILIO_AUTH_TOKEN
-        from_number = settings.TWILIO_FROM_NUMBER
         if account_sid is None:
             raise django.conf.ImproperlyConfigured(
                 'Twilio backend enabled but settings are missing')
 
         client = Client(account_sid, auth_token)
-        client.messages.create(
-            to=contact.address, from_=from_number, body=message)
+        for address in to_addresses:
+            client.messages.create(
+                to=address, from_=from_address, body=message)
+
+    @staticmethod
+    def get_default_from_address():
+        return settings.TWILIO_FROM_NUMBER

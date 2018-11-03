@@ -36,6 +36,15 @@
     is_superuser: true
     is_staff: true
     is_active: true
+- model: tests.user
+  pk: 2
+  fields:
+    name: Other user
+    email: user@example.org
+    password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
+    is_superuser: false
+    is_staff: true
+    is_active: true
 - model: tests.article
   pk: 1
   fields:
@@ -60,56 +69,61 @@
     backend: "email-html"
     subject: "Subscriber email"
     content: "<p>Hi {{ contact.name }},</p>
-      <p>A new article, <a href='http://127.0.0.1:8000/{{ content.pk }}/?token={{
-      recipient.get_token | urlencode }}'>{{ content }}</a>, has been
+      <p>A new article, <a href='http://127.0.0.1:8000/{{ object.pk }}/?token={{
+      recipient.get_token | urlencode }}'>{{ object }}</a>, has been
       published at the awesome blog.</p>"
-    recipient: c:sub
+    recipients: c:sub
     enabled: true
+    bulk: false
 - model: django_vox.template
   pk: 2
   fields:
     notification: [tests, article, create]
     backend: email-md
-    content: "{{ content.author.name }} has posted a new article.
+    content: "{{ object.author.name }} has posted a new article.
 
-    See at <a href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
-      content.article.name }}</a>."
-    recipient: si
+    See at <a href='http://127.0.0.1:8000/{{ object.article.pk }}/'>{{
+      object.article.name }}</a>."
+    recipients: si
     enabled: true
+    bulk: false
 - model: django_vox.template
   pk: 3
   fields:
     notification: [tests, comment, create]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
-      <p>{{ content.poster.name }} has posted a comment on your article <a
-      href='http://127.0.0.1:8000/{{ content.article.pk }}/'>{{
-      content.article.name }}</a>. Go check it out!</p>{% endblock %}"
-    recipient: c:author
+      <p>{{ object.poster.name }} has posted a comment on your article <a
+      href='http://127.0.0.1:8000/{{ object.article.pk }}/'>{{
+      object.article.name }}</a>. Go check it out!</p>{% endblock %}"
+    recipients: c:author
     enabled: true
+    bulk: false
 - model: django_vox.template
   pk: 4
   fields:
     notification: [tests, subscriber, create]
     backend: email
-    content: "A new subscriber {{ content }} has been added on the blog"
-    recipient: si
+    content: "A new subscriber {{ object }} has been added on the blog"
+    recipients: si
     enabled: true
+    bulk: false
 - model: django_vox.template
   pk: 5
   fields:
     notification: [tests, comment, create]
     backend: activity
     subject: New comment posted
-    content: "{{ content.poster.name }} has added a new comment to
-      {{ content.title }}"
-    recipient: c:author
+    content: "{{ object.poster.name }} has added a new comment to
+      {{ object.title }}"
+    recipients: c:author
     enabled: true
+    bulk: false
 - model: django_vox.templateattachment
   pk: 1
   fields:
     template: 1
-    key: content.author.vcard
+    key: object.author.vcard
 - model: django_vox.sitecontact
   pk: 1
   fields:

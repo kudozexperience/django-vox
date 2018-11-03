@@ -186,7 +186,7 @@ class ObjectManager(dict):
                 kwargs = match.kwargs if hasattr(match, 'kwargs') else match[2]
                 try:
                     return key.objects.get(**kwargs)
-                except key.__class__.DoesNotExist:
+                except key.DoesNotExist:
                     pass
         msg = _('Unable to find object for {}.').format(path)
         if matched_patterns:

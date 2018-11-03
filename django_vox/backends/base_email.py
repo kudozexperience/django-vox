@@ -83,6 +83,7 @@ class Backend(base.Backend):
     VERBOSE_NAME = _('Email (Basic)')
     USE_SUBJECT = True
     USE_ATTACHMENTS = True
+    USE_FROM_ADDRESS = True
 
     @classmethod
     def build_multipart(cls, subject: str, body: str,
@@ -105,10 +106,14 @@ class Backend(base.Backend):
         return django.utils.html.escape(parts.text)
 
     @classmethod
-    def send_message(cls, contact, message):
+    def send_message(cls, from_address, to_addresses, message):
         mpm = MultipartMessage.from_string(message)
         email = mpm.to_mail()
-        email.from_email = django.conf.settings.DEFAULT_FROM_EMAIL
-        email.to = [contact.address]
+        email.from_email = from_address
+        email.to = to_addresses
         connection = django.core.mail.get_connection()
         connection.send_messages([email])
+
+    @staticmethod
+    def get_default_from_address():
+        return django.conf.settings.DEFAULT_FROM_EMAIL

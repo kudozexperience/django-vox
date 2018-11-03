@@ -7,8 +7,6 @@ import django.template
 import django.utils.html
 from django.template import Context
 
-import django_vox.base
-
 __ALL__ = ('Backend', 'template_from_string')
 
 
@@ -27,6 +25,7 @@ class Backend:
 
     USE_SUBJECT = False
     USE_ATTACHMENTS = False
+    USE_FROM_ADDRESS = False
     ESCAPE_HTML = True
     DEPENDS = ()
     EDITOR_TYPE = 'basic'
@@ -50,8 +49,22 @@ class Backend:
         pass  # not supported
 
     @classmethod
-    def send_message(cls, contact: django_vox.base.Contact, message: str):
+    def send_message(cls, from_address: str,
+                     to_addresses: List[str], message: str):
         raise NotImplementedError
+
+    @classmethod
+    def get_from_address(cls, provided_address, parameters: dict):
+        if not cls.USE_FROM_ADDRESS:
+            return ''
+        if not provided_address:
+            return cls.get_default_from_address()
+        context = Context(parameters, autoescape=False)
+        return template_from_string(provided_address).render(context)
+
+    @classmethod
+    def get_default_from_address(cls):
+        return ''
 
 
 def template_from_string(text: str, using=None) -> \

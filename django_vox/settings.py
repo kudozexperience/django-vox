@@ -60,8 +60,9 @@ class _Sneaky:
         # call module.__init__ after import introspection is done
         django_setting_name = 'DJANGO_VOX_' + name
         if name in __all__:
-            if hasattr(django.conf.settings, django_setting_name):
-                return getattr(django.conf.settings, django_setting_name)
+            attr = getattr(django.conf.settings, django_setting_name, None)
+            if attr is not None:
+                return attr
             elif name == 'BACKENDS':
                 return _Sneaky.get_backends()
         result = getattr(self.module, name)

@@ -17,7 +17,7 @@ class Backend(base.Backend):
     DEPENDS = ('twitter',)
 
     @classmethod
-    def send_message(cls, contact, message):
+    def send_message(cls, _from_address, to_addresses, message):
         import twitter
         api = twitter.Api(
             consumer_key=settings.TWITTER_CONSUMER_KEY,
@@ -25,7 +25,8 @@ class Backend(base.Backend):
             access_token_key=settings.TWITTER_TOKEN_KEY,
             access_token_secret=settings.TWITTER_TOKEN_SECRET,
         )
-        if contact.address:
-            api.PostDirectMessage(message, screen_name=contact.address)
-        else:
+        if not to_addresses:
             api.PostUpdate(message)
+        else:
+            for address in to_addresses:
+                api.PostDirectMessage(message, screen_name=address)

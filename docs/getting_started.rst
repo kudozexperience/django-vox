@@ -46,7 +46,7 @@ There's basically two parts to setting up the models. First, you have to
 add notifications to the models that you want notifications about. Second,
 you have to add `channels` to those notifications to specify where they
 can be sent. Finally, you need to implement the ``AbstractContactable``
-interfaces for whatever your channels return so that we now how to contact
+interface for whatever your channels return so that we now how to contact
 them.
 
 If you only ever want to send notifications to the site contacts, you can

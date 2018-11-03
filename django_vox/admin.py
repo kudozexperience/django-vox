@@ -24,17 +24,19 @@ class SelectWithSubjectData(forms.Select):
         super().__init__(*args, **kwargs)
         self.use_subjects = {}
         self.use_attachments = {}
+        self.use_from_address = {}
 
     def create_option(self, name, value, label, selected,
                       index, subindex=None, attrs=None):
         index = str(index) if subindex is None else "%s_%s" % (index, subindex)
         option_attrs = {
-            'data-subject': ('true' if self.use_subjects.get(value)
-                             else 'false'),
-            'data-attachment': ('true' if self.use_attachments.get(value)
-                                else 'false'),
             'data-editor': self.editor_types.get(value),
         }
+        data_use_fields = {'data-subject': self.use_subjects,
+                           'data-from_address': self.use_from_address,
+                           'data-attachment': self.use_attachments}
+        for key, item in data_use_fields.items():
+            option_attrs[key] = ('true' if item.get(value) else 'false')
         if selected:
             option_attrs.update(self.checked_attribute)
         if 'id' in option_attrs:
@@ -58,12 +60,15 @@ class BackendChoiceField(forms.ChoiceField):
         backs = list(choices)
         choice_pairs = [(back.ID, back.VERBOSE_NAME) for back in backs]
         use_subjects = dict([(back.ID, back.USE_SUBJECT) for back in backs])
+        use_from_address = dict([(back.ID, back.USE_FROM_ADDRESS)
+                                 for back in backs])
         use_attachments = dict([(back.ID, back.USE_ATTACHMENTS)
                                 for back in backs])
         editor_types = dict([(back.ID, back.EDITOR_TYPE) for back in backs])
         super().__init__(choices=choice_pairs, *args, **kwargs)
         self.widget.use_subjects = use_subjects
         self.widget.use_attachments = use_attachments
+        self.widget.use_from_address = use_from_address
         self.widget.editor_types = editor_types
 
 
@@ -76,7 +81,8 @@ class TemplateInlineFormSet(forms.BaseInlineFormSet):
 
 class TemplateForm(forms.ModelForm):
     backend = BackendChoiceField(choices=registry.backends.all())
-    recipient = forms.ChoiceField()
+    recipients = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple, required=False)
     attachments = forms.MultipleChoiceField(
         required=False,
         widget=FilteredSelectMultiple(
@@ -84,32 +90,36 @@ class TemplateForm(forms.ModelForm):
 
     class Meta:
         model = models.Template
-        fields = ['notification', 'backend', 'recipient', 'subject',
-                  'content', 'attachments', 'enabled']
+        fields = ['notification', 'backend', 'recipients', 'subject',
+                  'content', 'attachments', 'from_address', 'bulk', 'enabled']
 
     def __init__(self, notification=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['recipient'].choices = \
-            notification.get_recipient_choices()
-        self.fields['attachments'].choices = \
-            self.get_attachment_choices(notification)
+        if notification is not None:
+            self.fields['recipients'].choices = \
+                notification.get_recipient_choices()
+            self.fields['attachments'].choices = \
+                self.get_attachment_choices(notification)
         if self.instance:
             self.initial['attachments'] = [
                 a.key for a in self.instance.attachments.all()]
+            self.initial['recipients'] = self.instance.recipients.split(',')
 
     def save(self, commit=True):
         # data will be a set of the added items
+        self.instance.recipients = ','.join(
+            set(self.cleaned_data['recipients']))
         instance = super().save(commit=commit)
         if commit:
-            data = set(self.cleaned_data['attachments'])
+            attach_data = set(self.cleaned_data['attachments'])
             # we need to sync it with the saved items
-            query = ~Q(key__in=data) & Q(template=instance)
+            query = ~Q(key__in=attach_data) & Q(template=instance)
             models.TemplateAttachment.objects.filter(query).delete()
             added_attachments = []
             for attachment in instance.attachments.all():
-                if attachment.key in data:
-                    data.remove(attachment.key)
-            for key in data:
+                if attachment.key in attach_data:
+                    attach_data.remove(attachment.key)
+            for key in attach_data:
                 added_attachments.append(models.TemplateAttachment(
                     template=instance, key=key))
             if added_attachments:
@@ -206,28 +216,28 @@ class NotificationAdmin(admin.ModelAdmin):
     def get_urls(self):
         return [
             url(
-                r'^(?P<id>\w+)/preview/(?P<backend_id>.+)/$',
+                r'^(?P<notification_id>\w+)/preview/(?P<backend_id>.+)/$',
                 self.admin_site.admin_view(self.preview),
                 name='django_vox_preview'),
             url(
-                r'^(?P<id>\w+)/variables/$',
+                r'^(?P<notification_id>\w+)/variables/$',
                 self.admin_site.admin_view(self.variables),
                 name='django_vox_variables'),
             url(
-                r'^(?P<id>\w+)/issue/$',
+                r'^(?P<notification_id>\w+)/issue/$',
                 self.admin_site.admin_view(self.issue),
                 name='django_vox_issue'),
             ] + super().get_urls()
 
-    def preview(self, request, id, backend_id):
+    def preview(self, request, notification_id, backend_id):
         if not self.has_change_permission(request):
             raise PermissionDenied
-        notification = self.get_object(request, unquote(id))
+        notification = self.get_object(request, unquote(notification_id))
         if notification is None:
             raise django.http.Http404(
                 _('%(name)s object with primary key %(key)r does not exist.')
                 % {'name': force_text(self.model._meta.verbose_name),
-                   'key': escape(id)})
+                   'key': escape(notification_id)})
         if request.method != 'POST':
             return django.http.HttpResponseNotAllowed(('POST',))
         try:
@@ -236,29 +246,29 @@ class NotificationAdmin(admin.ModelAdmin):
             result = 'Unable to make preview: {}'.format(str(exc))
         return django.http.HttpResponse(result)
 
-    def variables(self, request, id):
+    def variables(self, request, notification_id):
         if not self.has_change_permission(request):
             raise PermissionDenied
-        notification = self.get_object(request, unquote(id))
+        notification = self.get_object(request, unquote(notification_id))
         if notification is None:
             raise django.http.Http404(
                 _('%(name)s object with primary key %(key)r does not exist.')
                 % {'name': force_text(self.model._meta.verbose_name),
-                   'key': escape(id)})
+                   'key': escape(notification_id)})
         if request.method != 'POST':
             return django.http.HttpResponseNotAllowed(('POST',))
         result = notification.get_recipient_variables()
         return django.http.JsonResponse(result, safe=False)
 
-    def issue(self, request, id, form_url=''):
+    def issue(self, request, notification_id, form_url=''):
         if not self.has_change_permission(request):
             raise PermissionDenied
-        notification = self.get_object(request, unquote(id))
+        notification = self.get_object(request, unquote(notification_id))
         if notification is None:
             raise django.http.Http404(
                 _('%(name)s object with primary key %(key)r does not exist.')
                 % {'name': force_text(self.model._meta.verbose_name),
-                   'key': escape(id)})
+                   'key': escape(notification_id)})
         if request.method == 'POST':
             form = self.issue_form(notification, request.POST)
             if form.is_valid():
@@ -346,8 +356,8 @@ def resend(_admin, _request, queryset):
 
 
 class FailedMessageAdmin(admin.ModelAdmin):
-    list_display = ('backend', 'address', 'created_at')
-    list_filter = ('backend', 'address')
+    list_display = ('backend', 'from_address', 'to_addresses', 'created_at')
+    list_filter = ('backend', 'from_address', 'to_addresses')
     actions = (resend,)
 
 

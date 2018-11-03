@@ -8,6 +8,22 @@ Django vox is a django app that allow you to create and issue
 different types of notifications. Notifications can have different
 kinds of parameters which allow for convenient editing in the admin.
 
+Features
+---------------
+
+* Add and edit notifications from the admin
+* Built-in message editor provides drop-down of available template variables
+  and supports previewing
+* Supports many backends: email (html & text), SMS (Twilio), Twitter, Slack,
+  Postmark, XMPP, JSON webhooks, and Activity Streams
+* Supports attachments
+* Built in site contacts that can be used to send emails to admins, or update
+  your organization‘s Twitter account, or send out webhooks
+* Flexible API allows you to define your own user preferences about which user
+  gets which kind of notification
+* Set custom “from” addresses
+* Send messages in bulk (all together) or individually customized messages
+
 
 Why this exists
 ---------------

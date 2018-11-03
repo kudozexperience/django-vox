@@ -21,16 +21,16 @@ class Backend(json_webhook.Backend):
     VERBOSE_NAME = _('Email (Postmark Templates)')
     ENDPOINT = 'https://api.postmarkapp.com/email/withTemplate'
     USE_SUBJECT = True
+    USE_FROM_ADDRESS = True
 
     @classmethod
-    def send_message(cls, contact, message):
-        from_email = django.conf.settings.DEFAULT_FROM_EMAIL
+    def send_message(cls, from_address, to_addresses, message):
         subject, model = cls.extract_model(message)
         data = {
             'TemplateAlias': subject,
             'TemplateModel': model,
-            'From': from_email,
-            'To': contact.address,
+            'From': from_address,
+            'To': ','.join(to_addresses),
         }
         token = django_vox.settings.POSTMARK_TOKEN
         headers = {
@@ -44,3 +44,7 @@ class Backend(json_webhook.Backend):
         if not response.ok:
             raise RuntimeError('Postmark error: {} {}'.format(
                 data_result['ErrorCode'], data_result['Message']))
+
+    @staticmethod
+    def get_default_from_address():
+        return django.conf.settings.DEFAULT_FROM_EMAIL

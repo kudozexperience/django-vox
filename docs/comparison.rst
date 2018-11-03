@@ -20,6 +20,7 @@ some specific alternatives.
 
     + Less setup
     + Comes with notification settings editor
+    + Optional localization
 
   - Downsides
 
@@ -51,16 +52,14 @@ some specific alternatives.
     + The documentation is very lacking
     + Specifying addresses is convoluted
     + Maybe dead
-
-  - Neither
-
-    + Supports (and requires) ``django.contrib.sites``
+    + Requires ``django.contrib.sites``
 
 * `universal_notifications <https://pypi.python.org/pypi/universal_notifications>`_
 
   - Upsides:
 
     + Supports many backends
+    + Built-in unsubscribing API
 
   - Downsides:
 
@@ -70,10 +69,6 @@ some specific alternatives.
     + Templates aren't easily editable in the admin
 
 * `django-herald <https://pypi.python.org/pypi/django-herald>`_
-
-  - Upsides:
-
-    + Supports email attachments
 
   - Downsides:
 

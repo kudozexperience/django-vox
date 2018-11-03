@@ -16,6 +16,39 @@ class WebTests(TestCase):
     fixtures = ['test']
 
     @staticmethod
+    def test_bad_requests():
+        client = Client()
+        get_list = (
+            ('/~1/inbox', 200, "Sanity check failed"),
+            ('/~404/', 404, "Didn't return 404 on bad endpoint"),
+            ('/~404/inbox', 404, "Didn't return 404 on bad inbox"),
+            ('/~2/inbox', 403, "Didn't return 403 on other user's inbox"),
+            ('/~1/outbox', 405, "Didn't return 405 on getting outbox"),
+        )
+        post_list = (
+            ('/~404/outbox', 404, "Didn't return 404 on bad outbox"),
+            ('/~2/outbox', 403, "Didn't return 403 on other user's outbox"),
+            ('/~1/inbox', 405, "Didn't return 405 on getting inbox"),
+        )
+        response = client.post('/admin/login/',
+                               {'username': 'author@example.org',
+                                'password': 'password'})
+        assert 302 == response.status_code, 'login failed'
+        response = client.get('/~1/inbox', **EXTRA)
+        for url, status, info in get_list:
+            response = client.get(url, **EXTRA)
+            assert status == response.status_code, info
+        for url, status, info in post_list:
+            response = client.post(url, {}, **EXTRA)
+            assert status == response.status_code, info
+        # test and empty endpoint
+        response = client.get('/~1/followers', **EXTRA)
+        assert 200 == response.status_code
+        data = json.loads(response.content)
+        assert 'Collection' == data['type']
+        assert 'items' not in data
+
+    @staticmethod
     def test_actor_page():
         client = Client()
         response = client.get('/~1/', **EXTRA)
@@ -23,7 +56,7 @@ class WebTests(TestCase):
         assert 'application/activity+json' == response['Content-Type']
         json_obj = json.loads(response.content)
         assert 'Person' == json_obj['type']
-        assert 'http://127.0.0.1/~1/' == json_obj['id']
+        assert 'http://127.0.0.1:8000/~1/' == json_obj['id']
 
     @staticmethod
     def test_article_add():
@@ -62,10 +95,10 @@ class WebTests(TestCase):
         items = json_obj['items']
         assert 2 == len(items)
         # in make sure this is in descending order
-        assert 'http://127.0.0.1/1/#comment-1' == items[1]['object']['id']
+        assert 'http://127.0.0.1:8000/1/#comment-1' == items[1]['object']['id']
         assert 'First Post!11' == items[1]['object']['content']
         assert 'Note' == items[1]['object']['name']
-        assert 'http://127.0.0.1/1/#comment-2' == items[0]['object']['id']
+        assert 'http://127.0.0.1:8000/1/#comment-2' == items[0]['object']['id']
         assert 'Author Subscriber' == items[0]['actor']['name']
 
     @staticmethod

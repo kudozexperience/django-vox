@@ -45,7 +45,8 @@ class FailmailTests(TestCase):
                 'created_at')
             assert 6 == len(messages)
             # ends with date
-            assert str(messages[0]).startswith('admin@example.org @ ')
+            for message in messages:
+                assert '@example.org @ ' in str(message)
 
     def test_email_fail_resend(self):
         with self.settings(
@@ -63,7 +64,8 @@ class FailmailTests(TestCase):
             messages = django_vox.models.FailedMessage.objects.order_by(
                 'created_at')
             assert 3 == len(messages)
-            assert str(messages[0]).startswith('admin@example.org @ ')
+            for message in messages:
+                assert '@example.org @ ' in str(message)
             # try resending the first one (to admin)
             with self.assertRaises(Exception):
                 messages[0].resend()
@@ -72,6 +74,33 @@ class FailmailTests(TestCase):
             'created_at')
         messages[0].resend()
         assert 1 == len(mail.outbox)
+
+
+class ExtraOptionsTest(TestCase):
+    """Test extra notification template options"""
+    fixtures = ['test']
+
+    @staticmethod
+    def test_from_address():
+        assert len(mail.outbox) == 0
+        # get the article created template
+        template = django_vox.models.Template.objects.get(pk=1)
+        template.from_address = '{{ object.author.email }}'
+        template.save()
+        # disable message to site contact
+        template = django_vox.models.Template.objects.get(pk=2)
+        template.enabled = False
+        template.save()
+        # first we create an article as the author user
+        author = models.User.objects.get(email='author@example.org')
+        models.Article.objects.create(
+            author=author,
+            title='Just another article',
+            content='nothing really matters ... to me',
+        )
+        assert len(mail.outbox) == 2
+        for message in mail.outbox:
+            assert message.from_email == 'author@example.org'
 
 
 class DemoTests(TestCase):
@@ -120,8 +149,8 @@ class DemoTests(TestCase):
         template.backend = 'email-md'
         template.subject = 'Hi {{ recipient.name }}'
         template.content = 'Hi {{ recipient.name }},\n\nA new article, ' \
-                           '[{{ content }}](http://127.0.0.1:8000/{{ ' \
-                           'content.pk }}/?token={{ recipient.get_token | ' \
+                           '[{{ object }}](http://127.0.0.1:8000/{{ ' \
+                           'object.pk }}/?token={{ recipient.get_token | ' \
                            'urlencode }}), has been published at the ' \
                            'awesome blog.'
         template.save()
@@ -172,10 +201,10 @@ class DemoTests(TestCase):
             models.Article, models.User, models.Subscriber)
         assert 'recipient' not in pp
         assert 'target' in pp
-        assert pp['contact'].name == 'Contact Name'
         assert pp['content'].title == 'Why are there so many blog demos'
+        assert pp['object'].title == 'Why are there so many blog demos'
         assert pp['target'].name == 'Subscriber'
-        assert pp['source'].name == 'Author'
+        assert pp['actor'].name == 'Author'
         # now delete the articles and watch it come up with names
         for article in models.Article.objects.all():
             article.delete()
@@ -185,7 +214,15 @@ class DemoTests(TestCase):
             models.Article, models.User, models.Subscriber)
         assert 'recipient' not in pp
         assert 'target' in pp
-        assert pp['contact'].name == 'Contact Name'
-        assert pp['content'].title == '{title}'
+        assert pp['object'].title == '{title}'
         assert pp['target'].secret == ''
-        assert pp['source'].name == 'Author'
+        assert pp['actor'].name == 'Author'
+
+
+class TestTemplate(TestCase):
+
+    fixtures = ['test']
+
+    def test_str(self):
+        template = django_vox.models.Template.objects.get(pk=1)
+        assert 'Email (HTML) for Subscribers' == str(template)

@@ -73,10 +73,11 @@ class Backend(base.Backend):
         return subject, model
 
     @classmethod
-    def send_message(cls, contact, message):
+    def send_message(cls, _from_address, to_addresses, message):
         subject, model = cls.extract_model(message)
         headers = {'Content-Type': 'application/json'}
-        response = requests.post(contact.address, json=model, headers=headers)
+        for address in to_addresses:
+            response = requests.post(address, json=model, headers=headers)
         if not response.ok:
             raise RuntimeError(
                 'HTTP error: {}'.format(response.text))

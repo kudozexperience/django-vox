@@ -22,16 +22,17 @@ class Backend(base.Backend):
     DEPENDS = ('sleekxmpp',)
 
     @classmethod
-    def send_message(cls, contact, message):
-        try:
-            client = Client(settings.XMPP_JID, settings.XMPP_PASSWORD,
-                            contact.address, message)
-        except NameError:
-            raise ImportError('sleekxmpp is required to use this backend')
-        if client.connect():
-            client.process(block=True)
-        else:
-            raise RuntimeError('Unable to connect to XMPP account')
+    def send_message(cls, _from_address, to_addresses, message):
+        for address in to_addresses:
+            try:
+                client = Client(settings.XMPP_JID, settings.XMPP_PASSWORD,
+                                address, message)
+            except NameError:
+                raise ImportError('sleekxmpp is required to use this backend')
+            if client.connect():
+                client.process(block=True)
+            else:
+                raise RuntimeError('Unable to connect to XMPP account')
 
 
 try:

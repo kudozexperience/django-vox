@@ -1,4 +1,4 @@
-Django>=1.10,<2.1
+Django>=1.10
 requests
 lxml
 august
