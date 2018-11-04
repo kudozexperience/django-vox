@@ -48,7 +48,7 @@ class MakeNotificationTests(TestCase):
         assert 3 == len(ids)
         notification = Notification.objects.all()[0]
         Template.objects.filter(notification=notification).delete()
-        cmd.handle(verbosity=1)
+        cmd.handle(verbosity=0)
         second_ids = set(v['id'] for v in Notification.objects.values('id'))
         assert ids == second_ids
 

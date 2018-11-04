@@ -72,16 +72,17 @@ def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
             print("Added notification '%s'" % notification)
 
     for notification in all_notifications.values():
+        if not notification.from_code:
+            continue
         templates = template_class.objects.filter(notification=notification)
         if templates.count() > 0:
             if verbosity > 0:
                 print("Skipping removal of notification '%s' "
                       "still has templates" % notification)
             continue
-        if notification.from_code:
-            if verbosity > 0:
-                print("Removing notification '%s'" % notification)
-            if not dry_run:
-                notification.delete(using=using)
+        if verbosity > 0:
+            print("Removing notification '%s'" % notification)
+        if not dry_run:
+            notification.delete(using=using)
     if not dry_run:
         notification_class.objects.using(using).bulk_create(new_notifications)
