@@ -30,6 +30,7 @@ def make_notifications(app_config, verbosity=1, dry_run=False,
         app_config = apps.get_app_config(app_label)
         contenttype_class = apps.get_model('contenttypes', 'ContentType')
         notification_class = apps.get_model('django_vox', 'Notification')
+        template_class = apps.get_model('django_vox', 'Template')
     except LookupError:
         return
 
@@ -78,6 +79,12 @@ def make_notifications(app_config, verbosity=1, dry_run=False,
             print("Added notification '%s'" % notification)
 
     for notification in all_notifications.values():
+        templates = template_class.objects.filter(notification=notification)
+        if templates.count() > 0:
+            if verbosity > 0:
+                print("Skipping removal of notification '%s' "
+                      "still has templates" % notification)
+            continue
         if notification.from_code:
             if verbosity > 0:
                 print("Removing notification '%s'" % notification)

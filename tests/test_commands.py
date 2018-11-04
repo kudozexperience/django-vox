@@ -6,7 +6,7 @@ from django.test import TestCase
 
 import tests.models
 from django_vox.management.commands import make_notifications
-from django_vox.models import Notification
+from django_vox.models import Notification, Template
 
 
 class MakeNotificationTests(TestCase):
@@ -25,6 +25,21 @@ class MakeNotificationTests(TestCase):
             codename='foo', object_type=fake_ct, from_code=True)
         cmd.handle(verbose=True)
         assert 3 == Notification.objects.all().count()
+
+    @staticmethod
+    def test_keep_orphans_with_templates():
+        cmd = make_notifications.Command()
+        cmd.handle(verbose=True)
+        assert 3 == Notification.objects.all().count()
+        # simulate a deleted class
+        fake_ct = ContentType.objects.create(
+            app_label='django_vox', model='deleted')
+        notification = Notification.objects.create(
+            codename='foo', object_type=fake_ct, from_code=True)
+        Template.objects.create(
+            notification=notification, subject='subject', content='content')
+        cmd.handle(verbose=True)
+        assert 4 == Notification.objects.all().count()
 
     @staticmethod
     def test_make_notifications():
