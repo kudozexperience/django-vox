@@ -140,18 +140,26 @@
         }
     }
 
+    function findField(name, fieldType, parent=null) {
+        var spec = ('.field-' + name + ' ' + fieldType
+                    + ', .grp-row.' + name + ' ' + fieldType);
+        if (parent===null) return $(spec);
+        return parent.find(spec);
+    }
+
+    function findFieldRow(name, parent=null) {
+        var spec = ('.field-' + name + ', .grp-row.' + name);
+        if (parent===null) return $(spec);
+        return parent.find(spec);
+    }
+
     function setup(variables) {
         // show subject based on backends
-        var recipientBoxes = django.jQuery(
-            '.field-recipients input, .grp-row.recipients input')
-        recipientBoxes.on('change', function() {
+        findField('recipients', 'input').on('change', function() {
             selectRecipient(this, variables);});
-        var bulkBox = django.jQuery(
-            '.field-bulk input, .grp-row.bulk input')
-        bulkBox.on('change', function() {
+        findField('bulk', 'input').on('change', function() {
             selectRecipient(this, variables);});
-        var backendSelects = django.jQuery(
-            '.field-backend select, .grp-row.backend select');
+        var backendSelects = findField('backend', 'select');
         backendSelects.each(function() {selectBackend(this, variables);});
         backendSelects.on('change', function() {selectBackend(this, variables);});
     }
@@ -159,48 +167,34 @@
     function selectBackend(elem, variables) {
         // show/hide fields
         var opt = elem.options[elem.selectedIndex];
-        var useSubject = opt.dataset.subject == 'true';
-        var useAttachment = opt.dataset.attachment == 'true';
-        var useFromAddress = opt.dataset.from_address == 'true';
         // update subject
-        var subject_div = django.jQuery(
-            '.field-subject, .grp-row.subject');
-        subject_div.toggle(useSubject);
+        findFieldRow('subject').toggle(opt.dataset.subject == 'true');
         // update attachments
-        var attachment_div = django.jQuery(
-            '.field-attachments, .grp-row.attachments');
-        attachment_div.toggle(useAttachment);
+        findFieldRow('attachments').toggle(opt.dataset.attachment == 'true');
         // update from address
-        var from_address_div = django.jQuery(
-            '.field-from_address, .grp-row.from_address');
-        from_address_div.toggle(useFromAddress);
+        findFieldRow('from_address').toggle(opt.dataset.from_address == 'true');
         // update markitup
         var fieldset = $(elem).closest('fieldset')
         refreshMarkItUp(fieldset, variables);
     }
 
     function selectRecipient(elem, variables) {
-        var fieldset = $(elem).closest('fieldset');
-        refreshMarkItUp(fieldset, variables);
+        refreshMarkItUp($(elem).closest('fieldset'), variables);
     }
 
     function refreshMarkItUp(fieldset, variables) {
-        var bulk = fieldset.find(
-            '.field-bulk input, .grp-row.backend input')[0];
+        var bulk = findField('bulk', 'input', fieldset)[0];
         // find value
         var recipients = [];
         if (!bulk.checked)
-            recipients = fieldset.find(
-                '.field-recipients input, .grp-row.recipients input').filter(
+            recipients = findField('recipients', 'input', fieldset).filter(
                     function() { return this.checked; }).map(
                     function() { return this.value; }).get();
-        var backendSelect = fieldset.find(
-            '.field-backend select, .grp-row.backend select')[0];
+        var backendSelect = findField('backend', 'select', fieldset)[0];
         var opt = backendSelect.selectedOptions[0];
         var backend = opt.value;
         var editor = opt.dataset.editor;
-        var textarea = fieldset.find(
-            '.field-content textarea, .grp-row.content textarea');
+        var textarea = findField('content', 'textarea', fieldset);
         textarea.markItUpRemove();
         if (editor in markItUpSettings) {
             textarea.markItUp(getMarkItUpSettings(
