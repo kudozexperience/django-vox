@@ -56,8 +56,7 @@ def make_notifications(app_config, verbosity=1, dry_run=False,
     # looking for.  We don't need to check for code names since we already have
     # a list of the ones we're going to create.
     all_notifications = {}
-    for item in notification_class.objects.using(using).filter(
-            object_type__in=object_types):
+    for item in notification_class.objects.using(using).all():
         all_notifications[(item.object_type_id, item.codename)] = item
 
     new_notifications = []

@@ -12,6 +12,21 @@ from django_vox.models import Notification
 class MakeNotificationTests(TestCase):
 
     @staticmethod
+    def test_kill_orphans():
+        """If you completely remove a class,
+        its notification should get deleted."""
+        cmd = make_notifications.Command()
+        cmd.handle(verbose=True)
+        assert 3 == Notification.objects.all().count()
+        # simulate a deleted class
+        fake_ct = ContentType.objects.create(
+            app_label='django_vox', model='deleted')
+        Notification.objects.create(
+            codename='foo', object_type=fake_ct, from_code=True)
+        cmd.handle(verbose=True)
+        assert 3 == Notification.objects.all().count()
+
+    @staticmethod
     def test_make_notifications():
         cmd = make_notifications.Command()
         assert 0 == Notification.objects.all().count()
