@@ -16,18 +16,11 @@ class Command(BaseCommand):
             help='Don\'t actually make changes')
 
     def handle(self, *args, verbosity=1, dry_run=False, **kwargs):
-        for app in apps.get_app_configs():
-            make_notifications(app, verbosity=1, dry_run=dry_run)
+        make_notifications(verbosity=verbosity, dry_run=dry_run)
 
 
-def make_notifications(app_config, verbosity=1, dry_run=False,
-                       using=DEFAULT_DB_ALIAS):
-    if not app_config.models_module:
-        return
-
-    app_label = app_config.label
+def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
     try:
-        app_config = apps.get_app_config(app_label)
         contenttype_class = apps.get_model('contenttypes', 'ContentType')
         notification_class = apps.get_model('django_vox', 'Notification')
         template_class = apps.get_model('django_vox', 'Template')
@@ -42,7 +35,7 @@ def make_notifications(app_config, verbosity=1, dry_run=False,
     searched_notifications = []
     # The code names and content types that should exist.
     object_types = set()
-    for cls in app_config.get_models():
+    for cls in apps.get_models():
         meta = getattr(cls, '_vox_meta', None)
         if meta is not None:
             # Force looking up the content types in the current database
