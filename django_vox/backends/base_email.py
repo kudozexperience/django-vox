@@ -110,7 +110,7 @@ class Backend(base.Backend):
         mpm = MultipartMessage.from_string(message)
         email = mpm.to_mail()
         email.from_email = from_address
-        email.to = to_addresses
+        email.to = list(to_addresses)
         connection = django.core.mail.get_connection()
         connection.send_messages([email])
 
