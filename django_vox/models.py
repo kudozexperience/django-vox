@@ -533,6 +533,22 @@ class Notification(models.Model):
             for key, channel in channel_data.items():
                 yield key, channel.name
 
+    def _get_activity_object(self, obj, actor, target):
+        if hasattr(obj, 'get_activity_object'):
+            return obj.get_activity_object(self.codename, actor, target)
+        if hasattr(obj, '__activity__'):
+            return obj.__activity__()
+        # all else has failed, try to make stuff up
+        abs_url = None
+        if obj.__class__ in registry.objects:
+            abs_url = registry.objects[self.__class__].reverse(self)
+        elif hasattr(obj, 'get_absolute_url'):
+            abs_url = obj.get_absolute_url()
+        if abs_url:
+            iri = django_vox.base.full_iri(self.get_absolute_url())
+            return aspy.Object(name=str(obj), id=iri)
+        return aspy.Object(name=str(obj))
+
     def issue(self, obj: VoxModel,
               target: VoxModelN = None,
               actor: VoxModelN = None):
@@ -560,8 +576,8 @@ class Notification(models.Model):
             # backwards compatibility
             parameters['source'] = actor
 
-        parameters['activity_object'] = obj.get_activity_object(
-            self.codename, actor, target)
+        parameters['activity_object'] = self._get_activity_object(
+            obj, actor, target)
         parameters['activity_type'] = self.get_activity_type()
         # load up all the templates so we can see available recipients
         templates = self.template_set.filter(enabled=True)
