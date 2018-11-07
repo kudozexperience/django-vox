@@ -42,6 +42,8 @@ def load_aspy_object(json_str):
 
 
 def find_activity_type(url):
+    if ':' not in url:
+        url = aspy.as_uri(url)
     for item in aspy.__dict__.values():
         if inspect.isclass(item):
             if issubclass(item, (aspy.Object, aspy.Link)):
@@ -280,7 +282,7 @@ class VoxNotifications(list):
 class VoxNotification:
     REQUIRED_PARAMS = {'codename', 'description'}
     OPTIONAL_PARAMS = {'actor_type': '', 'target_type': '',
-                       'activity_type': '', 'required': False}
+                       'activity_type': 'Create', 'required': False}
 
     def __init__(self, description, codename='', **kwargs):
         self.params = {
@@ -306,8 +308,8 @@ class VoxNotification:
                     value = ''
                 else:
                     value = '{}.{}'.format(value.app_label, value.model)
-            if key == 'action_type':
-                value = value.get_type()
+            # if key == 'activity_type':
+            #     value = value.get_type()
             if value != my_value:
                 return False
         return True
@@ -319,8 +321,9 @@ class VoxNotification:
                 return None
             model = apps.get_model(value)
             return ContentType.objects.get_for_model(model)
-        if key == 'action_type':
-            return find_activity_type(value)
+        if key == 'activity_type':
+            if inspect.isclass(value) and issubclass(value, aspy.Object):
+                value = value.get_type()
         return value
 
     def set_params(self, notification):
@@ -454,7 +457,6 @@ class Notification(models.Model):
         to=ContentType, on_delete=models.CASCADE, related_name='+',
         limit_choices_to=registry.channel_type_limit,
         verbose_name=_('target model'), null=True, blank=True)
-    activity_type = models.CharField(_('activity_type'), max_length=500)
     required = models.BooleanField(
         _('required'), default=False,
         help_text=_('If true, triggering the notification will throw an '
@@ -672,6 +674,8 @@ class Notification(models.Model):
                 else None)
 
     def get_activity_type(self):
+        if self.activity_type == '':
+            return aspy.Create
         return find_activity_type(self.activity_type)
 
     def get_recipient_variables(self):

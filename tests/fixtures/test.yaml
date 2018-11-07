@@ -13,6 +13,7 @@
     actor_type: [tests, user]
     description: Notification that a new article was created
     from_code: true
+    activity_type: Create
 - model: django_vox.notification
   fields:
     codename: create
