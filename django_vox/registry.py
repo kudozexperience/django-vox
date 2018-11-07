@@ -98,6 +98,9 @@ class ChannelManagerItem:
         self.__prefixes = {}
         self._channels = collections.defaultdict(dict)
 
+    def __bool__(self):
+        return bool(self._channels)
+
     def add(self, key, name, target_type, func):
         self._channels[key] = name, target_type, func
         self.__prefixes = {}
@@ -122,22 +125,27 @@ class ChannelManagerItem:
         return self.__prefixes[prefix]
 
 
-class ChannelManager(dict):
+class ChannelProxyManager(dict):
 
     def __missing__(self, key):
-        item = ChannelManagerItem(key)
-        self[key] = item
-        return item
+        if key not in objects:
+            objects.add(key, regex=None)
+        return objects[key].channels
 
 
 class ObjectManagerItem:
 
     def __init__(self, cls):
         self.cls = cls
+        self.pattern = None
         self.matcher = None
-        self.pattern = ''
-        self.reverse_form = ''
+        self.reverse_form = None
         self.reverse_params = ()
+        self.channels = ChannelManagerItem(cls)
+
+    @property
+    def has_url(self):
+        return self.matcher is not None
 
     def set_regex(self, pattern: str):
         self.pattern = pattern
@@ -149,11 +157,15 @@ class ObjectManagerItem:
         self.reverse_form, self.reverse_params = next(iter(normal), ('', ()))
 
     def match(self, path: str):
+        if self.matcher is None:
+            return False
         if hasattr(django.urls.resolvers, 'RegexPattern'):
             return self.matcher.match(path)
         return self.matcher.resolve(path)
 
     def reverse(self, obj):
+        if self.reverse_form is None:
+            return None
         kwargs = dict(((param, getattr(obj, param, None))
                       for param in self.reverse_params))
         return '/' + (self.reverse_form % kwargs)
@@ -165,6 +177,22 @@ class ObjectManager(dict):
         item = ObjectManagerItem(key)
         self[key] = item
         return item
+
+    def __setitem__(self, key, value: ObjectManagerItem):
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key) -> ObjectManagerItem:
+        return super().__getitem__(key)
+
+    def add(self, cls, *, regex=...):
+        if regex is ...:
+            raise RuntimeError(
+                'Must set regex keyword argument, '
+                'use None if object has no URL')
+        item = ObjectManagerItem(cls)
+        if regex is not None:
+            item.set_regex(regex)
+        self[cls] = item
 
     def create_local_object(self, path):
         for key, value in self.items():
@@ -199,7 +227,7 @@ class ObjectManager(dict):
 backends = BackendManager(
     pydoc.locate(name) for name in settings.BACKENDS)
 
-channels = ChannelManager()
+channels = ChannelProxyManager()
 
 objects = ObjectManager()
 
@@ -212,9 +240,10 @@ def get_protocol_choices():
 def _channel_type_ids():
     for all_models in apps.all_models.values():
         for model in all_models.values():
-            if model in channels:
-                ct = ContentType.objects.get_for_model(model)
-                yield ct.id
+            if model in objects:
+                if objects[model].channels:
+                    ct = ContentType.objects.get_for_model(model)
+                    yield ct.id
 
 
 def channel_type_limit():

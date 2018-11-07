@@ -11,7 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 from django_vox.base import Contact, full_iri
 from django_vox.models import (VoxAttach, VoxAttachments, VoxModel,
                                VoxNotification, VoxNotifications)
-from django_vox.registry import channels, objects
+from django_vox.registry import objects
 
 
 class UserManager(BaseUserManager):
@@ -268,14 +268,20 @@ class Comment(VoxModel):
             content=self.content)
 
 
-channels[User].add_self()
-channels[Article].add('sub', _('Subscribers'),
-                      Subscriber, Article.get_subscribers)
-channels[Article].add('author', _('Author'), User, Article.get_authors)
-channels[Subscriber].add_self()
-channels[Comment].add('poster', _('Poster'), Subscriber, Comment.get_posters)
-channels[Comment].add('author', _('Article author'),
-                      User, Comment.get_article_authors)
+objects.add(User, regex=r'^~(?P<id>[0-9]+)/$')
+objects[User].channels.add_self()
 
-objects[User].set_regex(r'^~(?P<id>[0-9]+)/$')
-objects[Subscriber].set_regex(r'^\.(?P<id>[0-9]+)/$')
+objects.add(Subscriber, regex=r'^\.(?P<id>[0-9]+)/$')
+objects[Subscriber].channels.add_self()
+
+objects.add(Article, regex=None)
+objects[Article].channels.add(
+    'sub', _('Subscribers'), Subscriber, Article.get_subscribers)
+objects[Article].channels.add(
+    'author', _('Author'), User, Article.get_authors)
+
+objects.add(Comment, regex=None)
+objects[Comment].channels.add(
+    'poster', _('Poster'), Subscriber, Comment.get_posters)
+objects[Comment].channels.add(
+    'author', _('Article author'), User, Comment.get_article_authors)

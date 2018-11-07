@@ -131,14 +131,16 @@ notifications table using the ``make_notifications`` management command::
     python3 manage.py make_notifications
 
 
-Adding Channels
----------------
+Registering Objects and Channels
+--------------------------------
 
 Channels are what allow you to select different recipients. The site contacts
 channel is available by default, but if you want any other channels, you have
-to create them yourself using the channel registry at
-``django_vox.registry.channels``. You can add new channels using either the
-``add`` or ``add_self`` method takes four arguments:
+to create them yourself using the object registry at
+``django_vox.registry.objects``. In order to use this, you need to first
+register your object using ``objects.add(cls, regex=None)``, and then you can
+access the channel registry as ``objects[cls].channels``. You can add new
+channels using either the ``add`` or ``add_self`` method takes four arguments:
 
 ``key``
    A slug that identifies the channel. Should be unique per model.
@@ -167,11 +169,13 @@ An example of channels given the above code might look like this::
 
     ...
 
-    from django_vox.registry import channels
-    channels[User].add_self()
-    channels[PurchaseOrder].add('purchaser', _('Purchaser'), User,
+    from django_vox.registry import objects
+    objects.add(User, regex=None)
+    objects[User].channels.add_self()
+    po_reg = objects.add(PurchaseOrder, regex=None)
+    po_reg.channels.add('purchaser', _('Purchaser'), User,
         PurchaseOrder.get_purchasers)
-    channels[PurchaseOrder].add('manager', _('Manager'), User,
+    po_reg.channels.add('manager', _('Manager'), User,
         PurchaseOrder.get_managers)
 
 

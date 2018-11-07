@@ -49,6 +49,18 @@ def find_activity_type(url):
                     return item
 
 
+def make_activity_object(obj):
+    iri = None
+    if obj.__class__ in registry.objects:
+        iri = obj.get_object_address()
+    if iri is None and hasattr(obj, 'get_absolute_url'):
+        iri = django_vox.base.full_iri(obj.get_absolute_url())
+    name = str(obj)
+    if iri is None:
+        return aspy.Object(name=name)
+    return aspy.Object(name=name, id=iri)
+
+
 def get_model_from_relation(field):
     # code copied from django's admin
     if not hasattr(field, 'get_path_info'):
@@ -242,20 +254,16 @@ class VoxModel(models.Model, metaclass=VoxModelBase):
     def get_object_address(self):
         if self.__class__ not in registry.objects:
             raise RuntimeError(
-                '{} is not a registered object, use '
-                'django_vox.registry.object[{}].set_regex(...)'.format(
-                    self, self.__class__))
+                '{cls} is not a registered object, use '
+                'django_vox.registry.object.add({cls}, regex=...)'.format(
+                    self, {'cls': self.__class__}))
         url = registry.objects[self.__class__].reverse(self)
+        if url is None:
+            return None
         return django_vox.base.full_iri(url)
 
     def __activity__(self):
-        if self.__class__ in registry.objects:
-            # this is safer, and probably faster
-            iri = self.get_object_address()
-        else:
-            iri = django_vox.base.full_iri(self.get_absolute_url())
-
-        return aspy.Object(name=str(self), id=iri)
+        return make_activity_object(self)
 
 
 class VoxNotifications(list):
@@ -523,13 +531,15 @@ class Notification(models.Model):
         instances = self.get_recipient_instances(obj, target, actor)
         return dict((key, channel)
                     for recip_key, model in instances.items()
-                    for key, channel in registry.channels[
-                        model.__class__].prefix(recip_key).bind(model).items())
+                    for key, channel in registry.objects[
+                        model.__class__].channels.prefix(
+                            recip_key).bind(model).items())
 
     def get_recipient_choices(self):
         recipient_models = self.get_recipient_models()
         for recipient_key, model in recipient_models.items():
-            channel_data = registry.channels[model].prefix(recipient_key)
+            channel_data = registry.objects[model].channels.prefix(
+                recipient_key)
             for key, channel in channel_data.items():
                 yield key, channel.name
 
@@ -538,16 +548,7 @@ class Notification(models.Model):
             return obj.get_activity_object(self.codename, actor, target)
         if hasattr(obj, '__activity__'):
             return obj.__activity__()
-        # all else has failed, try to make stuff up
-        abs_url = None
-        if obj.__class__ in registry.objects:
-            abs_url = registry.objects[self.__class__].reverse(self)
-        elif hasattr(obj, 'get_absolute_url'):
-            abs_url = obj.get_absolute_url()
-        if abs_url:
-            iri = django_vox.base.full_iri(self.get_absolute_url())
-            return aspy.Object(name=str(obj), id=iri)
-        return aspy.Object(name=str(obj))
+        return make_activity_object(obj)
 
     def issue(self, obj: VoxModel,
               target: VoxModelN = None,
@@ -681,7 +682,7 @@ class Notification(models.Model):
         mapping = {}
         for target_key, model in recipient_spec.items():
             if model is not None:
-                channels = registry.channels[model].prefix(target_key)
+                channels = registry.objects[model].channels.prefix(target_key)
                 for key, channel in channels.items():
                     label = str(_('Recipient {}')).format(channel.name)
                     mapping[key] = get_model_variables(
@@ -896,6 +897,7 @@ class InboxItem(models.Model):
         _('date read'), db_index=True, null=True, blank=True)
 
 
-registry.channels[SiteContact].add(
+registry.objects.add(SiteContact, regex=None)
+registry.objects[SiteContact].channels.add(
     '', '', SiteContact, SiteContact.all_contacts)
-registry.objects[Activity].set_regex(settings.ACTIVITY_REGEX)
+registry.objects.add(Activity, regex=settings.ACTIVITY_REGEX)
