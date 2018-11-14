@@ -1,4 +1,7 @@
 import warnings
+import datetime
+import pytz
+import aspy
 
 from bs4 import BeautifulSoup
 from django.contrib.contenttypes.models import ContentType
@@ -226,3 +229,20 @@ class TestTemplate(TestCase):
     def test_str(self):
         template = django_vox.models.Template.objects.get(pk=1)
         assert 'Email (HTML) for Subscribers' == str(template)
+
+
+def test_load_aspy_object():
+    json = '{\n' \
+           '"@context": "https://www.w3.org/ns/activitystreams",\n' \
+           '"type": "Create",\n' \
+           '"object": {\n' \
+           '  "type": "Note",\n' \
+           '  "updated": "2018-11-14T06:47:34Z",\n' \
+           '  "summary": "Here’s a note"\n' \
+           '}\n' \
+           '}'
+    print(json)
+    obj = django_vox.models.load_aspy_object(json)
+    assert isinstance(obj['object'], aspy.Note)
+    assert obj['object']['updated'] == datetime.datetime(
+        2018, 11, 14, 6, 47, 34, tzinfo=pytz.utc)

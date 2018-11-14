@@ -8,6 +8,7 @@ import warnings
 from typing import List, Mapping, TypeVar, cast
 
 import aspy
+import dateutil.parser
 import django.conf
 import django.utils.timezone
 from django.apps import apps
@@ -34,9 +35,17 @@ __all__ = ('find_activity_type', 'get_model_from_relation',
 
 def load_aspy_object(json_str):
     data = json.loads(json_str)
+    return _load_aspy_object(data)
+
+
+def _load_aspy_object(data):
     obj = getattr(aspy, data.get('type', 'Object'))()
     for key, value in data.items():
         if key not in ('type', '@context'):
+            if aspy.PROPERTIES.get(key) is aspy.datetime_property:
+                value = dateutil.parser.parse(value)
+            if isinstance(value, dict):
+                value = _load_aspy_object(value)
             obj[key] = value
     return obj
 
