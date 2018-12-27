@@ -2,5 +2,5 @@ Django>=1.10
 requests
 lxml
 python-dateutil
-august
+august>=2.1
 aspy>=0.4
