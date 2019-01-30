@@ -62,7 +62,9 @@ def find_activity_type(url):
 
 def make_activity_object(obj):
     iri = None
-    if obj.__class__ in registry.objects:
+    # if obj.__class__ in registry.objects:
+    address_func = getattr(obj, 'get_object_address')
+    if address_func:
         iri = obj.get_object_address()
     if iri is None and hasattr(obj, 'get_absolute_url'):
         iri = django_vox.base.full_iri(obj.get_absolute_url())
