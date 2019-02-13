@@ -269,7 +269,7 @@ class VoxModel(models.Model, metaclass=VoxModelBase):
             raise RuntimeError(
                 '{cls} is not a registered object, use '
                 'django_vox.registry.object.add({cls}, regex=...)'.format(
-                    self, {'cls': self.__class__}))
+                    cls=self.__class__))
         url = registry.objects[self.__class__].reverse(self)
         if url is None:
             return None
