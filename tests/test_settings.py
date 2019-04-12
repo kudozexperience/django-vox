@@ -1,5 +1,6 @@
-import django_vox.settings
 from django.test.utils import override_settings
+
+import django_vox.settings
 
 
 def test_backends():
