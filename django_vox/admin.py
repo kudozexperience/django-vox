@@ -360,6 +360,10 @@ class FailedMessageAdmin(admin.ModelAdmin):
     list_filter = ('backend', 'from_address', 'to_addresses')
     actions = (resend,)
 
+    # there's no real point in an add button here
+    def has_add_permission(self, request):
+        return False
+
 
 admin.site.register(models.SiteContact, SiteContactAdmin)
 admin.site.register(models.FailedMessage, FailedMessageAdmin)
