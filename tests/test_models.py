@@ -241,7 +241,6 @@ def test_load_aspy_object():
            '  "summary": "Here’s a note"\n' \
            '}\n' \
            '}'
-    print(json)
     obj = django_vox.models.load_aspy_object(json)
     assert isinstance(obj['object'], aspy.Note)
     assert obj['object']['updated'] == datetime.datetime(
