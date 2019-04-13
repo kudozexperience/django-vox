@@ -1,2 +1,6 @@
 global-exclude .gitignore
 exclude .gitlab-ci.yml
+include README.rst
+include LICENSE
+graft django_vox/templates
+graft django_vox/static

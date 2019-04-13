@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+3.5.1
+-----
+
+* Fix packaging problem (missing files)
+
 3.5
 ---
 
