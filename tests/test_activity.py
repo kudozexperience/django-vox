@@ -62,7 +62,7 @@ class WebTests(TestCase):
     def test_article_add():
         # sanity check
         assert django_vox.models.InboxItem.objects.count() == 0
-        article = models.Article.objects.get(id=1)
+        article = models.Article.objects.get(pk='too_many')
         subscriber = models.Subscriber.objects.get(id=1)
         author_subscriber = models.Subscriber.objects.get(id=2)
         # first we create an article as the author user
@@ -95,17 +95,19 @@ class WebTests(TestCase):
         items = json_obj['items']
         assert 2 == len(items)
         # in make sure this is in descending order
-        assert 'http://127.0.0.1:8000/1/#comment-1' == items[1]['object']['id']
+        assert 'http://127.0.0.1:8000/too_many/#comment-1' == \
+               items[1]['object']['id']
         assert 'First Post!11' == items[1]['object']['content']
         assert 'Note' == items[1]['object']['name']
-        assert 'http://127.0.0.1:8000/1/#comment-2' == items[0]['object']['id']
+        assert 'http://127.0.0.1:8000/too_many/#comment-2' == \
+               items[0]['object']['id']
         assert 'Author Subscriber' == items[0]['actor']['name']
 
     @staticmethod
     def test_activity_read():
         # sanity check
         assert django_vox.models.InboxItem.objects.count() == 0
-        article = models.Article.objects.get(id=1)
+        article = models.Article.objects.get(pk='too_many')
         subscriber = models.Subscriber.objects.get(id=1)
         # first we create an article as the author user
         models.Comment.objects.create(

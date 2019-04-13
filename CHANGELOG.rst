@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+3.5.2
+-----
+
+* Add better support and testing for non-ID primary keys
+
 3.5.1
 -----
 

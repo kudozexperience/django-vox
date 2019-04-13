@@ -11,6 +11,7 @@
     codename: create
     object_type: [tests, article]
     actor_type: [tests, user]
+    target_type: [tests, article]
     description: Notification that a new article was created
     from_code: true
     activity_type: Create
@@ -47,11 +48,12 @@
     is_staff: true
     is_active: true
 - model: tests.article
-  pk: 1
+  pk: too_many
   fields:
     author: 1
     title: Why are there so many blog demos
     content: There are just too many
+    created_at: 2000-1-1
 - model: tests.subscriber
   pk: 1
   fields:

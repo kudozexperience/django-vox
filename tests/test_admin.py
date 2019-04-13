@@ -44,16 +44,21 @@ class VariableTests(TestCase):
     def test_variables():
         notification = models.Article.get_notification('create')
         variables = notification.get_recipient_variables()
-        assert {'si', 'se', 'c:sub', 'c:author', '_static'} == variables.keys()
+        assert {
+                   'si', 'se', 'c:sub', 'c:author', '_static',
+                   're:sub', 're:author',
+               } == variables.keys()
         # check recipient variables first:
         for key in ('si', 'se', 'c:sub', 'c:author'):
             assert variables[key]['value'] == 'recipient'
         static = variables['_static']
-        assert len(static) == 2
+        assert len(static) == 3
         assert static[0]['label'] == 'Article'
         assert static[0]['value'] == 'object'
         assert static[1]['label'] == 'Actor'
         assert static[1]['value'] == 'actor'
+        assert static[2]['label'] == 'Target'
+        assert static[2]['value'] == 'target'
 
 
 class NotificationAdminTests(TestCase):
@@ -112,7 +117,7 @@ class NotificationAdminTests(TestCase):
             # this POST should work
             # we have to perform some malarky because of an isinstance
             # check in django 1.10
-            request = MockRequest('POST', {'objects': (obj.id,)})
+            request = MockRequest('POST', {'objects': (obj.pk,)})
             mock_request = mock.Mock(spec=django.http.HttpRequest)
             for attr in request.__dir__():
                 if not attr.startswith('_'):

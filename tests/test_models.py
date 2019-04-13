@@ -25,6 +25,7 @@ class FailmailTests(TestCase):
         with self.settings(EMAIL_BACKEND='Can\'t import this!'):
             with self.assertRaises(ImportError):
                 models.Article.objects.create(
+                    slug='second',
                     author=author,
                     title='A second article',
                     content='Whoever thought we\'d come this far',
@@ -38,8 +39,9 @@ class FailmailTests(TestCase):
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 models.Article.objects.create(
+                    slug='third',
                     author=author,
-                    title='A second article',
+                    title='A third article',
                     content='Whoever thought we\'d come this far',
                 )
             # this should create 3 failed messages
@@ -60,6 +62,7 @@ class FailmailTests(TestCase):
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 models.Article.objects.create(
+                    slug='second',
                     author=author,
                     title='A second article',
                     content='Whoever thought we\'d come this far',)
@@ -97,6 +100,7 @@ class ExtraOptionsTest(TestCase):
         # first we create an article as the author user
         author = models.User.objects.get(email='author@example.org')
         models.Article.objects.create(
+            slug='another',
             author=author,
             title='Just another article',
             content='nothing really matters ... to me',
@@ -118,6 +122,7 @@ class DemoTests(TestCase):
         # first we create an article as the author user
         author = models.User.objects.get(email='author@example.org')
         models.Article.objects.create(
+            slug='second',
             author=author,
             title='A second article',
             content='Whoever thought we\'d come this far',
@@ -136,7 +141,7 @@ class DemoTests(TestCase):
             anchors = soup.find_all('a')
             assert len(anchors) == 1
             url = anchors[0].get('href')
-            assert url.startswith('http://127.0.0.1:8000/2/?token=')
+            assert url.startswith('http://127.0.0.1:8000/second/?token=')
             assert len(url) > 31  # if less, token is blank
             client = Client()
             response = client.get(url)
@@ -160,6 +165,7 @@ class DemoTests(TestCase):
         # first we create an article as the author user
         author = models.User.objects.get(email='author@example.org')
         models.Article.objects.create(
+            slug='second',
             author=author,
             title='A second article',
             content='Whoever thought we\'d come this far',
@@ -179,7 +185,7 @@ class DemoTests(TestCase):
         anchors = soup.find_all('a')
         assert len(anchors) == 1
         url = anchors[0].get('href')
-        assert url.startswith('http://127.0.0.1:8000/2/?token=')
+        assert url.startswith('http://127.0.0.1:8000/second/?token=')
         assert len(url) > 31  # if less, token is blank
 
     @staticmethod

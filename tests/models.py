@@ -119,26 +119,32 @@ class Article(VoxModel):
         notifications = VoxNotifications(
             create=VoxNotification(
                 _('Notification that a new article was created.'),
-                actor_type='tests.user')
+                # note that the target type here is also the same
+                # as the object type (and we'll use the same object)
+                # this is mostly pointless, and not a pattern I would
+                # recommend, but it's useful for testing
+                actor_type='tests.user', target_type='tests.article')
 
         )
 
+    slug = models.SlugField(primary_key=True)
     author = models.ForeignKey(
         to=User, on_delete=models.CASCADE, related_name='+')
     title = models.CharField(_('title'), max_length=254)
     content = models.TextField(_('content'))
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
 
     def save(self, *args, **kwargs):
-        new = self.id is None
+        new = self.created_at is None
         super().save(*args, **kwargs)
         if new:
-            self.issue_notification('create', actor=self.author)
+            self.issue_notification('create', actor=self.author, target=self)
 
     def get_absolute_url(self):
-        return reverse('tests:article', args=[str(self.id)])
+        return reverse('tests:article', args=[self.slug])
 
     def get_subscribers(self):
         return Subscriber.objects.filter(
@@ -256,7 +262,7 @@ class Comment(VoxModel):
 
     def get_absolute_url(self):
         frag = '#comment-{}'.format(self.id)
-        return reverse('tests:article', args=[str(self.article.id)]) + frag
+        return reverse('tests:article', args=[self.article.pk]) + frag
 
     def __activity__(self):
         # we're being hacky here to test out the automatic

@@ -7,7 +7,7 @@
     <h2>Comments</h2>
     {% for comment in comments %}
         <div>
-          <a href="{% url 'tests:comment' article.id comment.id %}"
+          <a href="{% url 'tests:comment' article.pk comment.id %}"
              id="comment-{{ comment.id }}">#{{ comment.id }}</a>
           <a href="mailto:{{ comment.poster.email }}">{{ comment.poster.name }}</a></div>
         <p>{{ comment.content }}</p>
@@ -17,7 +17,7 @@
 {% endif %}
 {% if token %}
     <h2>Add a comment</h2>
-    <form action="{% url 'tests:post-comment' article.id %}" method="post">
+    <form action="{% url 'tests:post-comment' article.pk %}" method="post">
         {% csrf_token %}
         <input type="hidden" name="token" value="{{ token }}"/>
         <label for="content">Content</label><input type="text" id="content" name="content"/>

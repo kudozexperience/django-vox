@@ -20,8 +20,8 @@ def user_detail(request, user_id):
     return render(request, 'tests/index.html', context)
 
 
-def article_detail(request, article_id):
-    article = get_object_or_404(models.Article, pk=article_id)
+def article_detail(request, article_pk):
+    article = get_object_or_404(models.Article, pk=article_pk)
     comments = models.Comment.objects.filter(article=article).order_by('id')
     token = request.GET.get('token')
     return render(request, 'tests/article.html', {
@@ -35,10 +35,10 @@ def subscriber_detail(request, sub_id):
         'subscriber': subscriber, 'comments': comments})
 
 
-def comment(request, article_id):
+def comment(request, article_pk):
     token = request.POST.get('token', '')
     content = request.POST.get('content', '')
-    article = get_object_or_404(models.Article, pk=article_id)
+    article = get_object_or_404(models.Article, pk=article_pk)
     subscriber = models.Subscriber.load_from_token(token)
     models.Comment.objects.create(
         content=content,

@@ -525,7 +525,7 @@ class Notification(models.Model):
                 'Model specified "target_type" for notification but '
                 'target missing on issue_notification ')
         elif target is not None:
-            raise RuntimeError('Recipient added to issue_notification, '
+            raise RuntimeError('Target added to issue_notification, '
                                'but is not specified in VoxMeta')
         if self.actor_type and (actor is not None):
             choices['se'] = actor
