@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+3.5
+---
+
+* Fix some javascript problems on Django 2.1 & 2.2
+* Add one-time message admin actions
 
 3.4
 ---

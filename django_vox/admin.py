@@ -4,6 +4,7 @@ import django.http
 from django import forms
 from django.conf.urls import url
 from django.contrib import admin
+from django.contrib.admin.helpers import Fieldset, ACTION_CHECKBOX_NAME
 from django.contrib.admin.options import IS_POPUP_VAR
 from django.contrib.admin.utils import unquote
 from django.contrib.admin.widgets import FilteredSelectMultiple
@@ -13,8 +14,8 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django.utils.html import escape
-from django.utils.translation import ugettext
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 
 from . import models, registry
 
@@ -66,6 +67,20 @@ class BackendChoiceField(forms.ChoiceField):
                                 for back in backs])
         editor_types = dict([(back.ID, back.EDITOR_TYPE) for back in backs])
         super().__init__(choices=choice_pairs, *args, **kwargs)
+        self.widget.use_subjects = use_subjects
+        self.widget.use_attachments = use_attachments
+        self.widget.use_from_address = use_from_address
+        self.widget.editor_types = editor_types
+
+    def set_backend_choices(self, backends):
+        choice_pairs = [(back.ID, back.VERBOSE_NAME) for back in backends]
+        use_subjects = dict([(back.ID, back.USE_SUBJECT) for back in backends])
+        use_from_address = dict([(back.ID, back.USE_FROM_ADDRESS)
+                                 for back in backends])
+        use_attachments = dict([(back.ID, back.USE_ATTACHMENTS)
+                                for back in backends])
+        editor_types = dict([(back.ID, back.EDITOR_TYPE) for back in backends])
+        self.choices = choice_pairs
         self.widget.use_subjects = use_subjects
         self.widget.use_attachments = use_attachments
         self.widget.use_from_address = use_from_address
@@ -191,13 +206,13 @@ class TemplateInline(admin.StackedInline):
 
 
 class NotificationAdmin(admin.ModelAdmin):
-    change_form_template = 'django_vox/notification/change_form.html'
+    change_form_template = 'django_vox/change_form.html'
     list_display = ('__str__', 'description', 'required', 'template_count')
     list_filter = ('object_type',)
     inlines = [TemplateInline]
     form = NotificationForm
     issue_form = NotificationIssueForm
-    issue_template = 'django_vox/notification/issue.html'
+    issue_template = 'django_vox/issue.html'
 
     fields = ['codename', 'object_type', 'description']
 
@@ -206,8 +221,11 @@ class NotificationAdmin(admin.ModelAdmin):
             'all': ('django_vox/markitup/images.css',
                     'django_vox/markitup/style.css'),
         }
-        js = ('django_vox/markitup/jquery.markitup.js',
-              'django_vox/notification_fields.js')
+        js = (
+            'admin/js/jquery.init.js',
+            'django_vox/markitup/jquery.markitup.js',
+            'django_vox/notification_fields.js',
+        )
 
     # only show inlines on change forms
     def get_inline_instances(self, request, obj=None):
@@ -216,9 +234,13 @@ class NotificationAdmin(admin.ModelAdmin):
     def get_urls(self):
         return [
             url(
-                r'^(?P<notification_id>\w+)/preview/(?P<backend_id>.+)/$',
+                r'^preview/(?P<backend_id>.+)/$',
                 self.admin_site.admin_view(self.preview),
                 name='django_vox_preview'),
+            url(
+                r'^(?P<notification_id>\w+)/preview/(?P<backend_id>.+)/$',
+                self.admin_site.admin_view(self.notification_preview),
+                name='django_vox_notification_preview'),
             url(
                 r'^(?P<notification_id>\w+)/variables/$',
                 self.admin_site.admin_view(self.variables),
@@ -229,7 +251,21 @@ class NotificationAdmin(admin.ModelAdmin):
                 name='django_vox_issue'),
             ] + super().get_urls()
 
-    def preview(self, request, notification_id, backend_id):
+    def preview(self, request, backend_id):
+        if request.method != 'POST':
+            return django.http.HttpResponseNotAllowed(('POST',))
+
+        backend = registry.backends.by_id(backend_id)
+        message = request.POST['body']
+        params = {}
+
+        try:
+            result = backend.preview_message('', message, params)
+        except Exception as exc:
+            result = 'Unable to make preview: {}'.format(str(exc))
+        return django.http.HttpResponse(result)
+
+    def notification_preview(self, request, notification_id, backend_id):
         if not self.has_change_permission(request):
             raise PermissionDenied
         notification = self.get_object(request, unquote(notification_id))
@@ -273,7 +309,7 @@ class NotificationAdmin(admin.ModelAdmin):
             form = self.issue_form(notification, request.POST)
             if form.is_valid():
                 form.save()
-                msg = ugettext('Notification sent successfully.')
+                msg = gettext('Notification sent successfully.')
                 django.contrib.messages.success(
                     request, msg, fail_silently=True)
                 return django.http.HttpResponseRedirect(
@@ -338,6 +374,82 @@ class NotificationAdmin(admin.ModelAdmin):
     @staticmethod
     def template_count(obj):
         return obj.template_set.count()
+
+
+class NotifyForm(forms.Form):
+
+    backend = BackendChoiceField(label=_('Backend'))
+    from_address = forms.CharField(label=_('From Address'), required=False)
+    subject = forms.CharField(label=_('Subject'), required=False)
+    content = forms.CharField(label=_('Content'), required=True,
+                              widget=forms.Textarea)
+
+    def __init__(self, protocols, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['content'].widget.attrs['data-preview-url'] = reverse(
+            'admin:django_vox_preview', args=('__backend__',))
+        backends = [b for bs in (registry.backends.by_protocol(p)
+                                 for p in protocols)
+                    for b in bs]
+        self.fields['backend'].set_backend_choices(backends)
+
+
+def notify(modeladmin, request, queryset):
+    model = getattr(modeladmin, 'model')
+    opts = getattr(model, '_meta')
+    if not opts:
+        raise RuntimeError('modeladmin must be a django ModelAdmin')
+
+    notification = models.OneTimeNotification
+    # we don't want to have to evaluate this too many times
+    query_list = list(queryset)
+    protocols = set()
+    for obj in query_list:
+        for contact in obj.get_contacts_for_notification(notification):
+            protocols.add(contact.protocol)
+
+    if request.POST.get('post'):
+        form = NotifyForm(protocols, request.POST)
+    else:
+        form = NotifyForm(protocols)
+    context = {
+        'opts': opts,
+        'form': form,
+        'action_checkbox_name': ACTION_CHECKBOX_NAME,
+        'queryset': query_list,
+        'fieldset': Fieldset(
+            form, fields=('backend', 'from_address', 'subject', 'content')),
+    }
+
+    if request.POST.get('post') == 'yes':
+        if form.is_valid():
+            # okay, now we issue the notification
+            contacts = [c for cs in
+                        (obj.get_contacts_for_notification(notification)
+                         for obj in query_list)
+                        for c in cs]
+            result = notification.send(
+                form.cleaned_data['backend'], contacts,
+                form.cleaned_data['from_address'],
+                form.cleaned_data['subject'],
+                form.cleaned_data['content'])
+            if result is None:
+                msg = gettext('Notification sent successfully.')
+                django.contrib.messages.success(
+                    request, msg, fail_silently=True)
+            else:
+                msg = gettext('Error sending notification (%s).') % result
+                django.contrib.messages.error(
+                    request, msg, fail_silently=True)
+            return django.http.HttpResponseRedirect(
+                reverse(
+                    '%s:%s_%s_changelist' % (
+                        modeladmin.admin_site.name,
+                        opts.app_label,
+                        opts.model_name,
+                    )))
+
+    return TemplateResponse(request, 'django_vox/notify.html', context)
 
 
 class SiteContactSettingInline(admin.TabularInline):

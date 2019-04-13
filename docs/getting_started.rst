@@ -212,3 +212,35 @@ you'll need to add some appropriate :doc:`templates <templates>`.
 In this case, you'll want an email template for the "User" recipient of the
 "user created" notification, and possibly a template for a site contact
 too.
+
+
+One-time Messages from the Admin
+================================
+
+The normal way to handle notifications is call `issue_notification(codename)`
+from within the code. It’s also possible to manually issue notifications
+from the admin as long as a notification doesn't have an actor/target model.
+The other way of sending messages completely bypasses the ``Notification``
+models and uses an Admin Action.
+
+In order to send messages this way, you need to add the
+``django_vox.admin.notify`` action to your ``ModelAdmin`` class. It might look
+something like this:
+
+.. code-block:: python
+
+   from django.contrib import admin
+   from django_vox.admin import notify
+
+   class UserAdmin(admin.ModelAdmin):
+       actions = (notify, )
+
+   admin.site.register(YourUserModel, UserAdmin)
+
+In order for this to work right, the model in question needs to implement
+``get_contacts_for_notification``.
+
+.. note:: Because we don’t actually have a notification model here, a fake
+          notification (``django_vox.models.OneTimeNotification``) is passed
+          to ``get_contacts_for_notification``. This can be used if only want
+          certain contact methods to be accessible in this way.

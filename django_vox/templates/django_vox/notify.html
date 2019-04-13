@@ -1,0 +1,57 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+{% load admin_urls %}
+{% block extrahead %}{{ block.super }}
+<script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+
+<link href="{% static 'django_vox/markitup/images.css' %}" type="text/css" media="all" rel="stylesheet">
+<link href="{% static 'django_vox/markitup/style.css' %}" type="text/css" media="all" rel="stylesheet">
+
+<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
+<script type="text/javascript" src="{% static 'admin/js/core.js' %}"></script>
+<script type="text/javascript" src="{% static 'django_vox/markitup/jquery.markitup.js' %}"></script>
+<script type="text/javascript" src="{% static 'django_vox/notification_fields.js' %}"></script>
+{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}">{% endblock %}
+{% block bodyclass %}{{ block.super }} {{ opts.app_label }}-{{ opts.model_name }} change-form{% endblock %}
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {% trans 'Send Notification' %}
+</div>
+{% endblock %}
+{% endif %}
+{% block content %}<div id="content-main">
+<form action="." method="post" id="{{ opts.model_name }}_notify_form">{% csrf_token %}
+<div>
+{% if form.errors %}
+    <p class="errornote">
+    {% if form.errors.items|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+    </p>
+{% endif %}
+{% include "admin/includes/fieldset.html" %}
+<h2>Summary</h2>
+{% blocktrans with name=opts.verbose_name name_plural=opts.verbose_name_plural count len=queryset|length %}
+  Sending message to {{ len }} {{ name }}
+{% plural %}
+  Sending message to {{ len }} {{ name_plural }}
+{% endblocktrans %}
+<ul>
+{% for obj in queryset %}
+  <li>{{ obj }}</li>
+  <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+{% endfor %}
+</ul>
+<input type="hidden" name="action" value="notify">
+<input type="hidden" name="post" value="yes">
+<div class="submit-row">
+    <input type="submit" value="{% trans 'Notify' %}" class="default">
+</div>
+
+</div>
+</form></div>
+{% endblock %}

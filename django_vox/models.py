@@ -30,6 +30,7 @@ __all__ = ('find_activity_type', 'get_model_from_relation',
            'VoxNotification', 'VoxNotifications', 'VoxAttach',
            'VoxAttachments', 'NotificationManager', 'Notification',
            'Template', 'TemplateAttachment', 'SiteContactManager',
+           'OneTimeNotification',
            'SiteContact', 'SiteContactSetting', 'FailedMessage', 'InboxItem')
 
 
@@ -713,6 +714,76 @@ class Notification(models.Model):
             mapping['_static'].append(
                 get_model_variables('Target', 'target', target_type))
         return mapping
+
+
+class _OneTimeNotificationType:
+    codename = ''
+    object_type_id = None
+    description = ''
+    actor_type_id = None
+    target_type_id = None
+    required = True
+    activity_type = 'Object'
+    from_code = False
+
+    def __str__(self):
+        return '<OneTimeNotification>'
+
+    @property
+    def object_type(self):
+        return None
+
+    @property
+    def actor_type(self):
+        return None
+
+    @property
+    def target_type(self):
+        return None
+
+    def natural_key(self):
+        return '', '', ''
+
+    def get_actor_type(self):
+        return None
+
+    def get_target_type(self):
+        return None
+
+    def get_object_model(self):
+        return None
+
+    def get_activity_type(self):
+        return aspy.Create
+
+    def get_recipient_variables(self):
+        return {}
+
+    def send(self, backend_id, contacts, from_address, subject, body):
+        backend = django_vox.registry.backends.by_id(backend_id)
+        to_addresses = [c.address for c in contacts
+                        if c.protocol == backend.PROTOCOL]
+
+        parameters = {}
+        message = backend.build_message(
+            subject, body, parameters, attachments=[])
+        from_address = backend.get_from_address(
+            from_address, parameters)
+        try:
+            backend.send_message(from_address, to_addresses, message)
+        except Exception as e:
+            FailedMessage.objects.create(
+                backend=backend.ID,
+                from_address=from_address,
+                to_addresses=','.join(to_addresses),
+                message=str(message),
+                error=str(e),
+            )
+            return e
+        return None
+
+
+OneTimeNotification = _OneTimeNotificationType()
 
 
 class Template(models.Model):

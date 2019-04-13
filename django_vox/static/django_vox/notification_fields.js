@@ -112,18 +112,24 @@
     }
 
 
-    function getMarkItUpSettings(backend, editor, recipients, variables) {
+    function getMarkItUpSettings(backend, editor, recipients, variables, previewUrl) {
         var settings = Object.assign({}, markItUpSettings[editor]);
-        settings.previewParserPath = '../preview/' + backend + '/';
+        if (previewUrl === null) {
+            settings.previewParserPath = '../preview/' + backend + '/';
+        } else {
+            settings.previewParserPath = previewUrl.replace('__backend__', backend)
+        }
         settings.previewParserVar = 'body';
-        var variableList = parseVariables(recipients, variables);
-        settings.markupSet = [
-            {name:'Variables', className:'variable', openWith:'{{ ', closeWith:' }}',
-                dropMenu: variableList},
-            {separator:'---------------' },
-        ].concat(settings.markupSet);
+        if (variables != null) {
+            var variableList = parseVariables(recipients, variables);
+            settings.markupSet = [
+                {name:'Variables', className:'variable', openWith:'{{ ', closeWith:' }}',
+                    dropMenu: variableList},
+                {separator:'---------------' },
+            ].concat(settings.markupSet);
+        }
         var lms = settings.markupSet.length;
-        if (!('separator' in settings.markupSet[lms-1])) {
+        if (lms > 0 && !('separator' in settings.markupSet[lms-1])) {
             settings.markupSet = settings.markupSet.concat(
                 {separator:'---------------' });
         }
@@ -186,7 +192,7 @@
         var bulk = findField('bulk', 'input', fieldset)[0];
         // find value
         var recipients = [];
-        if (!bulk.checked)
+        if (bulk && !bulk.checked)
             recipients = findField('recipients', 'input', fieldset).filter(
                     function() { return this.checked; }).map(
                     function() { return this.value; }).get();
@@ -197,8 +203,9 @@
         var textarea = findField('content', 'textarea', fieldset);
         textarea.markItUpRemove();
         if (editor in markItUpSettings) {
+            var previewUrl = textarea.data('preview-url') || null;
             textarea.markItUp(getMarkItUpSettings(
-                backend, editor, recipients, variables));
+                backend, editor, recipients, variables, previewUrl));
         }
     }
 
@@ -209,23 +216,26 @@
 
 
     $(document).ready(function() {
+        // set up CSRF ajax stuff
+        var csrftoken = $("[name=csrfmiddlewaretoken]").val();
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
         // only on the change page with the template inline
         if (document.getElementById('template_set-group')) {
-            // set up CSRF ajax stuff
-            var csrftoken = $("[name=csrfmiddlewaretoken]").val();
-            $.ajaxSetup({
-                beforeSend: function(xhr, settings) {
-                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    }
-                }
-            });
             django.jQuery.ajax({
                 type: 'POST',
                 global: false,
                 url: '../variables/',
                 success: setup,
             });
+        } else {
+            setup(null);
         }
+
     });
 })(django.jQuery)

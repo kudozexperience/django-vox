@@ -109,3 +109,4 @@ DJANGO_VOX_BACKENDS = [
     # 'django_vox.backends.xmpp.Backend',
 ]
 DJANGO_VOX_VIEW_INBOX = False
+DEFAULT_FROM_EMAIL = 'admin@example.test'
