@@ -19,11 +19,11 @@ class BackgroundVoxModel(django_vox.models.VoxModel):
         self_cls_str = str(self.__class__._meta)
         if target is not None:
             kwargs['target_cls_str'] = str(target.__class__._meta)
-            kwargs['target_id'] = target.id
+            kwargs['target_id'] = target.pk
         if actor is not None:
             kwargs['actor_cls_str'] = str(actor.__class__._meta)
-            kwargs['actor_id'] = actor.id
-        issue_notification(codename, self_cls_str, self.id, **kwargs)
+            kwargs['actor_id'] = actor.pk
+        issue_notification(codename, self_cls_str, self.pk, **kwargs)
 
 
 def issue_notification(
