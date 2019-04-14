@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+3.5.3
+-----
+
+* Fix bugs in demo caused by slug
+* Add icon
+
 3.5.2
 -----
 
