@@ -5,7 +5,7 @@ from . import models
 
 def article_list(request):
     context = {
-        'articles': models.Article.objects.order_by('-id'),
+        'articles': models.Article.objects.order_by('-created_at'),
         'author': None,
     }
     return render(request, 'tests/index.html', context)
@@ -14,7 +14,8 @@ def article_list(request):
 def user_detail(request, user_id):
     user = get_object_or_404(models.User, pk=user_id)
     context = {
-        'articles': models.Article.objects.filter(author=user).order_by('-id'),
+        'articles': models.Article.objects.filter(
+            author=user).order_by('-created_at'),
         'author': user,
     }
     return render(request, 'tests/index.html', context)
@@ -45,7 +46,7 @@ def comment(request, article_pk):
         poster=subscriber,
         article=article,
     )
-    return redirect('tests:article', article.id)
+    return redirect('tests:article', article.pk)
 
 
 def subscribe(request):
