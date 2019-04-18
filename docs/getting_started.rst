@@ -76,16 +76,20 @@ use a ``VoxNotification`` object to specify more parameters.
 
        class VoxMeta:
            notifications = VoxNotifications(
-               create=_('Notification to that a user created an account'),
+               created=_('Notification to that a user created an account'),
            )
 
        ...
 
+       # Here, we're embedding the notification issue code into
+       # the model itself. The upside is we don't have to manually
+       # call it from our forms/model admins, the downside is that
+       # we don't have access to the HTTP request
        def save(self, *args, **kwargs):
            new = self.id is None
            super().save(*args, **kwargs)
            if new:
-               self.issue_notification('create')
+               self.issue_notification('created')
 
    ...
 
@@ -118,10 +122,19 @@ parameters (like actor & target model) if you need them.
 
        class VoxMeta:
            notifications = VoxNotifications(
-               create=VoxNotification(
+               created=VoxNotification(
                    _('Notification to that a user created an account'),
                    actor_type='myapp.mymodel'),
            )
+   # In the form save method
+   # -----------------------
+   # Here we're saving outside the model object, this means we can have
+   # to the HTTP request, but we have to manually make sure we send the
+   # notification whenever is appropriate
+   user = User(name='John Doe')
+   user.save()
+   user.issue_notification('created', actor=request.user)
+
 
 
 
@@ -200,7 +213,7 @@ class to look like this::
       ...
       email = models.EmailField(max_length=254, unique=True)
 
-      def get_contacts_for_notification(notification):
+      def get_contacts_for_notification(self, notification):
           return Contact(self.name, 'email', self.email)
 
 
@@ -217,7 +230,7 @@ too.
 One-time Messages from the Admin
 ================================
 
-The normal way to handle notifications is call `issue_notification(codename)`
+The normal way to handle notifications is call ``issue_notification(codename)``
 from within the code. It’s also possible to manually issue notifications
 from the admin as long as a notification doesn't have an actor/target model.
 The other way of sending messages completely bypasses the ``Notification``
