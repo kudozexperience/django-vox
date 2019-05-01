@@ -413,6 +413,7 @@ def notify(modeladmin, request, queryset):
     else:
         form = NotifyForm(protocols)
     context = {
+        'title': _('Notify'),
         'opts': opts,
         'form': form,
         'action_checkbox_name': ACTION_CHECKBOX_NAME,
