@@ -1,3 +1,4 @@
+import august
 import django.template
 from django.utils.translation import ugettext_lazy as _
 
@@ -11,7 +12,7 @@ class Backend(base_email.Backend):
     ID = 'email-html'
     VERBOSE_NAME = _('Email (HTML)')
     EDITOR_TYPE = 'html'
-    DEPENDS = ('august',)
+    DEPENDS = ()
 
     @classmethod
     def build_multipart(cls, subject: str, body: str, parameters: dict):
@@ -20,7 +21,6 @@ class Backend(base_email.Backend):
 
 def email_html(subject: str, body: str, parameters: dict) -> \
         base_email.MultipartMessage:
-    import august
     text_context = django.template.Context(parameters, autoescape=False)
     html_context = django.template.Context(parameters, autoescape=True)
     message = base_email.MultipartMessage()
