@@ -55,14 +55,6 @@ class Backend:
         return message
 
     @classmethod
-    def add_attachment(cls, data: bytes, mime: str):
-        pass  # not supported
-
-    def send_message(self, from_address: str,
-                     to_addresses: List[str], message: str):
-        raise NotImplementedError
-
-    @classmethod
     def get_from_address(cls, provided_address, parameters: dict):
         if not cls.USE_FROM_ADDRESS:
             return ''
@@ -72,8 +64,20 @@ class Backend:
         return template_from_string(provided_address).render(context)
 
     @classmethod
-    def get_default_from_address(cls):
+    def get_default_from_address(cls) -> str:
+        """
+        Gets the default from address
+
+        You only need to implement this is you have
+        USE_FROM_ADDRESS = True. This base method should normally never
+        get called (unless an empty from address is normal for your backend).
+        """
         return ''
+
+    # instance methods
+    def send_message(self, from_address: str,
+                     to_addresses: List[str], message: str):
+        raise NotImplementedError
 
 
 def template_from_string(text: str, using=None) -> \

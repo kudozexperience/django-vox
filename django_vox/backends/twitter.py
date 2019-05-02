@@ -1,5 +1,4 @@
 from django.utils.translation import ugettext_lazy as _
-import django.conf
 
 from django_vox import settings
 
@@ -18,18 +17,12 @@ class Backend(base.Backend):
     DEPENDS = ('twitter',)
 
     def __init__(self):
-        kwargs = {
-            'consumer_key': settings.TWITTER_CONSUMER_KEY,
-            'consumer_secret': settings.TWITTER_CONSUMER_SECRET,
-            'access_token_key': settings.TWITTER_TOKEN_KEY,
-            'access_token_secret': settings.TWITTER_TOKEN_SECRET,
-        }
-        if None in kwargs.values():
-            raise django.conf.ImproperlyConfigured(
-                'Twitter backend enabled but settings are missing')
-
         import twitter
-        self.client = twitter.Api(**kwargs)
+        self.client = twitter.Api(
+            consumer_key=settings.TWITTER_CONSUMER_KEY,
+            consumer_secret=settings.TWITTER_CONSUMER_SECRET,
+            access_token_key=settings.TWITTER_TOKEN_KEY,
+            access_token_secret=settings.TWITTER_TOKEN_SECRET)
 
     def send_message(self, _from_address, to_addresses, message):
         if not to_addresses:

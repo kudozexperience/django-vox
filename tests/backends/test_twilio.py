@@ -3,7 +3,7 @@ from unittest.mock import patch
 import django.conf
 from django.test import TestCase
 
-import django_vox.backends.twilio
+from django_vox.backends.twilio import Backend
 
 
 class TestTwilioBackend(TestCase):
@@ -16,27 +16,26 @@ class TestTwilioBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = django_vox.backends.twilio.Backend
-        message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
+        message = Backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
     def test_preview_message(cls):
-        backend = django_vox.backends.twilio.Backend
-        message = backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
+        message = Backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = django_vox.backends.twilio.Backend
-        message = backend.build_message(
+        message = Backend.build_message(
             self.SUBJECT, self.TEXT, self.PARAMS, [])
         with patch('twilio.rest.Client'):
             with self.assertRaises(django.conf.ImproperlyConfigured):
-                backend()
+                Backend()
             with self.settings(DJANGO_VOX_TWILIO_ACCOUNT_SID='abc',
-                               DJANGO_VOX_TWILIO_AUTH_TOKEN='secret'):
-                instance = backend()
-                instance.send_message('+321', ['+123'], message)
+                               DJANGO_VOX_TWILIO_AUTH_TOKEN='secret',
+                               DJANGO_VOX_TWILIO_FROM_NUMBER='+321'):
+                instance = Backend()
+                from_address = Backend.get_from_address('', {})
+                instance.send_message(from_address, ['+123'], message)
                 import twilio.rest
                 client = twilio.rest.Client
                 assert len(client.mock_calls) > 1

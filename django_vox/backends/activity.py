@@ -111,10 +111,6 @@ class Backend(base.Backend):
         return '<div><strong>{}</strong></div>' \
                '<div>{}</div'.format(subject, summary)
 
-    @classmethod
-    def add_attachment(cls, data: bytes, mime: str):
-        pass  # not supported
-
     def send_message(self, _from_address: str,
                      to_addresses: List[str], message: str):
         address_set = set(to_addresses)

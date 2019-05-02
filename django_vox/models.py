@@ -771,8 +771,7 @@ class _OneTimeNotificationType:
         parameters = {}
         message = backend.build_message(
             subject, body, parameters, attachments=[])
-        from_address = backend.get_from_address(
-            from_address, parameters)
+        from_address = backend.get_from_address(from_address, parameters)
         try:
             backend.send_message(from_address, to_addresses, message)
         except Exception as e:

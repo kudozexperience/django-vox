@@ -1,8 +1,3 @@
-import django.conf
-import django.core.mail.backends.base
-import django.core.mail.backends.smtp
-import django.template
-import django.utils.html
 from django.utils.translation import ugettext_lazy as _
 
 from django_vox import settings
@@ -23,14 +18,10 @@ class Backend(base.Backend):
     DEPENDS = ('twilio',)
 
     def __init__(self):
-        account_sid = settings.TWILIO_ACCOUNT_SID
-        auth_token = settings.TWILIO_AUTH_TOKEN
-        if account_sid is None or auth_token is None:
-            raise django.conf.ImproperlyConfigured(
-                'Twilio backend enabled but settings are missing')
-
         from twilio.rest import Client
-        self.client = Client(account_sid, auth_token)
+        self.client = Client(
+            username=settings.TWILIO_ACCOUNT_SID,
+            password=settings.TWILIO_AUTH_TOKEN)
 
     def send_message(self, from_address, to_addresses, message):
         for address in to_addresses:

@@ -3,29 +3,15 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-import django_vox.backends.template_email
+from django_vox.backends.json_webhook import Backend
+
+from tests.mock import MockJsonResponse
 
 
 def mocked_requests_post(url, _data=None, json=None, **_kwargs):
-    class MockResponse:
-        def __init__(self, json_data, status_code):
-            self.json_data = json_data
-            self.status_code = status_code
-
-        def json(self):
-            return self.json_data
-
-        @property
-        def text(self):
-            return str(self.json_data)
-
-        @property
-        def ok(self):
-            return self.status_code // 100 == 2
-
     if url == 'https://webhook.example':
-        return MockResponse('', 200)
-    return MockResponse(None, 404)
+        return MockJsonResponse('', 200)
+    return MockJsonResponse(None, 404)
 
 
 class TestJsonWebhookBackend(TestCase):
@@ -49,23 +35,20 @@ class TestJsonWebhookBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = django_vox.backends.json_webhook.Backend
-        message = backend.build_message('', cls.TEXT, cls.PARAMS, [])
+        message = Backend.build_message('', cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
     def test_preview_message(cls):
-        backend = django_vox.backends.json_webhook.Backend
-        message = backend.preview_message('', cls.TEXT, cls.PARAMS)
+        message = Backend.preview_message('', cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = django_vox.backends.json_webhook.Backend
-        message = backend.build_message('', self.TEXT, self.PARAMS, [])
+        message = Backend.build_message('', self.TEXT, self.PARAMS, [])
         bad_address = 'https://not.example'
         address = 'https://webhook.example'
         with patch('requests.post', side_effect=mocked_requests_post):
-            instance = backend()
+            instance = Backend()
             with self.assertRaises(RuntimeError):
                 instance.send_message('', [bad_address], message)
             instance.send_message('', [address], message)
@@ -77,3 +60,7 @@ class TestJsonWebhookBackend(TestCase):
             # not sure if this is actually what we want, but it's what
             # currently happens
             assert check_model['html'] is None
+
+    def test_from_address(self):
+        # we don't use from addresses, so this should be blank
+        assert '' == Backend.get_from_address('foo', {})
