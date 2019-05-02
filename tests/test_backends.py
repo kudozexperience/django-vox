@@ -52,26 +52,27 @@ class TestTwilioBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = django_vox.backends.twilio.Backend()
+        backend = django_vox.backends.twilio.Backend
         message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
     def test_preview_message(cls):
-        backend = django_vox.backends.twilio.Backend()
+        backend = django_vox.backends.twilio.Backend
         message = backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = django_vox.backends.twilio.Backend()
+        backend = django_vox.backends.twilio.Backend
         message = backend.build_message(
             self.SUBJECT, self.TEXT, self.PARAMS, [])
         with patch('twilio.rest.Client'):
             with self.assertRaises(django.conf.ImproperlyConfigured):
-                backend.send_message('+321', ['+123'], message)
+                backend()
             with self.settings(DJANGO_VOX_TWILIO_ACCOUNT_SID='abc',
                                DJANGO_VOX_TWILIO_AUTH_TOKEN='secret'):
-                backend.send_message('+321', ['+123'], message)
+                instance = backend()
+                instance.send_message('+321', ['+123'], message)
                 import twilio.rest
                 client = twilio.rest.Client
                 assert len(client.mock_calls) > 1
@@ -123,7 +124,7 @@ class TestPostmarkBackend(TestCase):
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = django_vox.backends.postmark_email.Backend()
+        backend = django_vox.backends.postmark_email.Backend
         bad_message = backend.build_message(
             '', self.TEXT, self.PARAMS, [])
         message = backend.build_message(
@@ -131,13 +132,14 @@ class TestPostmarkBackend(TestCase):
         from_address = django.conf.settings.DEFAULT_FROM_EMAIL
         to_addresses = ['george@example.org']
         with patch('requests.post', side_effect=mocked_requests_post):
+            instance = backend()
             with self.assertRaises(django.conf.ImproperlyConfigured):
-                backend.send_message(from_address, to_addresses, message)
+                instance.send_message(from_address, to_addresses, message)
             with self.settings(DJANGO_VOX_POSTMARK_TOKEN='token'):
                 with self.assertRaises(RuntimeError):
-                    backend.send_message(from_address, to_addresses,
-                                         bad_message)
-                backend.send_message(from_address, to_addresses, message)
+                    instance.send_message(from_address, to_addresses,
+                                          bad_message)
+                instance.send_message(from_address, to_addresses, message)
                 import requests
                 check_model = requests.post.mock_calls[1][2]['json'][
                     'TemplateModel']
@@ -167,25 +169,26 @@ class TestJsonWebhookBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = django_vox.backends.json_webhook.Backend()
+        backend = django_vox.backends.json_webhook.Backend
         message = backend.build_message('', cls.TEXT, cls.PARAMS, [])
         assert cls.MESSAGE == message
 
     @classmethod
     def test_preview_message(cls):
-        backend = django_vox.backends.json_webhook.Backend()
+        backend = django_vox.backends.json_webhook.Backend
         message = backend.preview_message('', cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
 
     def test_send_message(self):
-        backend = django_vox.backends.json_webhook.Backend()
+        backend = django_vox.backends.json_webhook.Backend
         message = backend.build_message('', self.TEXT, self.PARAMS, [])
         bad_address = 'https://not.example'
         address = 'https://webhook.example'
         with patch('requests.post', side_effect=mocked_requests_post):
+            instance = backend()
             with self.assertRaises(RuntimeError):
-                backend.send_message('', [bad_address], message)
-            backend.send_message('', [address], message)
+                instance.send_message('', [bad_address], message)
+            instance.send_message('', [address], message)
             import requests
             check_model = requests.post.mock_calls[0][2]['json']
             assert check_model['birthday'] == \
@@ -214,13 +217,13 @@ class TestTemplateEmailBackend(TestCase):
 
     @classmethod
     def test_build_message(cls):
-        backend = django_vox.backends.template_email.Backend()
+        backend = django_vox.backends.template_email.Backend
         message = backend.build_message(cls.SUBJECT, cls.TEXT, cls.PARAMS, [])
         obj = json.loads(message)
         assert cls.MESSAGE == obj
 
     @classmethod
     def test_preview_message(cls):
-        backend = django_vox.backends.template_email.Backend()
+        backend = django_vox.backends.template_email.Backend
         message = backend.preview_message(cls.SUBJECT, cls.TEXT, cls.PARAMS)
         assert cls.PREVIEW == message
