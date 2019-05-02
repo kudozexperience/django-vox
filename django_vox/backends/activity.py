@@ -115,8 +115,7 @@ class Backend(base.Backend):
     def add_attachment(cls, data: bytes, mime: str):
         pass  # not supported
 
-    @classmethod
-    def send_message(cls, _from_address: str,
+    def send_message(self, _from_address: str,
                      to_addresses: List[str], message: str):
         address_set = set(to_addresses)
         # note: we don't support public addressing yet, just strip them

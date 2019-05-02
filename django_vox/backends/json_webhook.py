@@ -72,9 +72,8 @@ class Backend(base.Backend):
                 model[key] = element.text
         return subject, model
 
-    @classmethod
-    def send_message(cls, _from_address, to_addresses, message):
-        subject, model = cls.extract_model(message)
+    def send_message(self, _from_address, to_addresses, message):
+        subject, model = self.extract_model(message)
         headers = {'Content-Type': 'application/json'}
         for address in to_addresses:
             response = requests.post(address, json=model, headers=headers)

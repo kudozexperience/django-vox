@@ -30,6 +30,16 @@ class Backend:
     DEPENDS = ()
     EDITOR_TYPE = 'basic'
 
+    def __init__(self):
+        """
+        Import any modules or initialize any resources you need for sending.
+
+        This is only used when actually sending messages and not used for
+        building or previewing them. The lifetime of a backend object isn't
+        all that long right now.
+        """
+        pass
+
     @classmethod
     def build_message(cls, subject: str, body: str, parameters: dict,
                       attachments: List[AttachmentData]):
@@ -48,8 +58,7 @@ class Backend:
     def add_attachment(cls, data: bytes, mime: str):
         pass  # not supported
 
-    @classmethod
-    def send_message(cls, from_address: str,
+    def send_message(self, from_address: str,
                      to_addresses: List[str], message: str):
         raise NotImplementedError
 

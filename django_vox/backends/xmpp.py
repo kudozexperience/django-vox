@@ -21,8 +21,10 @@ class Backend(base.Backend):
     VERBOSE_NAME = _('XMPP')
     DEPENDS = ('sleekxmpp',)
 
-    @classmethod
-    def send_message(cls, _from_address, to_addresses, message):
+    # TODO: implement __init__ and do the heavy work there
+    # so that sending multiple messages at once isn't stupidly slow
+
+    def send_message(self, _from_address, to_addresses, message):
         for address in to_addresses:
             try:
                 client = Client(settings.XMPP_JID, settings.XMPP_PASSWORD,

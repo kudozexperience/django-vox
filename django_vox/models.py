@@ -601,8 +601,12 @@ class Notification(models.Model):
         exceptions = []
         sent = False
 
+        backend_ids = {template.backend for template in templates}
+        loaded_backends = dict((bid, django_vox.registry.backends.by_id(bid)())
+                               for bid in backend_ids)
+
         for template in templates:
-            backend = django_vox.registry.backends.by_id(template.backend)
+            backend = loaded_backends[template.backend]
             recipients = template.recipients.split(',')
             # items is a list of address list, contactable pairs
             if template.bulk:
@@ -760,7 +764,7 @@ class _OneTimeNotificationType:
         return {}
 
     def send(self, backend_id, contacts, from_address, subject, body):
-        backend = django_vox.registry.backends.by_id(backend_id)
+        backend = django_vox.registry.backends.by_id(backend_id)()
         to_addresses = [c.address for c in contacts
                         if c.protocol == backend.PROTOCOL]
 
@@ -913,7 +917,7 @@ class FailedMessage(models.Model):
         return '{} @ {}'.format(self.to_addresses, self.created_at)
 
     def resend(self):
-        backend = django_vox.registry.backends.by_id(self.backend)
+        backend = django_vox.registry.backends.by_id(self.backend)()
         to_addresses = list(self.to_addresses.split(','))
         backend.send_message(self.from_address, to_addresses, self.message)
         self.delete()

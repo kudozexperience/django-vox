@@ -16,8 +16,7 @@ class Backend(base.Backend):
     EDITOR_TYPE = 'basic'
     VERBOSE_NAME = _('Slack')
 
-    @classmethod
-    def send_message(cls, _from_address, to_addresses, message):
+    def send_message(self, _from_address, to_addresses, message):
         data = json.dumps({'text': message})
         headers = {'Content-Type': 'application/json'}
         for address in to_addresses:

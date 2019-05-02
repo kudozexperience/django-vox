@@ -105,8 +105,7 @@ class Backend(base.Backend):
             return parts.html
         return django.utils.html.escape(parts.text)
 
-    @classmethod
-    def send_message(cls, from_address, to_addresses, message):
+    def send_message(self, from_address, to_addresses, message):
         mpm = MultipartMessage.from_string(message)
         email = mpm.to_mail()
         email.from_email = from_address

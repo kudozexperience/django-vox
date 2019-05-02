@@ -23,9 +23,8 @@ class Backend(json_webhook.Backend):
     USE_SUBJECT = True
     USE_FROM_ADDRESS = True
 
-    @classmethod
-    def send_message(cls, from_address, to_addresses, message):
-        subject, model = cls.extract_model(message)
+    def send_message(self, from_address, to_addresses, message):
+        subject, model = self.extract_model(message)
         data = {
             'TemplateAlias': subject,
             'TemplateModel': model,
@@ -39,7 +38,7 @@ class Backend(json_webhook.Backend):
             'X-Postmark-Server-Token': token,
         }
 
-        response = requests.post(cls.ENDPOINT, json=data, headers=headers)
+        response = requests.post(self.ENDPOINT, json=data, headers=headers)
         data_result = response.json()
         if not response.ok:
             raise RuntimeError('Postmark error: {} {}'.format(
