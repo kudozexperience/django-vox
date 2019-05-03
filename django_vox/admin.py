@@ -40,8 +40,6 @@ class SelectWithSubjectData(forms.Select):
             option_attrs[key] = ('true' if item.get(value) else 'false')
         if selected:
             option_attrs.update(self.checked_attribute)
-        if 'id' in option_attrs:
-            option_attrs['id'] = self.id_for_label(option_attrs['id'], index)
         return {
             'name': name,
             'value': value,
@@ -115,10 +113,9 @@ class TemplateForm(forms.ModelForm):
                 notification.get_recipient_choices()
             self.fields['attachments'].choices = \
                 self.get_attachment_choices(notification)
-        if self.instance:
-            self.initial['attachments'] = [
-                a.key for a in self.instance.attachments.all()]
-            self.initial['recipients'] = self.instance.recipients.split(',')
+        self.initial['attachments'] = [
+            a.key for a in self.instance.attachments.all()]
+        self.initial['recipients'] = self.instance.recipients.split(',')
 
     def save(self, commit=True):
         # data will be a set of the added items
@@ -190,11 +187,10 @@ class NotificationIssueForm(forms.Form):
         super().__init__(*args, **kwargs)
 
     def save(self, commit=True):
-        if not commit:
-            return
-        objects = self.cleaned_data['objects']
-        for obj in objects:
-            self.notification.issue(obj)
+        if commit:
+            objects = self.cleaned_data['objects']
+            for obj in objects:
+                self.notification.issue(obj)
 
 
 class TemplateInline(admin.StackedInline):
@@ -252,14 +248,15 @@ class NotificationAdmin(admin.ModelAdmin):
             ] + super().get_urls()
 
     def preview(self, request, backend_id):
+        if not request.user.is_staff:
+            raise PermissionDenied
         if request.method != 'POST':
             return django.http.HttpResponseNotAllowed(('POST',))
 
-        backend = registry.backends.by_id(backend_id)
-        message = request.POST['body']
-        params = {}
-
         try:
+            backend = registry.backends.by_id(backend_id)
+            message = request.POST['body']
+            params = {}
             result = backend.preview_message('', message, params)
         except Exception as exc:
             result = 'Unable to make preview: {}'.format(str(exc))
