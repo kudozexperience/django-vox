@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+3.6
+---
+
+* Fix bug in notification editor where switching one template's backend would
+  alter the state of the another template form.
+* Add more tests
+* Make ``Backend.send_message`` an instance method, and instantiate backend
+  objects when sending messages. This is a significant API change, but it's
+  unlikely to actually cause backwards compatibility issues.
+* Add title to notify page
+
 3.5.3
 -----
 
