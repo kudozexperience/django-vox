@@ -172,16 +172,16 @@
 
     function selectBackend(elem, variables) {
         // show/hide fields
-        var opt = elem.options[elem.selectedIndex];
+        var ds = elem.options[elem.selectedIndex].dataset;
+        var parent = $(elem).closest('fieldset')
         // update subject
-        findFieldRow('subject').toggle(opt.dataset.subject == 'true');
+        findFieldRow('subject', parent).toggle(ds.subject == 'true');
         // update attachments
-        findFieldRow('attachments').toggle(opt.dataset.attachment == 'true');
+        findFieldRow('attachments', parent).toggle(ds.attachment == 'true');
         // update from address
-        findFieldRow('from_address').toggle(opt.dataset.from_address == 'true');
+        findFieldRow('from_address', parent).toggle(ds.from_address == 'true');
         // update markitup
-        var fieldset = $(elem).closest('fieldset')
-        refreshMarkItUp(fieldset, variables);
+        refreshMarkItUp(parent, variables);
     }
 
     function selectRecipient(elem, variables) {
