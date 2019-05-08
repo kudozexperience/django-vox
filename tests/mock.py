@@ -7,6 +7,7 @@ class MockResponse:
     """
     Base class to share methods
     """
+
     def __init__(self, status_code):
         self.status_code = status_code
 
@@ -26,6 +27,7 @@ class MockTextResponse(MockResponse):
     """
     Mock an JSON HTTP response with a dict and a status code
     """
+
     def __init__(self, content, status_code):
         super().__init__(status_code)
         self.content = content
@@ -46,6 +48,7 @@ class MockJsonResponse(MockResponse):
     """
     Mock an JSON HTTP response with a dict and a status code
     """
+
     def __init__(self, json_data, status_code):
         super().__init__(status_code)
         self.json_data = json_data

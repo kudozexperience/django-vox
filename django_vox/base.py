@@ -12,8 +12,9 @@ def get_current_site():
     """
     # Imports are inside the function because its point is to avoid importing
     # the Site models when django.contrib.sites isn't installed.
-    if apps.is_installed('django.contrib.sites'):
+    if apps.is_installed("django.contrib.sites"):
         from django.contrib.sites.models import Site
+
         return Site.objects.get_current()
     else:
         return SettingsSite()
@@ -26,17 +27,16 @@ class SettingsSite:
     """
 
     def __init__(self):
-        self.domain = self.name = getattr(
-            settings, 'SITE_DOMAIN', '127.0.0.1:8000')
+        self.domain = self.name = getattr(settings, "SITE_DOMAIN", "127.0.0.1:8000")
 
     def __str__(self):
         return self.name
 
     def save(self, force_insert=False, force_update=False):
-        raise NotImplementedError('SettingsSite cannot be saved.')
+        raise NotImplementedError("SettingsSite cannot be saved.")
 
     def delete(self):
-        raise NotImplementedError('SettingsSite cannot be deleted.')
+        raise NotImplementedError("SettingsSite cannot be deleted.")
 
 
 def full_iri(absolute_url: str):
@@ -46,14 +46,14 @@ def full_iri(absolute_url: str):
     Uses the SITE_SSL and SITE_DOMAIN settings
     """
     # copied and modified from django.contrib.syndication.view.add_domain
-    ssl = getattr(settings, 'SITE_SSL', True)
-    protocol = 'https' if ssl else 'http'
-    if absolute_url.startswith('//'):
-        return '{}:{}'.format(protocol, absolute_url)
-    if absolute_url.startswith(('http://', 'https://', 'mailto:')):
+    ssl = getattr(settings, "SITE_SSL", True)
+    protocol = "https" if ssl else "http"
+    if absolute_url.startswith("//"):
+        return "{}:{}".format(protocol, absolute_url)
+    if absolute_url.startswith(("http://", "https://", "mailto:")):
         return absolute_url
     domain = get_current_site().domain
-    return '{}://{}{}'.format(protocol, domain, absolute_url)
+    return "{}://{}{}".format(protocol, domain, absolute_url)
 
 
 class Contact:
@@ -70,7 +70,7 @@ class Contact:
         self.address = address
 
     def __str__(self):
-        return '{} <{}:{}>'.format(self.name, self.protocol, self.address)
+        return "{} <{}:{}>".format(self.name, self.protocol, self.address)
 
     def __hash__(self):
         return hash((self.name, self.protocol, self.address))

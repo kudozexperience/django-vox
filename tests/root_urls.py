@@ -9,9 +9,6 @@ from django.contrib.staticfiles.views import serve
 
 from . import urls
 
-urlpatterns = [
-    url('^admin/', admin.site.urls),
-    url(r'^', include(urls)),
-] + [
-    url(r'^static/(?P<path>.*)$', serve),
+urlpatterns = [url("^admin/", admin.site.urls), url(r"^", include(urls))] + [
+    url(r"^static/(?P<path>.*)$", serve)
 ]

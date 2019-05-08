@@ -7,20 +7,15 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_vox', '0005_activity_table'),
-    ]
+    dependencies = [("django_vox", "0005_activity_table")]
 
     operations = [
-        migrations.RemoveField(
-            model_name='inboxitem',
-            name='read',
-        ),
+        migrations.RemoveField(model_name="inboxitem", name="read"),
         migrations.AddField(
-            model_name='inboxitem',
-            name='read_at',
+            model_name="inboxitem",
+            name="read_at",
             field=models.DateTimeField(
-                blank=True, db_index=True, null=True,
-                verbose_name='date read'),
+                blank=True, db_index=True, null=True, verbose_name="date read"
+            ),
         ),
     ]

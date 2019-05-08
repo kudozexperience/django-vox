@@ -7,13 +7,16 @@ from django.db import DEFAULT_DB_ALIAS, router
 
 
 class Command(BaseCommand):
-    help = 'Creates notifications based on VoxMeta instances in classes'
+    help = "Creates notifications based on VoxMeta instances in classes"
 
     def add_arguments(self, parser):  # pragma: no cover
         parser.add_argument(
-            '--dry-run',
-            action='store_true', dest='dry_run', default=False,
-            help='Don\'t actually make changes')
+            "--dry-run",
+            action="store_true",
+            dest="dry_run",
+            default=False,
+            help="Don't actually make changes",
+        )
 
     def handle(self, *args, verbosity=1, dry_run=False, **kwargs):
         make_notifications(verbosity=verbosity, dry_run=dry_run)
@@ -21,9 +24,9 @@ class Command(BaseCommand):
 
 def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
     try:
-        contenttype_class = apps.get_model('contenttypes', 'ContentType')
-        notification_class = apps.get_model('django_vox', 'Notification')
-        template_class = apps.get_model('django_vox', 'Template')
+        contenttype_class = apps.get_model("contenttypes", "ContentType")
+        notification_class = apps.get_model("django_vox", "Notification")
+        template_class = apps.get_model("django_vox", "Template")
     except LookupError:
         return
 
@@ -36,12 +39,11 @@ def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
     # The code names and content types that should exist.
     object_types = set()
     for cls in apps.get_models():
-        meta = getattr(cls, '_vox_meta', None)
+        meta = getattr(cls, "_vox_meta", None)
         if meta is not None:
             # Force looking up the content types in the current database
             # before creating foreign keys to them.
-            object_type = contenttype_class.objects.db_manager(
-                using).get_for_model(cls)
+            object_type = contenttype_class.objects.db_manager(using).get_for_model(cls)
             object_types.add(object_type)
             for params in meta.notifications:
                 searched_notifications.append((object_type, params))
@@ -77,8 +79,10 @@ def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
         templates = template_class.objects.filter(notification=notification)
         if templates.count() > 0:
             if verbosity > 0:
-                print("Skipping removal of notification '%s' "
-                      "still has templates" % notification)
+                print(
+                    "Skipping removal of notification '%s' "
+                    "still has templates" % notification
+                )
             continue
         if verbosity > 0:
             print("Removing notification '%s'" % notification)

@@ -7,12 +7,12 @@ import django.template
 import django.utils.html
 from django.template import Context
 
-__ALL__ = ('Backend', 'template_from_string')
+__ALL__ = ("Backend", "template_from_string")
 
 
 def html_format(text: str):
     escaped = django.utils.html.escape(text)
-    return escaped.replace('\r\n', '<br/>').replace('\n', '<br/>')
+    return escaped.replace("\r\n", "<br/>").replace("\n", "<br/>")
 
 
 class AttachmentData:
@@ -28,7 +28,7 @@ class Backend:
     USE_FROM_ADDRESS = False
     ESCAPE_HTML = True
     DEPENDS = ()
-    EDITOR_TYPE = 'basic'
+    EDITOR_TYPE = "basic"
 
     def __init__(self):
         """
@@ -41,8 +41,13 @@ class Backend:
         pass
 
     @classmethod
-    def build_message(cls, subject: str, body: str, parameters: dict,
-                      attachments: List[AttachmentData]):
+    def build_message(
+        cls,
+        subject: str,
+        body: str,
+        parameters: dict,
+        attachments: List[AttachmentData],
+    ):
         template = template_from_string(body)
         context = Context(parameters, autoescape=cls.ESCAPE_HTML)
         return template.render(context)
@@ -57,7 +62,7 @@ class Backend:
     @classmethod
     def get_from_address(cls, provided_address, parameters: dict):
         if not cls.USE_FROM_ADDRESS:
-            return ''
+            return ""
         if not provided_address:
             return cls.get_default_from_address()
         context = Context(parameters, autoescape=False)
@@ -72,16 +77,14 @@ class Backend:
         USE_FROM_ADDRESS = True. This base method should normally never
         get called (unless an empty from address is normal for your backend).
         """
-        return ''
+        return ""
 
     # instance methods
-    def send_message(self, from_address: str,
-                     to_addresses: List[str], message: str):
+    def send_message(self, from_address: str, to_addresses: List[str], message: str):
         raise NotImplementedError
 
 
-def template_from_string(text: str, using=None) -> \
-        django.template.base.Template:
+def template_from_string(text: str, using=None) -> django.template.base.Template:
     """
     Convert a string into a template object,
     using a given template engine or using the default backends

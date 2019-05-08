@@ -4,7 +4,7 @@ from django_vox import settings
 
 from . import base
 
-__all__ = ('Backend',)
+__all__ = ("Backend",)
 
 
 class Backend(base.Backend):
@@ -14,12 +14,12 @@ class Backend(base.Backend):
     be pretty slow.
     """
 
-    ID = 'xmpp'
-    PROTOCOL = 'xmpp'
-    EDITOR_TYPE = 'basic'
+    ID = "xmpp"
+    PROTOCOL = "xmpp"
+    EDITOR_TYPE = "basic"
     ESCAPE_HTML = False
-    VERBOSE_NAME = _('XMPP')
-    DEPENDS = ('sleekxmpp',)
+    VERBOSE_NAME = _("XMPP")
+    DEPENDS = ("sleekxmpp",)
 
     # TODO: implement __init__ and do the heavy work there
     # so that sending multiple messages at once isn't stupidly slow
@@ -27,14 +27,15 @@ class Backend(base.Backend):
     def send_message(self, _from_address, to_addresses, message):
         for address in to_addresses:
             try:
-                client = Client(settings.XMPP_JID, settings.XMPP_PASSWORD,
-                                address, message)
+                client = Client(
+                    settings.XMPP_JID, settings.XMPP_PASSWORD, address, message
+                )
             except NameError:
-                raise ImportError('sleekxmpp is required to use this backend')
+                raise ImportError("sleekxmpp is required to use this backend")
             if client.connect():
                 client.process(block=True)
             else:
-                raise RuntimeError('Unable to connect to XMPP account')
+                raise RuntimeError("Unable to connect to XMPP account")
 
 
 try:
@@ -44,8 +45,7 @@ except ImportError:
 else:
     # largely copied from sleekxmpp examples
     class Client(sleekxmpp.ClientXMPP):
-        def __init__(self, jid: str, password: str,
-                     recipient: str, message: str):
+        def __init__(self, jid: str, password: str, recipient: str, message: str):
             super().__init__(jid, password)
             # The message we wish to send, and the JID that will receive it.
             self.recipient = recipient
@@ -69,8 +69,7 @@ else:
             """
             self.send_presence()
             self.get_roster()
-            self.send_message(
-                mto=self.recipient, mbody=self.msg, mtype='chat')
+            self.send_message(mto=self.recipient, mbody=self.msg, mtype="chat")
             # Using wait=True ensures that the send queue will be emptied
             # before ending the session.
             self.disconnect(wait=True)

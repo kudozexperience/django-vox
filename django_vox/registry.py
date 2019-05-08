@@ -12,26 +12,22 @@ from django.utils.translation import ugettext_lazy as _
 from django_vox import settings
 
 PROTOCOLS = {
-    'email': _('Email'),
-    'sms': _('SMS'),
-    'slack-webhook': _('Slack Webhook'),
-    'json-webhook': _('JSON Webhook'),
-    'twitter': _('Twitter'),
-    'xmpp': _('XMPP'),
-    'activity': _('Activity Stream'),
+    "email": _("Email"),
+    "sms": _("SMS"),
+    "slack-webhook": _("Slack Webhook"),
+    "json-webhook": _("JSON Webhook"),
+    "twitter": _("Twitter"),
+    "xmpp": _("XMPP"),
+    "activity": _("Activity Stream"),
 }
 
 PREFIX_NAMES = {
-    'si': _('Site Contacts'),
-    'c': '__content__',
-    'se': _('Actor'),
-    're': _('Target'),
+    "si": _("Site Contacts"),
+    "c": "__content__",
+    "se": _("Actor"),
+    "re": _("Target"),
 }
-PREFIX_FORMATS = {
-    'c': '{}',
-    'se': _('Actor\'s {}'),
-    're': _('Target\'s {}'),
-}
+PREFIX_FORMATS = {"c": "{}", "se": _("Actor's {}"), "re": _("Target's {}")}
 
 _CHANNEL_TYPE_IDS = None
 
@@ -41,14 +37,12 @@ class ObjectNotFound(Exception):
 
 
 class BackendManager:
-
     def __init__(self, class_list):
         self.proto_map = collections.defaultdict(list)
         self.id_map = {}
         for cls in class_list:
             if cls.ID in self.id_map:
-                raise RuntimeError(
-                    'Conflicting backend IDs: {}'.format(cls.ID))
+                raise RuntimeError("Conflicting backend IDs: {}".format(cls.ID))
             self.proto_map[cls.PROTOCOL].append(cls)
             self.id_map[cls.ID] = cls
 
@@ -66,7 +60,8 @@ class BackendManager:
 
 
 UnboundChannel = collections.namedtuple(
-    'UnboundChannel', ('name', 'target_class', 'func'))
+    "UnboundChannel", ("name", "target_class", "func")
+)
 
 
 class Channel:
@@ -81,10 +76,10 @@ class Channel:
 
 
 class UnboundChannelMap(dict):
-
     def bind(self, obj):
         return BoundChannelMap(
-            ((key, Channel(ubc, obj)) for (key, ubc) in self.items()))
+            ((key, Channel(ubc, obj)) for (key, ubc) in self.items())
+        )
 
 
 class BoundChannelMap(dict):
@@ -92,7 +87,6 @@ class BoundChannelMap(dict):
 
 
 class ChannelManagerItem:
-
     def __init__(self, cls):
         self.cls = cls
         self.__prefixes = {}
@@ -106,17 +100,17 @@ class ChannelManagerItem:
         self.__prefixes = {}
 
     def add_self(self):
-        self.add('', '', self.cls, None)
+        self.add("", "", self.cls, None)
 
     def prefix(self, prefix) -> UnboundChannelMap:
         # get channels by prefix
         if prefix not in self.__prefixes:
             ubc_map = UnboundChannelMap()
             for key, (name, cls, func) in self._channels.items():
-                channel_key = prefix if key == '' else prefix + ':' + key
-                if name == '':
+                channel_key = prefix if key == "" else prefix + ":" + key
+                if name == "":
                     name = PREFIX_NAMES[prefix]
-                    if name == '__content__':
+                    if name == "__content__":
                         name = self.cls._meta.verbose_name.title()
                 else:
                     name = PREFIX_FORMATS[prefix].format(name)
@@ -126,7 +120,6 @@ class ChannelManagerItem:
 
 
 class ChannelProxyManager(dict):
-
     def __missing__(self, key):
         if key not in objects:
             objects.add(key, regex=None)
@@ -134,7 +127,6 @@ class ChannelProxyManager(dict):
 
 
 class ObjectManagerItem:
-
     def __init__(self, cls):
         self.cls = cls
         self.pattern = None
@@ -149,30 +141,30 @@ class ObjectManagerItem:
 
     def set_regex(self, pattern: str):
         self.pattern = pattern
-        if hasattr(django.urls.resolvers, 'RegexPattern'):
+        if hasattr(django.urls.resolvers, "RegexPattern"):
             self.matcher = django.urls.resolvers.RegexPattern(pattern)
         else:
             self.matcher = django.urls.resolvers.RegexURLPattern(pattern, None)
         normal = django.utils.regex_helper.normalize(pattern)
-        self.reverse_form, self.reverse_params = next(iter(normal), ('', ()))
+        self.reverse_form, self.reverse_params = next(iter(normal), ("", ()))
 
     def match(self, path: str):
         if self.matcher is None:
             return False
-        if hasattr(django.urls.resolvers, 'RegexPattern'):
+        if hasattr(django.urls.resolvers, "RegexPattern"):
             return self.matcher.match(path)
         return self.matcher.resolve(path)
 
     def reverse(self, obj):
         if self.reverse_form is None:
             return None
-        kwargs = dict(((param, getattr(obj, param, None))
-                      for param in self.reverse_params))
-        return '/' + (self.reverse_form % kwargs)
+        kwargs = dict(
+            ((param, getattr(obj, param, None)) for param in self.reverse_params)
+        )
+        return "/" + (self.reverse_form % kwargs)
 
 
 class ObjectManager(dict):
-
     def __missing__(self, key):
         item = ObjectManagerItem(key)
         self[key] = item
@@ -187,8 +179,8 @@ class ObjectManager(dict):
     def add(self, cls, *, regex=...):
         if regex is ...:
             raise RuntimeError(
-                'Must set regex keyword argument, '
-                'use None if object has no URL')
+                "Must set regex keyword argument, " "use None if object has no URL"
+            )
         item = ObjectManagerItem(cls)
         if regex is not None:
             item.set_regex(regex)
@@ -199,9 +191,9 @@ class ObjectManager(dict):
             match = value.match(path)
             if match:
                 # RegexURLPattern vs RegexPattern
-                kwargs = match.kwargs if hasattr(match, 'kwargs') else match[2]
+                kwargs = match.kwargs if hasattr(match, "kwargs") else match[2]
                 return key.__class__(**kwargs)
-        msg = _('Unable to find class for {}.').format(path)
+        msg = _("Unable to find class for {}.").format(path)
         raise ObjectNotFound(msg)
 
     def get_local_object(self, path):
@@ -211,21 +203,21 @@ class ObjectManager(dict):
             if match:
                 matched_patterns.append(value.pattern)
                 # RegexURLPattern vs RegexPattern
-                kwargs = match.kwargs if hasattr(match, 'kwargs') else match[2]
+                kwargs = match.kwargs if hasattr(match, "kwargs") else match[2]
                 try:
                     return key.objects.get(**kwargs)
                 except key.DoesNotExist:
                     pass
-        msg = _('Unable to find object for {}.').format(path)
+        msg = _("Unable to find object for {}.").format(path)
         if matched_patterns:
-            msg = msg + ' ' + _(
-                'We tried the following patterns: {}.').format(
-                ', '.join(matched_patterns))
+            details = _("We tried the following patterns: {}.").format(
+                ", ".join(matched_patterns)
+            )
+            msg = "{} {}".format(msg, details)
         raise ObjectNotFound(msg)
 
 
-backends = BackendManager(
-    pydoc.locate(name) for name in settings.BACKENDS)
+backends = BackendManager(pydoc.locate(name) for name in settings.BACKENDS)
 
 channels = ChannelProxyManager()
 
@@ -250,4 +242,4 @@ def channel_type_limit():
     global _CHANNEL_TYPE_IDS
     if _CHANNEL_TYPE_IDS is None:
         _CHANNEL_TYPE_IDS = tuple(_channel_type_ids())
-    return {'id__in': _CHANNEL_TYPE_IDS}
+    return {"id__in": _CHANNEL_TYPE_IDS}

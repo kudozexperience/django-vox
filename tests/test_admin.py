@@ -34,18 +34,17 @@ class MockSuperUser:
 
 
 class MockRequest:
-
     def __init__(self, method, parameters=None):
         self.method = method
         self.user = MockSuperUser()
         self.GET = {}
         self.POST = {}
         if parameters is not None:
-            if method == 'POST':
+            if method == "POST":
                 self.POST = parameters
             else:
                 self.GET = parameters
-        self.META = {'SCRIPT_NAME': ''}
+        self.META = {"SCRIPT_NAME": ""}
 
 
 class MockAnonRequest(MockRequest):
@@ -57,27 +56,32 @@ class MockAnonRequest(MockRequest):
 class VariableTests(TestCase):
     """Test the variables that are used in admin"""
 
-    fixtures = ['test']
+    fixtures = ["test"]
 
     @staticmethod
     def test_variables():
-        notification = models.Article.get_notification('create')
+        notification = models.Article.get_notification("create")
         variables = notification.get_recipient_variables()
         assert {
-                   'si', 'se', 'c:sub', 'c:author', '_static',
-                   're:sub', 're:author',
-               } == variables.keys()
+            "si",
+            "se",
+            "c:sub",
+            "c:author",
+            "_static",
+            "re:sub",
+            "re:author",
+        } == variables.keys()
         # check recipient variables first:
-        for key in ('si', 'se', 'c:sub', 'c:author'):
-            assert variables[key]['value'] == 'recipient'
-        static = variables['_static']
+        for key in ("si", "se", "c:sub", "c:author"):
+            assert variables[key]["value"] == "recipient"
+        static = variables["_static"]
         assert len(static) == 3
-        assert static[0]['label'] == 'Article'
-        assert static[0]['value'] == 'object'
-        assert static[1]['label'] == 'Actor'
-        assert static[1]['value'] == 'actor'
-        assert static[2]['label'] == 'Target'
-        assert static[2]['value'] == 'target'
+        assert static[0]["label"] == "Article"
+        assert static[0]["value"] == "object"
+        assert static[1]["label"] == "Actor"
+        assert static[1]["value"] == "actor"
+        assert static[2]["label"] == "Target"
+        assert static[2]["value"] == "target"
 
 
 class TemplateFormTests(TestCase):
@@ -85,7 +89,7 @@ class TemplateFormTests(TestCase):
     Test template specific forms
     """
 
-    fixtures = ['test']
+    fixtures = ["test"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -97,20 +101,19 @@ class TemplateFormTests(TestCase):
         notification = template.notification
         blank_form = self.form_class()
         add_form = self.form_class(notification=notification)
-        change_form = self.form_class(
-            notification=notification, instance=template)
+        change_form = self.form_class(notification=notification, instance=template)
 
-        add_initial = {'attachments': [], 'recipients': ['re']}
+        add_initial = {"attachments": [], "recipients": ["re"]}
         change_initial = {
-            'notification': 1,
-            'backend': 'email-html',
-            'subject': 'Subscriber email',
-            'content': ...,
-            'recipients': ['c:sub'],
-            'from_address': '',
-            'enabled': True,
-            'bulk': False,
-            'attachments': ['object.author.vcard'],
+            "notification": 1,
+            "backend": "email-html",
+            "subject": "Subscriber email",
+            "content": ...,
+            "recipients": ["c:sub"],
+            "from_address": "",
+            "enabled": True,
+            "bulk": False,
+            "attachments": ["object.author.vcard"],
         }
 
         assert add_initial == add_form.initial
@@ -118,192 +121,200 @@ class TemplateFormTests(TestCase):
             if value is not ...:
                 assert value == change_form.initial.get(key)
 
-        assert [] == blank_form.fields['recipients'].choices
-        assert [] == blank_form.fields['attachments'].choices
-        re_choices = [('si', 'Site Contacts'),
-                      ('re:sub', "Target's Subscribers"),
-                      ('re:author', "Target's Author"),
-                      ('se', 'Actor'),
-                      ('c:sub', 'Subscribers'),
-                      ('c:author', 'Author')]
-        assert re_choices == add_form.fields['recipients'].choices
-        at_choices = [('target.author.vcard', 'Target/Author/Contact Info'),
-                      ('actor.vcard', 'Actor/Contact Info'),
-                      ('object.author.vcard', 'Author/Contact Info')]
-        assert at_choices == add_form.fields['attachments'].choices
+        assert [] == blank_form.fields["recipients"].choices
+        assert [] == blank_form.fields["attachments"].choices
+        re_choices = [
+            ("si", "Site Contacts"),
+            ("re:sub", "Target's Subscribers"),
+            ("re:author", "Target's Author"),
+            ("se", "Actor"),
+            ("c:sub", "Subscribers"),
+            ("c:author", "Author"),
+        ]
+        assert re_choices == add_form.fields["recipients"].choices
+        at_choices = [
+            ("target.author.vcard", "Target/Author/Contact Info"),
+            ("actor.vcard", "Actor/Contact Info"),
+            ("object.author.vcard", "Author/Contact Info"),
+        ]
+        assert at_choices == add_form.fields["attachments"].choices
 
-        backend_opts = add_form.fields['backend'].widget.optgroups(
-            'backend', 'email-html')
-        opt = next(x[0] for _, x, _idx in backend_opts
-                   if x[0]['value'] == 'email-html')
+        backend_opts = add_form.fields["backend"].widget.optgroups(
+            "backend", "email-html"
+        )
+        opt = next(x[0] for _, x, _idx in backend_opts if x[0]["value"] == "email-html")
 
-        opt_attrs = {'data-editor': 'html',
-                     'data-subject': 'true',
-                     'data-from_address': 'true',
-                     'data-attachment': 'true',
-                     'selected': True}
-        assert 'Email (HTML)' == opt['label']
-        assert opt['selected']
-        assert opt_attrs == opt['attrs']
+        opt_attrs = {
+            "data-editor": "html",
+            "data-subject": "true",
+            "data-from_address": "true",
+            "data-attachment": "true",
+            "selected": True,
+        }
+        assert "Email (HTML)" == opt["label"]
+        assert opt["selected"]
+        assert opt_attrs == opt["attrs"]
 
     def test_template_form_save(self):
         template = self.model_class.objects.get(pk=1)
         data = {
-            'attachments': ['actor.vcard', 'object.author.vcard'],
-            'notification': 1,
-            'backend': 'email-html',
-            'content': 'bad content {% if %}',
+            "attachments": ["actor.vcard", "object.author.vcard"],
+            "notification": 1,
+            "backend": "email-html",
+            "content": "bad content {% if %}",
         }
         change_form = self.form_class(
-            data=data, notification=template.notification, instance=template)
+            data=data, notification=template.notification, instance=template
+        )
         change_form.full_clean()
         assert not change_form.is_valid()
-        data['content'] = 'okay content'
+        data["content"] = "okay content"
         change_form.full_clean()
         assert change_form.is_valid()
         change_form.save()
 
         new_attachments = self.model_class.objects.get(pk=1).attachments.all()
-        new_attachment_keys = {'actor.vcard', 'object.author.vcard'}
+        new_attachment_keys = {"actor.vcard", "object.author.vcard"}
         assert new_attachment_keys == set((a.key for a in new_attachments))
 
 
 class NotificationAdminTests(TestCase):
     """Test NotificationAdmin"""
 
-    fixtures = ['test']
+    fixtures = ["test"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model_class = django_vox.models.Notification
-        self.admin = django_vox.admin.NotificationAdmin(
-            self.model_class, AdminSite())
+        self.admin = django_vox.admin.NotificationAdmin(self.model_class, AdminSite())
 
     def test_template_count(self):
         model_obj = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'create')
+            "tests", "article", "create"
+        )
         assert 2 == self.admin.template_count(model_obj)
 
     def test_get_urls(self):
         names = (u.name for u in self.admin.get_urls() if u.name is not None)
-        name_set = set((un for un in names
-                        if not un.startswith('django_vox_notification')))
+        name_set = set(
+            (un for un in names if not un.startswith("django_vox_notification"))
+        )
         assert 3 == len(name_set)
-        expected = {'django_vox_issue', 'django_vox_preview',
-                    'django_vox_variables'}
+        expected = {"django_vox_issue", "django_vox_preview", "django_vox_variables"}
         assert expected == name_set
 
     def test_fields(self):
-        base_fields = ['codename', 'object_type', 'description']
-        from_code_ro = ['codename', 'object_type', 'description',
-                        'required', 'actor_type', 'target_type']
+        base_fields = ["codename", "object_type", "description"]
+        from_code_ro = [
+            "codename",
+            "object_type",
+            "description",
+            "required",
+            "actor_type",
+            "target_type",
+        ]
         new_obj = self.model_class()
         model_obj = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'create')
-        request = MockRequest('GET')
+            "tests", "article", "create"
+        )
+        request = MockRequest("GET")
         assert base_fields == self.admin.get_fields(request)
         assert [] == self.admin.get_readonly_fields(request)
-        assert ['object_type'] == self.admin.get_readonly_fields(
-            request, new_obj)
-        assert from_code_ro == self.admin.get_readonly_fields(
-            request, model_obj)
+        assert ["object_type"] == self.admin.get_readonly_fields(request, new_obj)
+        assert from_code_ro == self.admin.get_readonly_fields(request, model_obj)
 
     def test_issue(self):
         notification = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'create')
+            "tests", "article", "create"
+        )
         obj = models.Article.objects.first()
-        with mock.patch('django_vox.models.Notification.issue'):
+        with mock.patch("django_vox.models.Notification.issue"):
             # no POST parameters, so won't be valid
-            request = MockRequest('POST', {})
+            request = MockRequest("POST", {})
             response = self.admin.issue(request, str(notification.id))
             assert response.status_code == 400
-            assert 'This field is required' in response.rendered_content
+            assert "This field is required" in response.rendered_content
             # this should 404
             with self.assertRaises(django.http.Http404):
-                self.admin.issue(request, '9000')
+                self.admin.issue(request, "9000")
             # this POST should work
             # we have to perform some malarky because of an isinstance
             # check in django 1.10
-            request = MockRequest('POST', {'objects': (obj.pk,)})
+            request = MockRequest("POST", {"objects": (obj.pk,)})
             mock_request = mock.Mock(spec=django.http.HttpRequest)
             for attr in request.__dir__():
-                if not attr.startswith('_'):
+                if not attr.startswith("_"):
                     setattr(mock_request, attr, getattr(request, attr))
             response = self.admin.issue(mock_request, str(notification.id))
             assert response.status_code == 302
 
     def test_get_inline_instances(self):
-        request = MockRequest('GET', {})
-        obj = self.model_class.objects.get_by_natural_key(
-            'tests', 'article', 'create')
+        request = MockRequest("GET", {})
+        obj = self.model_class.objects.get_by_natural_key("tests", "article", "create")
         assert [] == self.admin.get_inline_instances(request)
         inline = self.admin.get_inline_instances(request, obj=obj)[0]
         formset = inline.get_formset(request, obj=obj)(instance=obj)
-        assert obj == formset.get_form_kwargs(0)['notification']
+        assert obj == formset.get_form_kwargs(0)["notification"]
 
     def test_preview(self):
-        anon_request = MockAnonRequest('POST', {'body': 'Hello World'})
-        get_request = MockRequest('GET', {'body': 'Hello World'})
-        post_request = MockRequest('POST', {'body': 'Hello World'})
+        anon_request = MockAnonRequest("POST", {"body": "Hello World"})
+        get_request = MockRequest("GET", {"body": "Hello World"})
+        post_request = MockRequest("POST", {"body": "Hello World"})
 
         with self.assertRaises(PermissionDenied):
-            self.admin.preview(anon_request, 'email-html')
+            self.admin.preview(anon_request, "email-html")
 
-        response = self.admin.preview(get_request, 'email-html')
+        response = self.admin.preview(get_request, "email-html")
         assert response.status_code == 405
 
-        response = self.admin.preview(post_request, 'email-html9000')
+        response = self.admin.preview(post_request, "email-html9000")
         assert response.status_code == 200
         assert b"Unable to make preview: 'email-html9000'" == response.content
 
-        response = self.admin.preview(post_request, 'email-html')
+        response = self.admin.preview(post_request, "email-html")
         assert response.status_code == 200
-        assert b'Hello World' == response.content
+        assert b"Hello World" == response.content
 
     def test_notification_preview(self):
-        anon_request = MockAnonRequest('POST', {'body': 'Hello World'})
-        get_request = MockRequest('GET', {'body': 'Hello World'})
-        syntax_request = MockRequest('POST', {'body': '{% if %}'})
-        good_request = MockRequest('POST', {'body': 'Hello {{content}}'})
-        backend = 'email-html'
-        bad_backend = 'email-html9000'
-        notification = '1'
-        bad_notification = '9000'
+        anon_request = MockAnonRequest("POST", {"body": "Hello World"})
+        get_request = MockRequest("GET", {"body": "Hello World"})
+        syntax_request = MockRequest("POST", {"body": "{% if %}"})
+        good_request = MockRequest("POST", {"body": "Hello {{content}}"})
+        backend = "email-html"
+        bad_backend = "email-html9000"
+        notification = "1"
+        bad_notification = "9000"
 
         with self.assertRaises(PermissionDenied):
-            self.admin.notification_preview(
-                anon_request, notification, backend)
+            self.admin.notification_preview(anon_request, notification, backend)
 
         with self.assertRaises(django.http.Http404):
-            self.admin.notification_preview(
-                good_request, bad_notification, backend)
+            self.admin.notification_preview(good_request, bad_notification, backend)
 
         response = self.admin.notification_preview(
-            good_request, notification, bad_backend)
+            good_request, notification, bad_backend
+        )
         assert 200 == response.status_code
         assert b"Unable to make preview: 'email-html9000'" == response.content
 
-        response = self.admin.notification_preview(
-            get_request, notification, backend)
+        response = self.admin.notification_preview(get_request, notification, backend)
         assert response.status_code == 405
 
         response = self.admin.notification_preview(
-            syntax_request, notification, backend)
+            syntax_request, notification, backend
+        )
         assert response.status_code == 200
-        assert response.content.startswith(b'Unable to make preview:')
+        assert response.content.startswith(b"Unable to make preview:")
 
-        response = self.admin.notification_preview(
-            good_request, notification, backend)
+        response = self.admin.notification_preview(good_request, notification, backend)
         assert response.status_code == 200
-        assert b'Hello Why are there so many blog demos' == response.content
+        assert b"Hello Why are there so many blog demos" == response.content
 
 
 def test_notify_form():
-    protocols = ('email',)
+    protocols = ("email",)
     form = django_vox.admin.NotifyForm(protocols)
-    backend_ids = {'email-md', 'email-html', 'postmark-template', 'email'}
-    preview_url = '/admin/django_vox/notification/preview/__backend__/'
-    assert preview_url == form.fields[
-        'content'].widget.attrs['data-preview-url']
-    assert backend_ids == set((key for key, _ in
-                               form.fields['backend'].choices))
+    backend_ids = {"email-md", "email-html", "postmark-template", "email"}
+    preview_url = "/admin/django_vox/notification/preview/__backend__/"
+    assert preview_url == form.fields["content"].widget.attrs["data-preview-url"]
+    assert backend_ids == set((key for key, _ in form.fields["backend"].choices))

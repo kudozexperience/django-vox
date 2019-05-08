@@ -2,63 +2,63 @@
 import django
 import os
 import sys
+
 sys.path.append(os.path.dirname(__file__))
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+os.environ["DJANGO_SETTINGS_MODULE"] = "settings"
 django.setup()
 
 # -- Project information -----------------------------------------------------
 
-project = 'Django Vox'
-copyright = '2018, Alan Trick'
-author = 'Alan Trick'
+project = "Django Vox"
+copyright = "2018, Alan Trick"
+author = "Alan Trick"
 
-extensions = [
-    'sphinx.ext.doctest',
-    'sphinx.ext.autodoc',
-]
+extensions = ["sphinx.ext.doctest", "sphinx.ext.autodoc"]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
-source_suffix = '.rst'
+source_suffix = ".rst"
 
-master_doc = 'index'
+master_doc = "index"
 
 language = None
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = 'classic'
-html_static_path = ['_static']
-htmlhelp_basename = 'DjangoVoxdoc'
+html_theme = "classic"
+html_static_path = ["_static"]
+htmlhelp_basename = "DjangoVoxdoc"
 
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {}
 
 latex_documents = [
-    (master_doc, 'DjangoVox.tex', 'Django Vox Documentation',
-     'Alan Trick', 'manual'),
+    (master_doc, "DjangoVox.tex", "Django Vox Documentation", "Alan Trick", "manual")
 ]
 
 
 # -- Options for manual page output ------------------------------------------
 
-man_pages = [
-    (master_doc, 'djangovox', 'Django Vox Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, "djangovox", "Django Vox Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
 
 texinfo_documents = [
-    (master_doc, 'DjangoVox', 'Django Vox Documentation',
-     author, 'DjangoVox', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        "DjangoVox",
+        "Django Vox Documentation",
+        author,
+        "DjangoVox",
+        "One line description of project.",
+        "Miscellaneous",
+    )
 ]

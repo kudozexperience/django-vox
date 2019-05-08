@@ -9,15 +9,15 @@ from django_vox import settings
 
 from . import base, base_email
 
-__all__ = ('Backend',)
+__all__ = ("Backend",)
 
 
 class Backend(base_email.Backend):
 
-    ID = 'email-md'
-    EDITOR_TYPE = 'markdown'
-    VERBOSE_NAME = _('Email (Markdown)')
-    DEPENDS = ('markdown2',)
+    ID = "email-md"
+    EDITOR_TYPE = "markdown"
+    VERBOSE_NAME = _("Email (Markdown)")
+    DEPENDS = ("markdown2",)
 
     @classmethod
     def build_multipart(cls, subject: str, body: str, parameters: dict):
@@ -26,8 +26,15 @@ class Backend(base_email.Backend):
 
 class MarkdownParameters:
 
-    IGNORED_TYPES = (int, float, decimal.Decimal, datetime.timedelta,
-                     datetime.datetime, datetime.date, datetime.time)
+    IGNORED_TYPES = (
+        int,
+        float,
+        decimal.Decimal,
+        datetime.timedelta,
+        datetime.datetime,
+        datetime.date,
+        datetime.time,
+    )
     MD_SPECIAL_PATTERN = re.compile(r"[\\`*_{\}\[\]()#+\-.!]")
 
     @classmethod
@@ -55,18 +62,17 @@ class MarkdownParameters:
 
     @staticmethod
     def escape(patterns) -> str:
-        return '\\' + patterns[0]
+        return "\\" + patterns[0]
 
 
 class CallableMarkdownParameters(MarkdownParameters):
-
     def __call__(self, *args, **kwargs):
         self.wrap(self._obj.__call__(*args, **kwargs))
 
 
-def email_md(subject: str, body: str, parameters: dict) -> \
-        base_email.MultipartMessage:
+def email_md(subject: str, body: str, parameters: dict) -> base_email.MultipartMessage:
     import markdown2
+
     md_parameters = MarkdownParameters(parameters)
     text_context = django.template.Context(parameters, autoescape=False)
     md_context = django.template.Context(md_parameters, autoescape=False)
@@ -77,6 +83,8 @@ def email_md(subject: str, body: str, parameters: dict) -> \
     message.text = body_template.render(text_context)
     md_body = body_template.render(md_context)
     message.html = markdown2.markdown(
-        md_body, extras=settings.MARKDOWN_EXTRAS,
-        link_patterns=settings.MARKDOWN_LINK_PATTERNS)
+        md_body,
+        extras=settings.MARKDOWN_EXTRAS,
+        link_patterns=settings.MARKDOWN_LINK_PATTERNS,
+    )
     return message

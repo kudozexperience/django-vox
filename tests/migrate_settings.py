@@ -10,15 +10,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # Quick-start development settings - unsuitable for production
 
-SECRET_KEY = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+SECRET_KEY = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django_vox',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django_vox",
 ]

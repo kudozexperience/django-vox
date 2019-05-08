@@ -8,19 +8,19 @@ except ImportError:  # workaround for django 1.10
 
 
 class VoxTestConfig(AppConfig):
-    name = 'tests'
-    verbose_name = 'Vox Test'
+    name = "tests"
+    verbose_name = "Vox Test"
 
     def ready(self):
         setup_databases(verbosity=3, interactive=False)
 
 
 class VoxDemoConfig(AppConfig):
-    name = 'tests'
-    verbose_name = 'Vox Demo'
+    name = "tests"
+    verbose_name = "Vox Demo"
 
     def ready(self):
         setup_databases(verbosity=3, interactive=False)
         # add notification objects
-        call_command('make_notifications')
-        call_command('loaddata', 'demo')
+        call_command("make_notifications")
+        call_command("loaddata", "demo")

@@ -1,1 +1,1 @@
-default_app_config = 'tests.apps.VoxTestConfig'
+default_app_config = "tests.apps.VoxTestConfig"

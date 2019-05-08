@@ -8,31 +8,36 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_vox', '0001_initial'),
-    ]
+    dependencies = [("django_vox", "0001_initial")]
 
     operations = [
         migrations.CreateModel(
-            name='TemplateAttachment',
+            name="TemplateAttachment",
             fields=[
-                ('id', models.AutoField(
-                    auto_created=True, primary_key=True,
-                    serialize=False, verbose_name='ID')),
-                ('key', models.CharField(
-                    max_length=500, verbose_name='key')),
-                ('template', models.ForeignKey(
-                    on_delete=django.db.models.deletion.CASCADE,
-                    to='django_vox.Template', verbose_name='template')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("key", models.CharField(max_length=500, verbose_name="key")),
+                (
+                    "template",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="django_vox.Template",
+                        verbose_name="template",
+                    ),
+                ),
             ],
-            options={
-                'verbose_name': 'template attachment',
-            },
+            options={"verbose_name": "template attachment"},
         ),
         migrations.AlterField(
-            model_name='sitecontact',
-            name='address',
-            field=models.CharField(
-                blank=True, max_length=500, verbose_name='address'),
+            model_name="sitecontact",
+            name="address",
+            field=models.CharField(blank=True, max_length=500, verbose_name="address"),
         ),
     ]

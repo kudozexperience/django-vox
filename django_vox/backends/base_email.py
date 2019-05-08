@@ -15,23 +15,21 @@ from . import base
 
 
 class MultipartMessage:
-
     def __init__(self):
-        self.subject = ''
-        self.text = ''
-        self.html = ''
+        self.subject = ""
+        self.text = ""
+        self.html = ""
         self.attachments = []
 
     @classmethod
     def from_dict(cls, obj):
         result = cls()
-        result.subject = obj.get('subject')
-        result.text = obj.get('text')
-        result.html = obj.get('html')
+        result.subject = obj.get("subject")
+        result.text = obj.get("text")
+        result.html = obj.get("html")
         result.attachments = [
-            base.AttachmentData(
-                base64.b64decode(a['data'].encode()),
-                a['mime']) for a in obj.get('attachments', ())
+            base.AttachmentData(base64.b64decode(a["data"].encode()), a["mime"])
+            for a in obj.get("attachments", ())
         ]
         return result
 
@@ -40,15 +38,12 @@ class MultipartMessage:
         return cls.from_dict(json.loads(string))
 
     def to_dict(self):
-        result = {
-            'subject': self.subject,
-            'text': self.text,
-            'html': self.html,
-        }
+        result = {"subject": self.subject, "text": self.text, "html": self.html}
         if self.attachments:
-            result['attachments'] = [
-                {'data': base64.b64encode(a.data).decode(), 'mime': a.mime}
-                for a in self.attachments]
+            result["attachments"] = [
+                {"data": base64.b64encode(a.data).decode(), "mime": a.mime}
+                for a in self.attachments
+            ]
         return result
 
     def __str__(self):
@@ -56,18 +51,18 @@ class MultipartMessage:
 
     def to_mail(self) -> mail.EmailMultiAlternatives:
         email = mail.EmailMultiAlternatives()
-        email.subject = re_newlines.sub(' ', self.subject)
+        email.subject = re_newlines.sub(" ", self.subject)
         if self.text:
             email.body = self.text
             if self.html:
-                email.attach_alternative(self.html, 'text/html')
+                email.attach_alternative(self.html, "text/html")
         elif self.html:
             email.body = self.html
-            email.content_subtype = 'html'
+            email.content_subtype = "html"
         for attachment in self.attachments:
             # workaround for django 1.10 problem
             data, mime = attachment.data, attachment.mime
-            if mime.startswith('text/'):
+            if mime.startswith("text/"):
                 data = data.decode()
             email.attach(content=data, mimetype=mime)
         return email
@@ -78,21 +73,27 @@ class MultipartMessage:
 
 class Backend(base.Backend):
 
-    ID = 'email-basic'
-    PROTOCOL = 'email'
-    VERBOSE_NAME = _('Email (Basic)')
+    ID = "email-basic"
+    PROTOCOL = "email"
+    VERBOSE_NAME = _("Email (Basic)")
     USE_SUBJECT = True
     USE_ATTACHMENTS = True
     USE_FROM_ADDRESS = True
 
     @classmethod
-    def build_multipart(cls, subject: str, body: str,
-                        parameters: dict) -> MultipartMessage:
+    def build_multipart(
+        cls, subject: str, body: str, parameters: dict
+    ) -> MultipartMessage:
         raise NotImplementedError()
 
     @classmethod
-    def build_message(cls, subject: str, body: str, parameters: dict,
-                      attachments: List[base.AttachmentData]):
+    def build_message(
+        cls,
+        subject: str,
+        body: str,
+        parameters: dict,
+        attachments: List[base.AttachmentData],
+    ):
         mpm = cls.build_multipart(subject, body, parameters)
         for attachment in attachments:
             mpm.attach(attachment)

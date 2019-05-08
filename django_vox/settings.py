@@ -5,27 +5,40 @@ import sys
 
 import django.conf
 
-__all__ = ('BACKENDS', 'INBOX_LIMIT', 'THROW_EXCEPTIONS', 'ACTIVITY_REGEX',
-           'MARKDOWN_EXTRAS', 'MARKDOWN_LINK_PATTERNS',
-           'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER',
-           'TWITTER_CONSUMER_KEY', 'TWITTER_CONSUMER_SECRET',
-           'TWITTER_TOKEN_KEY', 'TWITTER_TOKEN_SECRET',
-           'XMPP_JID', 'XMPP_PASSWORD', 'POSTMARK_TOKEN')
+__all__ = (
+    "BACKENDS",
+    "INBOX_LIMIT",
+    "THROW_EXCEPTIONS",
+    "ACTIVITY_REGEX",
+    "MARKDOWN_EXTRAS",
+    "MARKDOWN_LINK_PATTERNS",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_FROM_NUMBER",
+    "TWITTER_CONSUMER_KEY",
+    "TWITTER_CONSUMER_SECRET",
+    "TWITTER_TOKEN_KEY",
+    "TWITTER_TOKEN_SECRET",
+    "XMPP_JID",
+    "XMPP_PASSWORD",
+    "POSTMARK_TOKEN",
+)
 
 
 # General settings
 BACKENDS = []
 INBOX_LIMIT = 500
-THROW_EXCEPTIONS = getattr(django.conf.settings, 'DEBUG', False)
-ACTIVITY_REGEX = r'activity/(?P<id>[0-9a-z\-]+)/$'
+THROW_EXCEPTIONS = getattr(django.conf.settings, "DEBUG", False)
+ACTIVITY_REGEX = r"activity/(?P<id>[0-9a-z\-]+)/$"
 
 # Markdown settings
 URL_PATTERN = re.compile(
-    r'((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]'
-    r'+(:[0-9]+)?|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+'
-    r'~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)')
-MARKDOWN_EXTRAS = ['footnotes', 'link_patterns', 'smarty-pants', 'tables']
-MARKDOWN_LINK_PATTERNS = [(URL_PATTERN, r'\1')]
+    r"((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]"
+    r"+(:[0-9]+)?|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+"
+    r"~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)"
+)
+MARKDOWN_EXTRAS = ["footnotes", "link_patterns", "smarty-pants", "tables"]
+MARKDOWN_LINK_PATTERNS = [(URL_PATTERN, r"\1")]
 
 # Twilio
 TWILIO_ACCOUNT_SID = None
@@ -58,17 +71,18 @@ class _Sneaky:
 
     def __getattr__(self, name):
         # call module.__init__ after import introspection is done
-        django_setting_name = 'DJANGO_VOX_' + name
+        django_setting_name = "DJANGO_VOX_" + name
         if name in __all__:
             attr = getattr(django.conf.settings, django_setting_name, None)
             if attr is not None:
                 return attr
-            elif name == 'BACKENDS':
+            elif name == "BACKENDS":
                 return _Sneaky.get_backends()
         result = getattr(self.module, name)
         if result is None:
             raise django.conf.ImproperlyConfigured(
-                'Please set {} in your settings'.format(django_setting_name))
+                "Please set {} in your settings".format(django_setting_name)
+            )
         return result
 
     @staticmethod
@@ -78,15 +92,15 @@ class _Sneaky:
         default_backends = [
             # activity backend intentionally left out because
             # it requires lot of setup
-            'django_vox.backends.html_email.Backend',
-            'django_vox.backends.markdown_email.Backend',
-            'django_vox.backends.postmark_email.Backend',
-            'django_vox.backends.template_email.Backend',
-            'django_vox.backends.twilio.Backend',
-            'django_vox.backends.twitter.Backend',
-            'django_vox.backends.slack.Backend',
-            'django_vox.backends.json_webhook.Backend',
-            'django_vox.backends.xmpp.Backend',
+            "django_vox.backends.html_email.Backend",
+            "django_vox.backends.markdown_email.Backend",
+            "django_vox.backends.postmark_email.Backend",
+            "django_vox.backends.template_email.Backend",
+            "django_vox.backends.twilio.Backend",
+            "django_vox.backends.twitter.Backend",
+            "django_vox.backends.slack.Backend",
+            "django_vox.backends.json_webhook.Backend",
+            "django_vox.backends.xmpp.Backend",
         ]
         for cls_str in default_backends:
             cls = pydoc.locate(cls_str)
