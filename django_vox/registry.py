@@ -1,15 +1,22 @@
 import collections
+import inspect
 import pydoc
+import typing
 
+import dataclasses
+import aspy
 import django.urls.base
 import django.urls.resolvers
 import django.utils.encoding
 import django.utils.regex_helper
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import signals, Model, ManyToManyField
+from django.db.models.fields.related_descriptors import ForwardManyToOneDescriptor
 from django.utils.translation import ugettext_lazy as _
 
-from django_vox import settings
+from django_vox import settings, base
+from django_vox.backends.base import AttachmentData
 
 PROTOCOLS = {
     "email": _("Email"),
@@ -30,6 +37,21 @@ PREFIX_NAMES = {
 PREFIX_FORMATS = {"c": "{}", "se": _("Actor's {}"), "re": _("Target's {}")}
 
 _CHANNEL_TYPE_IDS = None
+
+
+def make_activity_object(obj):
+    iri = None
+    address_func = getattr(obj, "get_object_address", None)
+    if address_func is not None:
+        iri = obj.get_object_address()
+    if iri is None:
+        if hasattr(obj, "get_absolute_url"):
+            part_iri = obj.get_absolute_url()
+        else:
+            part_iri = objects[type(obj)].reverse(obj)
+        iri = base.full_iri(part_iri)
+    name = str(obj)
+    return aspy.Object(name=name, id=iri)
 
 
 class ObjectNotFound(Exception):
@@ -59,26 +81,50 @@ class BackendManager:
         return self.proto_map.keys()
 
 
-UnboundChannel = collections.namedtuple(
-    "UnboundChannel", ("name", "target_class", "func")
+ChannelFunc = typing.TypeVar(
+    "ChannelFunc", typing.Callable[[Model], typing.List[Model]], None
 )
 
 
+@dataclasses.dataclass
 class Channel:
-    def __init__(self, ubc: UnboundChannel, obj):
+    name: str
+    target_class: type
+    func: ChannelFunc
+
+    @classmethod
+    def self(cls, obj):
+        return Channel("", obj.model, None)
+
+    @classmethod
+    def field(cls, field):
+        if isinstance(field, ForwardManyToOneDescriptor):
+            field = field.field
+
+        def func(model):
+            if isinstance(field, ManyToManyField):
+                return getattr(model, field.name)
+            else:
+                return (getattr(model, field.name),)
+
+        return Channel(field.verbose_name.title(), field.model, func)
+
+
+class BoundChannel:
+    def __init__(self, ubc: Channel, obj: Model):
         self.name = ubc.name
         self.target_class = ubc.target_class
         self.func = ubc.func
         self.obj = obj
 
-    def contactables(self):
+    def contactables(self) -> typing.List[Model]:
         return (self.obj,) if self.func is None else self.func(self.obj)
 
 
 class UnboundChannelMap(dict):
     def bind(self, obj):
         return BoundChannelMap(
-            ((key, Channel(ubc, obj)) for (key, ubc) in self.items())
+            ((key, BoundChannel(ubc, obj)) for (key, ubc) in self.items())
         )
 
 
@@ -114,26 +160,293 @@ class ChannelManagerItem:
                         name = self.cls._meta.verbose_name.title()
                 else:
                     name = PREFIX_FORMATS[prefix].format(name)
-                ubc_map[channel_key] = UnboundChannel(name, cls, func)
+                ubc_map[channel_key] = Channel(name, cls, func)
             self.__prefixes[prefix] = ubc_map
         return self.__prefixes[prefix]
 
 
-class ChannelProxyManager(dict):
-    def __missing__(self, key):
-        if key not in objects:
-            objects.add(key, regex=None)
-        return objects[key].channels
+class Attachment:
+    def __init__(
+        self, attr: str = None, mime_attr: str = "", mime_string: str = "", label=""
+    ):
+        self.key = ""  # gets set later
+        self.attr = attr
+        if bool(mime_attr) == bool(mime_string):
+            raise RuntimeError("Either mime_attr must be set or mime_string (not both)")
+        self.mime_attr = mime_attr
+        self.mime_string = mime_string
+        self._label = label
+
+    @property
+    def label(self):
+        return self._label if self._label else self.key
+
+    def _get_field(self, model_instance, field_name):
+        if hasattr(model_instance, field_name):
+            result = getattr(model_instance, field_name)
+        else:
+            registration = objects[type(model_instance)].registration
+            result = getattr(registration, field_name)
+        return result(model_instance) if callable(result) else result
+
+    def get_data(self, model_instance: Model):
+        data = self._get_field(model_instance, self.attr)
+        # force bytes
+        if not isinstance(data, bytes):
+            if not isinstance(data, str):
+                data = str(data)
+            data = data.encode()
+        if self.mime_attr:
+            mime = self._get_field(model_instance, self.mime_attr)
+        else:
+            mime = self.mime_string
+        return AttachmentData(data, mime)
+
+
+class Notification:
+    REQUIRED_PARAMS = {"codename", "description"}
+    OPTIONAL_PARAMS = {
+        "actor_type": "",
+        "target_type": "",
+        "activity_type": "Create",
+        "required": False,
+    }
+
+    def __init__(self, description, codename="", **kwargs):
+        self.params = {
+            "codename": codename,
+            "description": description,
+            "from_code": True,
+        }
+        for key, default in self.OPTIONAL_PARAMS.items():
+            if key in kwargs:
+                self.params[key] = kwargs.pop(key)
+            else:
+                self.params[key] = default
+        if kwargs:
+            raise ValueError(
+                "Unrecognized parameters {}".format(", ".join(kwargs.keys()))
+            )
+
+    def params_equal(self, notification):
+        for key in self.params:
+            value = getattr(notification, key)
+            my_value = self.params[key]
+            if key in ("actor_type", "target_type"):
+                if value is None:
+                    value = ""
+                else:
+                    value = "{}.{}".format(value.app_label, value.model)
+            # if key == 'activity_type':
+            #     value = value.get_type()
+            if value != my_value:
+                return False
+        return True
+
+    def param_value(self, key):
+        value = self.params[key]
+        if key in ("actor_type", "target_type"):
+            if value == "":
+                return None
+            model = apps.get_model(value)
+            return ContentType.objects.get_for_model(model)
+        if key == "activity_type":
+            if inspect.isclass(value) and issubclass(value, aspy.Object):
+                value = value.get_type()
+        return value
+
+    def set_params(self, notification):
+        for key in self.params:
+            setattr(notification, key, self.param_value(key))
+
+    @property
+    def codename(self):
+        return self.params["codename"]
+
+    def get_notification(self, model):
+        from .models import Notification
+
+        ct = ContentType.objects.get_for_model(model)
+        return Notification.objects.get(codename=self.codename, object_type=ct)
+
+    def issue(self, object_, *, actor=None, target=None):
+        model = type(object_)
+        notification = self.get_notification(model)
+        notification.issue(object_, actor=actor, target=target)
+
+
+def receives_protocol(protocol_id):
+    def inner(func):
+        sig = inspect.signature(func)
+        assert len(sig.parameters) == 3 or (
+            len(sig.parameters) < 3
+            and any(
+                (p.kind == inspect.Parameter.VAR_POSITIONAL for p in sig.parameters)
+            )
+        ), (
+            "Function decorated by receives_protocol must take 3 arguments (self, "
+            "model instance, and notification)"
+        )
+
+        func._vox_receives_protocol = protocol_id
+        return func
+
+    return inner
+
+
+class VoxRegistrationBase(type):
+    """
+    Metaclass for Vox extensions.
+    """
+
+    def __new__(cls, name, bases, attributes):
+        new = super().__new__(cls, name, bases, attributes)
+
+        proto_func = {}
+        attachment_dict = {}
+        notification_dict = {}
+        for key, value in attributes.items():
+            if isinstance(value, Attachment):
+                if value.key == "":
+                    value.key = key
+                attachment_dict[key] = value
+            elif isinstance(value, Notification):
+                if value.codename == "":
+                    value.params["codename"] = key
+                notification_dict[key] = value
+            rec_proto = getattr(value, "_vox_receives_protocol", None)
+            if rec_proto is not None:
+                proto_func[rec_proto] = value
+        if proto_func:
+            new._vox_protocol_functions = new._vox_protocol_functions.copy()
+            new._vox_protocol_functions.update(proto_func)
+        if attachment_dict:
+            new._vox_attachments = new._vox_attachments.copy()
+            new._vox_attachments.update(attachment_dict)
+        if notification_dict:
+            new._vox_notifications = new._vox_notifications.copy()
+            new._vox_notifications.update(notification_dict)
+        return new
+
+
+class VoxRegistration(metaclass=VoxRegistrationBase):
+    """
+    A base class for Vox definitions
+
+    instance attributes:
+
+    - model: a django model that will serve as the object type for all of the
+        attached notifications
+
+    """
+
+    _vox_protocol_functions = {}
+    _vox_attachments = {}
+    _vox_notifications = {}
+
+    def __init__(self, model):
+        self.model = model
+
+    def get_attachments(self) -> typing.List[Attachment]:
+        return self._vox_attachments.values()
+
+    def get_attachment(self, key) -> Attachment:
+        return self._vox_attachments.get(key)
+
+    def get_notifications(self) -> typing.List[Notification]:
+        return self._vox_notifications.values()
+
+    def get_notification(self, key) -> Notification:
+        return self._vox_notifications.get(key)
+
+    def get_channels(self) -> typing.Mapping[str, Channel]:
+        return {}
+
+    def has_channels(self):
+        return bool(self.get_channels())
+
+    def get_supported_protocols(self):
+        return self._vox_protocol_functions.keys()
+
+    def get_contacts(self, instance, protocol, notification):
+        func = self._vox_protocol_functions.get(protocol, None)
+        if func is None:
+            return ()
+        return func(self, instance, notification)
+
+    def get_activity_object(self, instance, *, codename=None, actor=None, target=None):
+        """
+        Gets the activity object for instance.
+
+        Note that sometimes this is called with a specific codename (and maybe actor
+        or target). This lets you vary the way the object is represented in different
+        notifications.
+        """
+        if hasattr(instance, "get_activity_object"):
+            return instance.get_activity_object(codename, actor, target)
+        if hasattr(instance, "__activity__"):
+            return instance.__activity__()
+        return make_activity_object(instance)
+
+    def has_activity_endpoint(self, instance):
+        return False
+
+    @staticmethod
+    def _get_object_address(obj):
+        url = objects[type(obj)].reverse(obj)
+        if url is None:
+            return None
+        else:
+            return base.full_iri(url)
+
+
+class _VoxModelRegistration(VoxRegistration):
+    def __init__(self, model):
+        super().__init__(model)
+        meta = model._vox_meta
+        notification_dict = self._vox_notifications.copy()
+
+        for notification in meta.notifications:
+            notification_dict[notification.codename] = notification
+        self._vox_notifications = notification_dict
+
+
+class SignalVoxRegistration(VoxRegistration):
+    """
+    A Notification registration that automatically connects model signals
+    """
+
+    created = Notification(_("Notification that an instance was created."))
+    updated = Notification(_("Notification that an instance was updated."))
+    deleted = Notification(_("Notification that an instance was updated."))
+
+    def __init__(self, model):
+        super().__init__(model)
+        signals.post_save.connect(self._model_post_save, sender=model)
+        signals.post_delete.connect(self._model_post_delete, sender=model)
+
+    def _model_post_save(self, instance, raw, created, **_kw):
+        if not raw:
+            if created:
+                self.created.issue(instance)
+            else:
+                self.updated.issue(instance)
+
+    def _model_post_delete(self, instance, **_kw):
+        self.deleted.issue(instance)
 
 
 class ObjectManagerItem:
-    def __init__(self, cls):
+    def __init__(self, cls, registration: VoxRegistration):
         self.cls = cls
+        self.registration = registration
         self.pattern = None
         self.matcher = None
         self.reverse_form = None
         self.reverse_params = ()
         self.channels = ChannelManagerItem(cls)
+
+    # url methods
 
     @property
     def has_url(self):
@@ -163,10 +476,31 @@ class ObjectManagerItem:
         )
         return "/" + (self.reverse_form % kwargs)
 
+    # channel methods
+
+    def channels_by_prefix(self, prefix) -> UnboundChannelMap:
+        # get the old channels
+        ubc_map = self.channels.prefix(prefix)
+        # overwrite old channels with any new ones
+        for key, channel in self.registration.get_channels().items():
+            channel_key = prefix if key == "" else prefix + ":" + key
+            if channel.name == "":
+                if prefix == "c":
+                    channel.name = self.cls._meta.verbose_name.title()
+                else:
+                    channel.name = PREFIX_NAMES[prefix]
+            else:
+                channel.name = PREFIX_FORMATS[prefix].format(channel.name)
+            ubc_map[channel_key] = channel
+        return ubc_map
+
+    def has_channels(self):
+        return bool(self.channels) or self.registration.has_channels()
+
 
 class ObjectManager(dict):
     def __missing__(self, key):
-        item = ObjectManagerItem(key)
+        item = ObjectManagerItem(key, VoxRegistration(key))
         self[key] = item
         return item
 
@@ -176,12 +510,18 @@ class ObjectManager(dict):
     def __getitem__(self, key) -> ObjectManagerItem:
         return super().__getitem__(key)
 
-    def add(self, cls, *, regex=...):
+    def add(self, cls, registration_cls=VoxRegistration, *, regex=...):
         if regex is ...:
             raise RuntimeError(
-                "Must set regex keyword argument, " "use None if object has no URL"
+                "Must set regex keyword argument, use None if object has no URL"
             )
-        item = ObjectManagerItem(cls)
+        # a little hacky code for backwards compatibility
+        from .models import VoxModel
+
+        if registration_cls is VoxRegistration and issubclass(cls, VoxModel):
+            registration_cls = _VoxModelRegistration
+        # en hacky code
+        item = ObjectManagerItem(cls, registration_cls(cls))
         if regex is not None:
             item.set_regex(regex)
         self[cls] = item
@@ -219,8 +559,6 @@ class ObjectManager(dict):
 
 backends = BackendManager(pydoc.locate(name) for name in settings.BACKENDS)
 
-channels = ChannelProxyManager()
-
 objects = ObjectManager()
 
 
@@ -233,7 +571,7 @@ def _channel_type_ids():
     for all_models in apps.all_models.values():
         for model in all_models.values():
             if model in objects:
-                if objects[model].channels:
+                if objects[model].has_channels():
                     ct = ContentType.objects.get_for_model(model)
                     yield ct.id
 
@@ -243,3 +581,16 @@ def channel_type_limit():
     if _CHANNEL_TYPE_IDS is None:
         _CHANNEL_TYPE_IDS = tuple(_channel_type_ids())
     return {"id__in": _CHANNEL_TYPE_IDS}
+
+
+# Deprecated
+
+
+class ChannelProxyManager(dict):
+    def __missing__(self, key):
+        if key not in objects:
+            objects.add(key, regex=None)
+        return objects[key].channels
+
+
+channels = ChannelProxyManager()

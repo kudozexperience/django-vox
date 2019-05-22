@@ -32,8 +32,6 @@ BASE_INSTALLED_APPS = [
 
 INSTALLED_APPS = BASE_INSTALLED_APPS + ["tests"]
 
-AUTH_USER_MODEL = "tests.User"
-
 FIXTURE_DIRS = ["fixtures"]
 
 MEDIA_URL = "/media/"  # Avoids https://code.djangoproject.com/ticket/21451

@@ -4,6 +4,7 @@ import warnings
 import aspy
 import pytz
 from bs4 import BeautifulSoup
+import django.contrib.auth.models as auth_models
 from django.contrib.contenttypes.models import ContentType
 from django.core import mail
 from django.test import Client, TestCase
@@ -20,7 +21,7 @@ class FailmailTests(TestCase):
 
     def test_email_failure(self):
         assert 0 == len(mail.outbox)
-        author = models.User.objects.get(email="author@example.org")
+        author = auth_models.User.objects.get(email="author@example.org")
         # by default, with the test config, we throw errors
         with self.settings(EMAIL_BACKEND="Can't import this!"):
             with self.assertRaises(ImportError):
@@ -57,7 +58,7 @@ class FailmailTests(TestCase):
             DJANGO_VOX_THROW_EXCEPTIONS=False, EMAIL_BACKEND="Can't import this!"
         ):
             assert 0 == len(mail.outbox)
-            author = models.User.objects.get(email="author@example.org")
+            author = auth_models.User.objects.get(email="author@example.org")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 models.Article.objects.create(
@@ -97,7 +98,7 @@ class ExtraOptionsTest(TestCase):
         template.enabled = False
         template.save()
         # first we create an article as the author user
-        author = models.User.objects.get(email="author@example.org")
+        author = auth_models.User.objects.get(email="author@example.org")
         models.Article.objects.create(
             slug="another",
             author=author,
@@ -119,7 +120,7 @@ class DemoTests(TestCase):
         # sanity
         assert len(mail.outbox) == 0
         # first we create an article as the author user
-        author = models.User.objects.get(email="author@example.org")
+        author = auth_models.User.objects.get(email="author@example.org")
         models.Article.objects.create(
             slug="second",
             author=author,
@@ -165,7 +166,7 @@ class DemoTests(TestCase):
         )
         template.save()
         # first we create an article as the author user
-        author = models.User.objects.get(email="author@example.org")
+        author = auth_models.User.objects.get(email="author@example.org")
         models.Article.objects.create(
             slug="second",
             author=author,
@@ -199,7 +200,7 @@ class DemoTests(TestCase):
         for model in (
             models.Article,
             models.Subscriber,
-            models.User,
+            auth_models.User,
             models.Comment,
             django_vox.models.SiteContact,
         ):
@@ -209,32 +210,32 @@ class DemoTests(TestCase):
         vox_ct_limit = django_vox.registry.channel_type_limit()
         assert "id__in" in vox_ct_limit
         actual_ids = set(vox_ct_limit["id__in"])
-        assert actual_ids == expected_ids
+        assert expected_ids == actual_ids
 
     @staticmethod
     def test_previews():
         pp = django_vox.models.PreviewParameters(
-            models.Article, models.User, models.Subscriber
+            models.Article, auth_models.User, models.Subscriber
         )
         assert "recipient" not in pp
         assert "target" in pp
         assert pp["content"].title == "Why are there so many blog demos"
         assert pp["object"].title == "Why are there so many blog demos"
         assert pp["target"].name == "Subscriber"
-        assert pp["actor"].name == "Author"
+        assert pp["actor"].get_full_name() == "Author"
         # now delete the articles and watch it come up with names
         for article in models.Article.objects.all():
             article.delete()
         for sub in models.Subscriber.objects.all():
             sub.delete()
         pp = django_vox.models.PreviewParameters(
-            models.Article, models.User, models.Subscriber
+            models.Article, auth_models.User, models.Subscriber
         )
         assert "recipient" not in pp
         assert "target" in pp
         assert pp["object"].title == "{title}"
         assert pp["target"].secret == ""
-        assert pp["actor"].name == "Author"
+        assert pp["actor"].get_full_name() == "Author"
 
 
 class TestTemplate(TestCase):

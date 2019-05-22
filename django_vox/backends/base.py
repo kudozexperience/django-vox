@@ -1,3 +1,4 @@
+import dataclasses
 from typing import List
 
 import django.conf
@@ -15,10 +16,10 @@ def html_format(text: str):
     return escaped.replace("\r\n", "<br/>").replace("\n", "<br/>")
 
 
+@dataclasses.dataclass
 class AttachmentData:
-    def __init__(self, data: bytes, mime: str):
-        self.data = data
-        self.mime = mime
+    data: bytes
+    mime: str
 
 
 class Backend:

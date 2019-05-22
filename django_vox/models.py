@@ -1,17 +1,15 @@
 import abc
-import collections
 import inspect
 import json
 import random
 import uuid
 import warnings
-from typing import List, Mapping, TypeVar, cast
+from typing import List, Mapping, cast
 
 import aspy
 import dateutil.parser
 import django.conf
 import django.utils.timezone
-from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import NOT_PROVIDED, Q
@@ -19,7 +17,6 @@ from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
 import django_vox.backends
-from django_vox.backends.base import AttachmentData
 
 from . import base, registry, settings
 
@@ -35,10 +32,10 @@ __all__ = (
     "VoxOptions",
     "VoxModelBase",
     "VoxModel",
-    "VoxNotification",
-    "VoxNotifications",
     "VoxAttach",
     "VoxAttachments",
+    "VoxNotification",
+    "VoxNotifications",
     "NotificationManager",
     "Notification",
     "Template",
@@ -79,19 +76,6 @@ def find_activity_type(url):
                     return item
 
 
-def make_activity_object(obj):
-    iri = None
-    address_func = getattr(obj, "get_object_address", None)
-    if address_func is not None:
-        iri = obj.get_object_address()
-    if iri is None and hasattr(obj, "get_absolute_url"):
-        iri = django_vox.base.full_iri(obj.get_absolute_url())
-    name = str(obj)
-    if iri is None:
-        return aspy.Object(name=name)
-    return aspy.Object(name=name, id=iri)
-
-
 def get_model_from_relation(field):
     # code copied from django's admin
     if not hasattr(field, "get_path_info"):
@@ -99,7 +83,16 @@ def get_model_from_relation(field):
     return field.get_path_info()[-1].to_opts.model
 
 
-def resolve_parameter(key, parameters):
+def resolve_parameter(key: str, parameters: dict):
+    """
+    Turn an attachment key into actual data.
+
+    For example, n attachment key might look something like "content.photo" and
+    the parameters like {"content": <Model object>}. This method would return
+    the value of the "photo" attachment on <Model object>.
+
+    Returns None if no matches can be found.
+    """
     remainder, _, last = key.rpartition(".")
     parts = remainder.split(".")
     for part in parts:
@@ -113,11 +106,19 @@ def resolve_parameter(key, parameters):
             parameters = getattr(parameters, part)
         else:
             return None
-    if hasattr(parameters.__class__, "_vox_meta"):
-        meta = parameters.__class__._vox_meta
-        if last in meta.attachments:
-            return meta.attachments[last].get_data(parameters)
-    return None
+    # check if there's a VoxMeta
+    cls = type(parameters)
+    vox_meta = getattr(cls, "_vox_meta", None)
+    if vox_meta is not None:
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE)
+        if last in vox_meta.attachments:
+            return vox_meta.attachments[last].get_data(parameters)
+    registration = registry.objects[type(parameters)].registration
+    attachment = registration.get_attachment(last)
+    if attachment is not None:
+        return attachment.get_data(parameters)
+    else:
+        return None
 
 
 def make_model_preview(object_type):
@@ -185,11 +186,17 @@ def get_model_variables(label, value, cls, ancestors=frozenset()):
 def get_model_attachment_choices(label, value, cls, ancestors=frozenset()):
     sub_ancestors = set(ancestors)
     sub_ancestors.add(cls)
-    if hasattr(cls, "_vox_meta"):
-        fields = cls._vox_meta.attachments
-        for field in fields:
-            label = "{}/{}".format(label, field.label) if label else field.label
-            yield (value + "." + field.key), label
+    vox_meta = getattr(cls, "_vox_meta", None)
+
+    if vox_meta is not None:
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE)
+        attachments = vox_meta.attachments
+    else:
+        attachments = registry.objects[cls].registration.get_attachments()
+
+    for field in attachments:
+        label = "{}/{}".format(label, field.label) if label else field.label
+        yield (value + "." + field.key), label
     if hasattr(cls, "_meta") and len(sub_ancestors) < 3:
         for field in cls._meta.fields:
             if field.is_relation:
@@ -219,6 +226,12 @@ class VoxOptions(object):
     Options for Vox extensions
     """
 
+    DEPRECATION_MESSAGE = (
+        "Use of VoxMeta has been deprecated and replaced by "
+        "django_vox.registry.VoxRegistration, "
+        "it will be removed in django-vox 5.0"
+    )
+
     ALL_OPTIONS = ("notifications", "attachments")
     # list of notification code names
     notifications = []
@@ -228,6 +241,7 @@ class VoxOptions(object):
         """
         Set any options provided, replacing the default values
         """
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
         if meta is not None:
             for key, value in meta.__dict__.items():
                 if key in self.ALL_OPTIONS:
@@ -236,224 +250,34 @@ class VoxOptions(object):
                     raise ValueError("VoxMeta has invalid attribute: {}".format(key))
 
 
-class VoxModelBase(models.base.ModelBase):
-    """
-    Metaclass for Vox extensions.
-
-    Deals with notifications on VoxOptions
-    """
-
-    def __new__(mcs, name, bases, attributes):
-        new = super(VoxModelBase, mcs).__new__(mcs, name, bases, attributes)
-        meta = attributes.pop("VoxMeta", None)
-        new._vox_meta = VoxOptions(meta)
-        return new
-
-
-VoxModelN = TypeVar("VoxModelN", "VoxModel", None)
-
-
-class VoxModel(models.Model, metaclass=VoxModelBase):
-    """
-    Base class for models that implement notifications
-    """
-
-    class Meta:
-        abstract = True
-
-    @classmethod
-    def get_notification(cls, codename: str) -> "Notification":
-        ct = ContentType.objects.get_for_model(cls)
-        return Notification.objects.get(codename=codename, object_type=ct)
-
-    def issue_notification(
-        self, codename: str, target: VoxModelN = None, actor: VoxModelN = None
-    ):
-        notification = self.get_notification(codename)
-        notification.issue(self, target, actor)
-
-    def get_activity_object(self, codename, actor, target):
-        """Return an aspy.Object object for the activity.
-
-        The parameters actor and target may be None.
-        """
-        return self.__activity__()
-
-    def get_object_address(self):
-        if self.__class__ not in registry.objects:
-            raise RuntimeError(
-                "{cls} is not a registered object, use "
-                "django_vox.registry.object.add({cls}, regex=...)".format(
-                    cls=self.__class__
-                )
-            )
-        url = registry.objects[self.__class__].reverse(self)
-        if url is None:
-            return None
-        return django_vox.base.full_iri(url)
-
-    def __activity__(self):
-        return make_activity_object(self)
-
-
-class VoxNotifications(list):
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            if not isinstance(value, VoxNotification):
-                value = VoxNotification(value)
-            if not value.params["codename"]:
-                value.params["codename"] = key
-            self.append(value)
-
-
-class VoxNotification:
-    REQUIRED_PARAMS = {"codename", "description"}
-    OPTIONAL_PARAMS = {
-        "actor_type": "",
-        "target_type": "",
-        "activity_type": "Create",
-        "required": False,
-    }
-
-    def __init__(self, description, codename="", **kwargs):
-        self.params = {
-            "codename": codename,
-            "description": description,
-            "from_code": True,
-        }
-        for key, default in self.OPTIONAL_PARAMS.items():
-            if key in kwargs:
-                self.params[key] = kwargs.pop(key)
-            else:
-                self.params[key] = default
-        if kwargs:
-            raise ValueError(
-                "Unrecognized parameters {}".format(", ".join(kwargs.keys()))
-            )
-
-    def params_equal(self, notification):
-        for key in self.params:
-            value = getattr(notification, key)
-            my_value = self.params[key]
-            if key in ("actor_type", "target_type"):
-                if value is None:
-                    value = ""
-                else:
-                    value = "{}.{}".format(value.app_label, value.model)
-            # if key == 'activity_type':
-            #     value = value.get_type()
-            if value != my_value:
-                return False
-        return True
-
-    def param_value(self, key):
-        value = self.params[key]
-        if key in ("actor_type", "target_type"):
-            if value == "":
-                return None
-            model = apps.get_model(value)
-            return ContentType.objects.get_for_model(model)
-        if key == "activity_type":
-            if inspect.isclass(value) and issubclass(value, aspy.Object):
-                value = value.get_type()
-        return value
-
-    def set_params(self, notification):
-        for key in self.params:
-            setattr(notification, key, self.param_value(key))
-
-    def create(self, object_type):
-        new = Notification(object_type=object_type)
-        self.set_params(new)
-        return new
-
-    @property
-    def codename(self):
-        return self.params["codename"]
-
-
-# Temporarily here for backwards compatibility
-class VoxParam(VoxNotification):
-    def __init__(self, codename, description, **kwargs):
-        super().__init__(description, codename=codename, **kwargs)
-
-
-class VoxAttach:
-    def __init__(
-        self, attr: str = None, mime_attr: str = "", mime_string: str = "", label=""
-    ):
-        self.key = ""  # gets set later
-        self.attr = attr
-        if bool(mime_attr) == bool(mime_string):
-            raise RuntimeError("Either mime_attr must be set or mime_string (not both)")
-        self.mime_attr = mime_attr
-        self.mime_string = mime_string
-        self._label = label
-
-    @property
-    def label(self):
-        return self._label if self._label else self.key
-
-    def get_data(self, model_instance: VoxModel):
-        data = getattr(model_instance, self.attr)
-        if callable(data):
-            data = data()
-        # force bytes
-        if not isinstance(data, bytes):
-            if not isinstance(data, str):
-                data = str(data)
-            data = data.encode()
-        if self.mime_attr:
-            mime = getattr(model_instance, self.mime_attr)
-            if callable(mime):
-                mime = mime()
-        else:
-            mime = self.mime_string
-        return AttachmentData(data, mime)
-
-
-class VoxAttachments:
-    def __init__(self, **kwargs: Mapping[str, VoxAttach]):
-        self.items = {}
-        for key, value in kwargs.items():
-            value.key = key
-            if value.attr is None:
-                value.attr = key
-            self.items[key] = value
-
-    def __iter__(self):
-        yield from self.items.values()
-
-    def __contains__(self, item: str):
-        return self.items.__contains__(item)
-
-    def __getitem__(self, item: str):
-        return self.items.__getitem__(item)
-
-
 class ChannelContactSet:
     def __init__(self, notification, obj, target, actor):
-        # make a dictionary where the keys are protocol, 'recipient key'
-        # pairs, the values are address => contactable dictionaries
-        channels = notification.get_recipient_channels(obj, target, actor)
-        self._set = collections.defaultdict(dict)
-        contactable_list = dict(
-            (key, channel.contactables()) for (key, channel) in channels.items()
-        )
-        for recipient_key, contactables in contactable_list.items():
-            for c_able in contactables:
-                for contact in c_able.get_contacts_for_notification(notification):
-                    self._set[contact.protocol, recipient_key][contact.address] = c_able
+        self.channels = notification.get_recipient_channels(obj, target, actor)
+        self.notification = notification
 
     def get_addresses(self, protocol: str, recipients: List[str]):
-        for recipient in recipients:
-            if (protocol, recipient) in self._set:
-                yield from self._set[protocol, recipient].keys()
+        for address, _contactable in self.get_address_items(protocol, recipients):
+            yield address
 
     def get_address_items(self, protocol: str, recipients: List[str]):
         for recipient in recipients:
-            if (protocol, recipient) in self._set:
-                yield from self._set[protocol, recipient].items()
+            for contactable in self.channels[recipient].contactables():
+                if hasattr(contactable, "get_contacts_for_notification"):
+                    # backwards compatibility
+                    contacts = contactable.get_contacts_for_notification(
+                        self.notification
+                    )
+                    for contact in contacts:
+                        if contact.protocol == protocol:
+                            yield contact.address, contactable
+
+                else:
+                    registration = registry.objects[type(contactable)].registration
+                    contacts = registration.get_contacts(
+                        contactable, protocol, self.notification
+                    )
+                    for contact in contacts:
+                        yield contact.address, contactable
 
 
 class NotificationManager(models.Manager):
@@ -527,6 +351,12 @@ class Notification(models.Model):
 
     objects = NotificationManager()
 
+    @classmethod
+    def from_scheme(cls, scheme, object_type):
+        new = Notification(object_type=object_type)
+        scheme.set_params(new)
+        return new
+
     def __str__(self):
         return "{} | {} | {}".format(
             self.object_type.app_label, self.object_type, self.codename
@@ -587,7 +417,7 @@ class Notification(models.Model):
 
     def get_recipient_channels(
         self, obj, target, actor
-    ) -> Mapping[str, registry.Channel]:
+    ) -> Mapping[str, registry.BoundChannel]:
         instances = self.get_recipient_instances(obj, target, actor)
         return dict(
             (key, channel)
@@ -605,14 +435,7 @@ class Notification(models.Model):
             for key, channel in channel_data.items():
                 yield key, channel.name
 
-    def _get_activity_object(self, obj, actor, target):
-        if hasattr(obj, "get_activity_object"):
-            return obj.get_activity_object(self.codename, actor, target)
-        if hasattr(obj, "__activity__"):
-            return obj.__activity__()
-        return make_activity_object(obj)
-
-    def issue(self, obj: VoxModel, target: VoxModelN = None, actor: VoxModelN = None):
+    def issue(self, obj: models.Model, target=None, actor=None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template
@@ -633,7 +456,10 @@ class Notification(models.Model):
             # backwards compatibility
             parameters["source"] = actor
 
-        parameters["activity_object"] = self._get_activity_object(obj, actor, target)
+        reg = registry.objects[type(self)].registration
+        parameters["activity_object"] = reg.get_activity_object(
+            obj, codename=self.codename, actor=actor, target=target
+        )
         parameters["activity_type"] = self.get_activity_type()
         # load up all the templates so we can see available recipients
         templates = self.template_set.filter(enabled=True)
@@ -744,9 +570,9 @@ class Notification(models.Model):
         target_type = self.get_target_type()
         content_model = self.get_object_model()
         mapping = {}
-        for target_key, model in recipient_spec.items():
-            if model is not None:
-                channels = registry.objects[model].channels.prefix(target_key)
+        for target_key, model_cls in recipient_spec.items():
+            if model_cls is not None:
+                channels = registry.objects[model_cls].channels_by_prefix(target_key)
                 for key, channel in channels.items():
                     label = str(_("Recipient {}")).format(channel.name)
                     mapping[key] = get_model_variables(
@@ -910,7 +736,7 @@ class SiteContactManager(models.Manager, AbstractContactable):
 
 
 # can't make this subclass AbstractContact or fields become unset-able
-class SiteContact(VoxModel):
+class SiteContact(models.Model):
 
     ENABLE_CHOICES = (("blacklist", _("Blacklist")), ("whitelist", _("Whitelist")))
 
@@ -1027,6 +853,152 @@ class InboxItem(models.Model):
         verbose_name=_("activity"),
     )
     read_at = models.DateTimeField(_("date read"), db_index=True, null=True, blank=True)
+
+
+# Deprecated
+
+
+class VoxAttach(registry.Attachment):
+
+    DEPRECATION_MESSAGE = (
+        "VoxAttach has been replaced by django_vox.registry.Attachment, "
+        "it will be removed in django-vox 5.0"
+    )
+
+    def __init__(
+        self, attr: str = None, mime_attr: str = "", mime_string: str = "", label=""
+    ):
+        return super().__init__(attr, mime_attr, mime_string, label)
+
+
+class VoxAttachments:
+
+    DEPRECATION_MESSAGE = (
+        "VoxAttachments has been deprecated (replaced by "
+        "django_vox.registry.Attachment), "
+        "it will be removed in django-vox 5.0"
+    )
+
+    def __init__(self, **kwargs: Mapping[str, VoxAttach]):
+        self.items = {}
+        for key, value in kwargs.items():
+            value.key = key
+            if value.attr is None:
+                value.attr = key
+            self.items[key] = value
+
+    def __iter__(self):
+        yield from self.items.values()
+
+    def __contains__(self, item: str):
+        return self.items.__contains__(item)
+
+    def __getitem__(self, item: str):
+        return self.items.__getitem__(item)
+
+
+class VoxModelBase(models.base.ModelBase):
+    """
+    Metaclass for Vox extensions.
+
+    Deals with notifications on VoxOptions
+    """
+
+    def __new__(mcs, name, bases, attributes):
+        # note, deprecation message is unnecessary here, because VoxOptions
+        new = super(VoxModelBase, mcs).__new__(mcs, name, bases, attributes)
+        meta = attributes.pop("VoxMeta", None)
+        if meta is not None:
+            new._vox_meta = VoxOptions(meta)
+            if not getattr(new._vox_meta, "abstract", False):
+                registry.objects.add(new, regex=None)
+        return new
+
+
+class VoxModel(models.Model, metaclass=VoxModelBase):
+    """
+    Base class for models that implement notifications
+    """
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def get_notification(cls, codename: str) -> "Notification":
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
+        ct = ContentType.objects.get_for_model(cls)
+        return Notification.objects.get(codename=codename, object_type=ct)
+
+    def issue_notification(self, codename: str, target=None, actor=None):
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
+        notification = self.get_notification(codename)
+        notification.issue(self, target, actor)
+
+    def get_activity_object(self, codename, actor, target):
+        """Return an aspy.Object object for the activity.
+
+        The parameters actor and target may be None.
+        """
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
+        return self.__activity__()
+
+    def get_object_address(self):
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
+        if self.__class__ not in registry.objects:
+            raise RuntimeError(
+                "{cls} is not a registered object, use "
+                "django_vox.registry.object.add({cls}, regex=...)".format(
+                    cls=self.__class__
+                )
+            )
+        url = registry.objects[self.__class__].reverse(self)
+        if url is None:
+            return None
+        return django_vox.base.full_iri(url)
+
+    def __activity__(self):
+        warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
+        return registry.make_activity_object(self)
+
+
+class VoxParam(registry.Notification):
+    """An old name for Notification"""
+
+    def __init__(self, codename, description, **kwargs):
+        warnings.warn(
+            "VoxParam has been replaced by django_vox.registry.Notification, "
+            "it will be removed in django-vox 5.0"
+        )
+        super().__init__(description, codename=codename, **kwargs)
+
+
+class VoxNotification(registry.Notification):
+    """Another old name for Notification"""
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "VoxNotification has been replaced by "
+            "django_vox.registry.Notification, "
+            "it will be removed in django-vox 5.0"
+        )
+        super().__init__(*args, **kwargs)
+
+
+class VoxNotifications(list):
+    """
+    An old way of listing notification schemes that would auto-assign `codename`
+    """
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            if not isinstance(value, registry.Notification):
+                value = registry.Notification(value)
+            if not value.params["codename"]:
+                value.params["codename"] = key
+            self.append(value)
+
+
+# Registrations
 
 
 registry.objects.add(SiteContact, regex=None)

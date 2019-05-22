@@ -60,7 +60,7 @@ class VariableTests(TestCase):
 
     @staticmethod
     def test_variables():
-        notification = models.Article.get_notification("create")
+        notification = models.ArticleVox.created.get_notification(models.Article)
         variables = notification.get_recipient_variables()
         assert {
             "si",
@@ -105,7 +105,7 @@ class TemplateFormTests(TestCase):
 
         add_initial = {"attachments": [], "recipients": ["re"]}
         change_initial = {
-            "notification": 1,
+            "notification": 7,
             "backend": "email-html",
             "subject": "Subscriber email",
             "content": ...,
@@ -190,7 +190,7 @@ class NotificationAdminTests(TestCase):
 
     def test_template_count(self):
         model_obj = self.model_class.objects.get_by_natural_key(
-            "tests", "article", "create"
+            "tests", "article", "created"
         )
         assert 2 == self.admin.template_count(model_obj)
 
@@ -215,7 +215,7 @@ class NotificationAdminTests(TestCase):
         ]
         new_obj = self.model_class()
         model_obj = self.model_class.objects.get_by_natural_key(
-            "tests", "article", "create"
+            "tests", "article", "created"
         )
         request = MockRequest("GET")
         assert base_fields == self.admin.get_fields(request)
@@ -225,7 +225,7 @@ class NotificationAdminTests(TestCase):
 
     def test_issue(self):
         notification = self.model_class.objects.get_by_natural_key(
-            "tests", "article", "create"
+            "tests", "article", "created"
         )
         obj = models.Article.objects.first()
         with mock.patch("django_vox.models.Notification.issue"):
@@ -250,7 +250,7 @@ class NotificationAdminTests(TestCase):
 
     def test_get_inline_instances(self):
         request = MockRequest("GET", {})
-        obj = self.model_class.objects.get_by_natural_key("tests", "article", "create")
+        obj = self.model_class.objects.get_by_natural_key("tests", "article", "created")
         assert [] == self.admin.get_inline_instances(request)
         inline = self.admin.get_inline_instances(request, obj=obj)[0]
         formset = inline.get_formset(request, obj=obj)(instance=obj)
@@ -282,7 +282,7 @@ class NotificationAdminTests(TestCase):
         good_request = MockRequest("POST", {"body": "Hello {{content}}"})
         backend = "email-html"
         bad_backend = "email-html9000"
-        notification = "1"
+        notification = "7"  # article created notification id
         bad_notification = "9000"
 
         with self.assertRaises(PermissionDenied):

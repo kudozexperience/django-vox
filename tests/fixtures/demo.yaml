@@ -1,7 +1,8 @@
-- model: tests.user
+- model: auth.user
   pk: 1
   fields:
-    name: Author
+    username: author@example.org
+    first_name: Author
     email: author@example.org
     password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
     is_superuser: true
@@ -22,7 +23,7 @@
 - model: django_vox.template
   pk: 1
   fields:
-    notification: [tests, article, create]
+    notification: [tests, article, created]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>
       <p>A new article, <a href='http://127.0.0.1:8000/{{ object.pk }}/?token={{
@@ -34,7 +35,7 @@
 - model: django_vox.template
   pk: 2
   fields:
-    notification: [tests, comment, create]
+    notification: [tests, comment, created]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
       <p>{{ object.poster.name }} has posted a comment on your article <a
@@ -45,7 +46,7 @@
 - model: django_vox.template
   pk: 3
   fields:
-    notification: [tests, subscriber, create]
+    notification: [tests, subscriber, created]
     backend: email
     content: "A new subscriber {{ object }} has been added on the blog"
     recipients: si
@@ -66,6 +67,6 @@
   pk: 1
   fields:
     site_contact: 1
-    notification: [tests, subscriber, create]
+    notification: [tests, subscriber, created]
     enabled: true
 

@@ -31,13 +31,19 @@ def endpoint(_request, path):
         actor = registry.objects.get_local_object(path)
     except registry.ObjectNotFound:
         return django.http.HttpResponseNotFound()
-    obj = actor.__activity__()
-    obj_id = obj["id"]
-    for part in ("followers", "following", "liked", "inbox", "outbox"):
-        if part not in obj:
-            obj[part] = urllib.parse.urljoin(obj_id, part)
+    registration = registry.objects[type(actor)].registration
+    if registration is not None and registration.has_activity_endpoint(actor):
+        obj = registration.get_activity_object(actor)
+        obj_id = obj["id"]
+        for part in ("followers", "following", "liked", "inbox", "outbox"):
+            if part not in obj:
+                obj[part] = urllib.parse.urljoin(obj_id, part)
 
-    return django.http.HttpResponse(str(obj), content_type="application/activity+json")
+        return django.http.HttpResponse(
+            str(obj), content_type="application/activity+json"
+        )
+    else:
+        return django.http.HttpResponseNotFound()
 
 
 @fix_path
@@ -46,12 +52,17 @@ def outbox(request, path):
         owner = registry.objects.get_local_object(path)
     except registry.ObjectNotFound:
         return django.http.HttpResponseNotFound()
-    if request.user != owner:
-        return django.http.HttpResponseForbidden()
-    elif request.method == "POST":
-        return outbox_post(request, owner)
-    else:
+    if request.method != "POST":
         return django.http.HttpResponseNotAllowed(permitted_methods=("POST",))
+    else:
+        registration = registry.objects[type(owner)].registration
+        if registration is not None and registration.has_activity_endpoint(owner):
+            if request.user != owner:
+                return django.http.HttpResponseForbidden()
+            else:
+                return outbox_post(request, owner)
+        else:
+            return django.http.HttpResponseNotFound()
 
 
 @fix_path
@@ -60,12 +71,17 @@ def inbox(request, path):
         owner = registry.objects.get_local_object(path)
     except registry.ObjectNotFound:
         return django.http.HttpResponseNotFound()
-    if request.user != owner:
-        return django.http.HttpResponseForbidden()
-    if request.method == "GET":
-        return inbox_get(request, owner)
-    else:
+    if request.method != "GET":
         return django.http.HttpResponseNotAllowed(permitted_methods=("GET",))
+    else:
+        registration = registry.objects[type(owner)].registration
+        if registration is not None and registration.has_activity_endpoint(owner):
+            if request.user != owner:
+                return django.http.HttpResponseForbidden()
+            else:
+                return inbox_get(request, owner)
+        else:
+            return django.http.HttpResponseNotFound()
 
 
 def inbox_get(_request, owner):

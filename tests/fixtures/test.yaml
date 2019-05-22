@@ -1,47 +1,86 @@
 - model: contenttypes.contenttype
-  fields: {app_label: tests, model: user}
+  fields: {app_label: auth, model: user}
 - model: contenttypes.contenttype
   fields: {app_label: tests, model: article}
 - model: contenttypes.contenttype
   fields: {app_label: tests, model: subscriber}
 - model: contenttypes.contenttype
   fields: {app_label: tests, model: comment}
+## notification definitions
+# user
 - model: django_vox.notification
+  pk: 1
   fields:
-    codename: create
+    codename: created
+    object_type: [auth, user]
+    from_code: true
+- model: django_vox.notification
+  pk: 2
+  fields:
+    codename: updated
+    object_type: [auth, user]
+    from_code: true
+- model: django_vox.notification
+  pk: 3
+  fields:
+    codename: deleted
+    object_type: [auth, user]
+    from_code: true
+# subscriber
+- model: django_vox.notification
+  pk: 4
+  fields:
+    codename: created
+    object_type: [tests, subscriber]
+    from_code: true
+- model: django_vox.notification
+  pk: 5
+  fields:
+    codename: updated
+    object_type: [tests, subscriber]
+    from_code: true
+- model: django_vox.notification
+  pk: 6
+  fields:
+    codename: deleted
+    object_type: [tests, subscriber]
+    from_code: true
+# article
+- model: django_vox.notification
+  pk: 7
+  fields:
+    codename: created
     object_type: [tests, article]
-    actor_type: [tests, user]
+    actor_type: [auth, user]
     target_type: [tests, article]
     description: Notification that a new article was created
     from_code: true
     activity_type: Create
+# comment
 - model: django_vox.notification
+  pk: 8
   fields:
-    codename: create
-    object_type: [tests, subscriber]
-    description: Notification from subscriber that a new subscriber was created. Intended
-      for site admins
-    from_code: true
-- model: django_vox.notification
-  fields:
-    codename: create
+    codename: created
     object_type: [tests, comment]
     actor_type: [tests, subscriber]
     description: Notification from subscriber to author that a comment was posted
     from_code: true
-- model: tests.user
+## user entries
+- model: auth.user
   pk: 1
   fields:
-    name: Author
+    username: author@example.org
+    first_name: Author
     email: author@example.org
     password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
     is_superuser: true
     is_staff: true
     is_active: true
-- model: tests.user
+- model: auth.user
   pk: 2
   fields:
-    name: Other user
+    username: user@example.org
+    first_name: Other user
     email: user@example.org
     password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
     is_superuser: false
@@ -68,7 +107,7 @@
 - model: django_vox.template
   pk: 1
   fields:
-    notification: [tests, article, create]
+    notification: [tests, article, created]
     backend: "email-html"
     subject: "Subscriber email"
     content: "<p>Hi {{ contact.name }},</p>
@@ -81,7 +120,7 @@
 - model: django_vox.template
   pk: 2
   fields:
-    notification: [tests, article, create]
+    notification: [tests, article, created]
     backend: email-md
     content: "{{ object.author.name }} has posted a new article.
 
@@ -93,7 +132,7 @@
 - model: django_vox.template
   pk: 3
   fields:
-    notification: [tests, comment, create]
+    notification: [tests, comment, created]
     backend: email
     content: "{% block html_body %}<p>Hi {{ recipient.name }},</p>\r\n
       <p>{{ object.poster.name }} has posted a comment on your article <a
@@ -105,7 +144,7 @@
 - model: django_vox.template
   pk: 4
   fields:
-    notification: [tests, subscriber, create]
+    notification: [tests, subscriber, created]
     backend: email
     content: "A new subscriber {{ object }} has been added on the blog"
     recipients: si
@@ -114,7 +153,7 @@
 - model: django_vox.template
   pk: 5
   fields:
-    notification: [tests, comment, create]
+    notification: [tests, comment, created]
     backend: activity
     subject: New comment posted
     content: "{{ object.poster.name }} has added a new comment to
@@ -137,11 +176,11 @@
   pk: 1
   fields:
     site_contact: 1
-    notification: [tests, subscriber, create]
+    notification: [tests, subscriber, created]
     enabled: true
 - model: django_vox.sitecontactsetting
   pk: 2
   fields:
     site_contact: 1
-    notification: [tests, article, create]
+    notification: [tests, article, created]
     enabled: true

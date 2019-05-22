@@ -4,6 +4,10 @@ Creates permissions for all installed apps that need permissions.
 from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS, router
+from django.db.models import Model
+
+
+from django_vox import registry
 
 
 class Command(BaseCommand):
@@ -37,15 +41,15 @@ def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
     # (object_type, codename)
     searched_notifications = []
     # The code names and content types that should exist.
+
     object_types = set()
-    for cls in apps.get_models():
-        meta = getattr(cls, "_vox_meta", None)
-        if meta is not None:
+    for cls, obj_item in registry.objects.items():
+        if issubclass(cls, Model):
             # Force looking up the content types in the current database
             # before creating foreign keys to them.
             object_type = contenttype_class.objects.db_manager(using).get_for_model(cls)
             object_types.add(object_type)
-            for params in meta.notifications:
+            for params in obj_item.registration.get_notifications():
                 searched_notifications.append((object_type, params))
 
     # Find all the Notification that have a object_type for a model we're
@@ -59,7 +63,7 @@ def make_notifications(verbosity=1, dry_run=False, using=DEFAULT_DB_ALIAS):
     for ct, params in searched_notifications:
         notification = all_notifications.get((ct.pk, params.codename))
         if notification is None:
-            new_notifications.append(params.create(ct))
+            new_notifications.append(notification_class.from_scheme(params, ct))
         else:
             if not params.params_equal(notification):
                 if verbosity > 0:
