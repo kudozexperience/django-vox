@@ -372,7 +372,11 @@ class VoxRegistration(metaclass=VoxRegistrationBase):
         func = self._vox_protocol_functions.get(protocol, None)
         if func is None:
             return ()
-        return func(self, instance, notification)
+        name = str(instance)
+        for result in func(self, instance, notification):
+            if not isinstance(result, base.Contact):
+                result = base.Contact(name, protocol, result)
+            yield result
 
     def get_activity_object(self, instance, *, codename=None, actor=None, target=None):
         """

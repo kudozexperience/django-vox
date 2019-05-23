@@ -46,7 +46,7 @@ class UserVox(SignalVoxRegistration):
 
     @provides_contacts("email")
     def email_contact(self, obj, _notification):
-        yield Contact(obj.get_full_name(), "email", obj.email)
+        yield obj.email
 
     @provides_contacts("activity")
     def activity_contact(self, obj, *_):
