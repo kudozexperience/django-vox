@@ -19,6 +19,7 @@ test:
   - tox -e "py36-django{20,21,22},style"
 
 pages:
+  stage: deploy
   script:
   - pip install -U pip setuptools
   - pip install -e .[docs]
