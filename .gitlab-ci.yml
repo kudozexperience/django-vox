@@ -17,3 +17,15 @@ test:
   - pip install -e .[test]
   # new versions of sqlite problems with Django < 2.2
   - tox -e "py36-django{20,21,22},style"
+
+pages:
+  script:
+  - pip install -U pip setuptools
+  - pip install -e .[docs]
+  - python setup.py build_sphinx
+  - mv build/sphinx/ public/
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
