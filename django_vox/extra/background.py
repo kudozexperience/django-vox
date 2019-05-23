@@ -12,12 +12,7 @@ class BackgroundVoxModel(django_vox.models.VoxModel):
     class Meta:
         abstract = True
 
-    def issue_notification(
-        self,
-        codename: str,
-        target: django_vox.models.VoxModelN = None,
-        actor: django_vox.models.VoxModelN = None,
-    ):
+    def issue_notification(self, codename: str, target=None, actor=None):
         kwargs = {}
         self_cls_str = str(self.__class__._meta)
         if target is not None:

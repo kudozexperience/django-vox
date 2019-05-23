@@ -19,11 +19,11 @@ replace ``pip3`` with ``pip``) ::
 Configuring Django
 ------------------
 
-Add ``'django_vox'`` to your ``INSTALLED_APPS`` setting::
+Add ``"django_vox"`` to your ``INSTALLED_APPS`` setting::
 
     INSTALLED_APPS = [
         # ...
-        'django_vox',
+        "django_vox",
     ]
 
 Additionally, you may want to configure certain :doc:`backends <backends>`
@@ -33,206 +33,134 @@ depending on exactly what sort of other notifications you want.
 The Demo
 ========
 
-While you're welcome to use the setup instructions here, it may be easier
+While you’re welcome to use the setup instructions here, it may be easier
 to just try out the :doc:`demo <demo>` that comes with this package. The
-demo doesn't cover all the use cases (yet) but it does cover most of the
+demo doesn’t cover all the use cases (yet) but it does cover most of the
 standard stuff.
 
 
-Setting up the Models
-=====================
+Registering the Models
+======================
 
-There's basically two parts to setting up the models. First, you have to
-add notifications to the models that you want notifications about. Second,
-you have to add `channels` to those notifications to specify where they
-can be sent. Finally, you need to implement the ``AbstractContactable``
-interface for whatever your channels return so that we now how to contact
-them.
+The process of issuing and routing notifications in Django Vox happens in 4
+steps.
 
-If you only ever want to send notifications to the site contacts, you can
-skip step 2 and 3, but that's not very fun, is it.
+1. **Notification definitions**: These definitions are registered, and
+   attached to specific models.
 
-Adding Model Notifications
---------------------------
+2. **Recipients**: Any given notification can have 4 possible recipients.
 
-Notifications in django vox are centered around models. This is
-important, because it makes it possible to predictably know what
-parameters will be available in the notification templates, and
-provides a measure of sanity to whoever is editing them.
+   1. The model that the notification is attached to
+   2. The actor of the notification (optional)
+   3. The target of the notification (optional)
+   4. The site contacts (these come built-in)
 
-To add notifications to a model, change the parent class from
-``django.db.models.Model`` to ``django_vox.models.VoxModel``.
-Also, add ``VoxMeta`` inner class (much like django's ``Meta``)
-which contains an attribute, named ``notifications``. Set it to
-a ``VoxNotifications`` object, and each parameter you pass to
-it will specify the parameters for another notification. The
-parameter keys are the notification’s codename and the values
-are the the description (if they’re a plain string) or you can
-use a ``VoxNotification`` object to specify more parameters.
+3. **Channels**: Additionally, each of these recipients can have zero, 1, or
+   multiple “channels”. For example, a User model might have one channel for
+   the user themselves, one for the user’s followers, and one for the user’s
+   emergency contact.
+
+4. **Contact**: A contact specifies the actual address that a the notifications
+   are sent to. Any model specified in a channel, should also define contacts
+   in its registration, otherwise that recipient won’t have any way of
+   receiving the notifications.
+
+Any model that will be either issuing notifications, or receiving them should
+have a registration. It might look something like this:
 
 .. code-block:: python
 
-   class User(VoxModel):
+   from django.db import models
+   from django_vox.registry import (VoxRegistration, Notification,
+                                    Channel, objects, provides_contacts)
 
-       class VoxMeta:
-           notifications = VoxNotifications(
-               created=_('Notification to that a user created an account'),
-           )
+   class User(models.Model):
 
+       # required email, optional mobile_phone
+       email = models.EmailField(blank=False)
+       mobile_phone = models.CharField(blank=True, max_length=50)
        ...
 
-       # Here, we're embedding the notification issue code into
-       # the model itself. The upside is we don't have to manually
-       # call it from our forms/model admins, the downside is that
-       # we don't have access to the HTTP request
+
+   class UserVox(VoxRegistration):
+
+
+       @provides_contacts("email")
+       def email_contact(self, instance, notification):
+           yield instance.email
+
+       @provides_contacts("sms")
+       def email_contact(self, instance, notification):
+           if instance.mobile_phone:
+               yield instance.mobile_phone
+
+       def get_channels(self):
+           return {"": Channel.self(self)}
+
+   class PurchaseOrder(models.Model):
+
+       customer = models.ForeignKey(User, on_delete=models.PROTECT)
+
        def save(self, *args, **kwargs):
-           new = self.id is None
-           super().save(*args, **kwargs)
-           if new:
-               self.issue_notification('created')
-
-   ...
-
-   class PurchaseOrder(VoxModel):
-
-       class VoxMeta:
-           notifications = VoxNotifications(
-               received = _('Notification that an order was received.'),
-               on_hold = _('Notification that an order is on hold.'),
-           )
-
-       def save(self, *args, **kwargs):
-           new = self.id is None
-           if not new:
+           created = self.id is None
+           if not created:
                old = PurchaseOrder.objects.get(pk=self.pk)
+           else:
+               old = None
            super().save(*args, **kwargs)
-           if new:
-               self.issue_notification('received')
-           if not new and not old.on_hold and self.on_hold:
-               self.issue_notification('on_hold')
+           objects[type(self)].registration.post_save(
+               created, old, self)
 
 
-Here’s an example of the long-winded form to specify your parameters,
-This is more verbose, but makes it easier to specify extra notification
-parameters (like actor & target model) if you need them.
+   class PurchaseOrderVox(VoxRegistration):
 
-.. code-block:: python
+       received = Notification(
+           _("Notification that order was received."))
+       on_hold = Notification(
+           _("Notification that order is on hold."))
 
-   class User(VoxModel):
+       def post_save(self, created, old, new):
+           if created:
+               self.received.issue(new)
+           if old and not old.on_hold and new.on_hold:
+               self.on_hold.issue(new)
 
-       class VoxMeta:
-           notifications = VoxNotifications(
-               created=VoxNotification(
-                   _('Notification to that a user created an account'),
-                   actor_type='myapp.mymodel'),
-           )
-   # In the form save method
-   # -----------------------
-   # Here we're saving outside the model object, this means we can have
-   # to the HTTP request, but we have to manually make sure we send the
-   # notification whenever is appropriate
-   user = User(name='John Doe')
-   user.save()
-   user.issue_notification('created', actor=request.user)
+       def get_channels(self):
+           return {"cust": Channel.field(PurchaseOrder.customer)}
 
+   # the actual registration
+   objects.add(User, UserVox, regex=None)
+   objects.add(PurchaseOrder, PurchaseOrderVox, regex=None)
 
+In the above example, you have a User model, which can receive emails, and
+optionally an SMS message. You also have purchase orders that have two
+notifications registered on them (``received`` and ``on_hold``). Whenever
+the purchase order is saved, it calls ``post_save`` on the registration object,
+and that fires the notifications themselves.
 
-
-Once you've finished adding these, you'll need to regenerate the
+Once you’ve finished adding these, you’ll need to regenerate the
 notifications table using the ``make_notifications`` management command::
 
     python3 manage.py make_notifications
 
 
-Registering Objects and Channels
---------------------------------
-
-Channels are what allow you to select different recipients. The site contacts
-channel is available by default, but if you want any other channels, you have
-to create them yourself using the object registry at
-``django_vox.registry.objects``. In order to use this, you need to first
-register your object using ``objects.add(cls, regex=None)``, and then you can
-access the channel registry as ``objects[cls].channels``. You can add new
-channels using either the ``add`` or ``add_self`` method takes four arguments:
-
-``key``
-   A slug that identifies the channel. Should be unique per model.
-``name``
-   A name that shows up in the admin. Optional, defaults to various automatic
-   values.
-``recipient_type``
-   Model class of the objects returned by the function. Optional, defaults
-   to the VoxModel subclass (i.e. ``Foo`` in ``Foo.add_channel``).
-``func``
-   A function or method that returns the instances of ``recipient_type``.
-   The function is called with a single argument which is the VoxModel
-   instance that will eventually use it (i.e. the ``content`` object).
-   Optional, defaults to ``lambda x: x``
-
-
-An example of channels given the above code might look like this::
-
-    class PurchaseOrder(VoxModel):
-        ...
-        def get_purchasers(self):
-            yield self.purchaser
-
-        def get_managers(self):
-            yield self.shop.manager
-
-    ...
-
-    from django_vox.registry import objects
-    objects.add(User, regex=None)
-    objects[User].channels.add_self()
-    po_reg = objects.add(PurchaseOrder, regex=None)
-    po_reg.channels.add('purchaser', _('Purchaser'), User,
-        PurchaseOrder.get_purchasers)
-    po_reg.channels.add('manager', _('Manager'), User,
-        PurchaseOrder.get_managers)
-
-
-Adding Contact Info
--------------------
-
-Now we have to implement the ``get_contacts_for_notification(notification)``
-method for all the things that are return in channels. In our above
-example, that's just the ``User`` model. This method takes a notification,
-and returns all of the contacts that the object has enabled for that
-notification. The idea behind this method is that it allows you to implement
-your own notification settings on a per-contact basis.
-
-For now, we're just going to make an implementation that assumes every user
-will get email notifications for all notifications. We can alter the user
-class to look like this::
-
-  from django_vox.models import VoxModel
-  from django_vox.base import Contact
-
-  class User(VoxModel):
-      ...
-      email = models.EmailField(max_length=254, unique=True)
-
-      def get_contacts_for_notification(self, notification):
-          return Contact(self.name, 'email', self.email)
-
-
-.. note:: We haven't covered actors or targets, but this example should
-          be enough to get you started.
 
 And there you have it. Now, in order for this to do anything useful,
-you'll need to add some appropriate :doc:`templates <templates>`.
-In this case, you'll want an email template for the "User" recipient of the
-"user created" notification, and possibly a template for a site contact
+you’ll need to add some appropriate :doc:`templates <templates>`.
+In this case, you’ll want an email template for the "customer" recipient of
+the purchase order notifications, and possibly a template for a site contact
 too.
+
+For more details on model registration and the various options, see the
+:doc:`registrations` page.
 
 
 One-time Messages from the Admin
 ================================
 
-The normal way to handle notifications is call ``issue_notification(codename)``
+The normal way to handle notifications is call ``notification.issue(instance)``
 from within the code. It’s also possible to manually issue notifications
-from the admin as long as a notification doesn't have an actor/target model.
+from the admin as long as a notification doesn’t have an actor/target model.
 The other way of sending messages completely bypasses the ``Notification``
 models and uses an Admin Action.
 
@@ -250,10 +178,11 @@ something like this:
 
    admin.site.register(YourUserModel, UserAdmin)
 
-In order for this to work right, the model in question needs to implement
-``get_contacts_for_notification``.
+In order for this to work right, the model in question is treated as the
+channel,  and so needs to have contacts registered for the appropriate
+backend & protocol that you want to use.
 
 .. note:: Because we don’t actually have a notification model here, a fake
           notification (``django_vox.models.OneTimeNotification``) is passed
-          to ``get_contacts_for_notification``. This can be used if only want
-          certain contact methods to be accessible in this way.
+          to the contact methods. This can be used if only want
+          certain contacts to be accessible in this way.

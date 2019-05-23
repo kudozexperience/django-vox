@@ -11,7 +11,7 @@ from django_vox.base import Contact, full_iri
 from django_vox.models import VoxModel, VoxNotification, VoxNotifications
 from django_vox.registry import (
     objects,
-    receives_protocol,
+    provides_contacts,
     Channel,
     Notification,
     Attachment,
@@ -44,11 +44,11 @@ class UserVox(SignalVoxRegistration):
             "END:VCARD".format(obj=obj)
         )
 
-    @receives_protocol("email")
+    @provides_contacts("email")
     def email_contact(self, obj, _notification):
         yield Contact(obj.get_full_name(), "email", obj.email)
 
-    @receives_protocol("activity")
+    @provides_contacts("activity")
     def activity_contact(self, obj, *_):
         yield Contact(obj.get_full_name(), "activity", self._get_object_address(obj))
 
@@ -183,11 +183,11 @@ class Subscriber(models.Model):
 
 
 class SubscriberVox(SignalVoxRegistration):
-    @receives_protocol("email")
+    @provides_contacts("email")
     def email_contact(self, obj, _notification):
         yield Contact(obj.name, "email", obj.email)
 
-    @receives_protocol("activity")
+    @provides_contacts("activity")
     def activity_contact(self, obj, _notification):
         yield Contact(obj.name, "activity", self._get_object_address(obj))
 

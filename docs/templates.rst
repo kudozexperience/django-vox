@@ -25,7 +25,7 @@ Content
     shows a preview. Use this to check your template.
 Attachments
     You can add zero-multiple attachments here. What’s available here depends
-    on what’s set up in the code (see :doc:`attachments <attachments>`) [2]_
+    on what’s set up in the code [2]_
 From address
     Normally optional since backends have a way to specify a site-wide default
     from address if they need one at all. You can use template variables here.

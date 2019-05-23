@@ -6,10 +6,10 @@ Django Vox Documentation
    :caption: Contents:
 
    getting_started
+   registrations
    backends
    protocols
    templates
-   attachments
    activities
    demo
    extras

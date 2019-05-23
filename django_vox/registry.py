@@ -275,7 +275,7 @@ class Notification:
         notification.issue(object_, actor=actor, target=target)
 
 
-def receives_protocol(protocol_id):
+def provides_contacts(protocol_id):
     def inner(func):
         sig = inspect.signature(func)
         assert len(sig.parameters) == 3 or (
@@ -284,11 +284,11 @@ def receives_protocol(protocol_id):
                 (p.kind == inspect.Parameter.VAR_POSITIONAL for p in sig.parameters)
             )
         ), (
-            "Function decorated by receives_protocol must take 3 arguments (self, "
+            "Function decorated by provides_contacts must take 3 arguments (self, "
             "model instance, and notification)"
         )
 
-        func._vox_receives_protocol = protocol_id
+        func._vox_provides_contacts = protocol_id
         return func
 
     return inner
@@ -299,8 +299,8 @@ class VoxRegistrationBase(type):
     Metaclass for Vox extensions.
     """
 
-    def __new__(cls, name, bases, attributes):
-        new = super().__new__(cls, name, bases, attributes)
+    def __new__(mcs, name, bases, attributes):
+        new = super().__new__(mcs, name, bases, attributes)
 
         proto_func = {}
         attachment_dict = {}
@@ -314,7 +314,7 @@ class VoxRegistrationBase(type):
                 if value.codename == "":
                     value.params["codename"] = key
                 notification_dict[key] = value
-            rec_proto = getattr(value, "_vox_receives_protocol", None)
+            rec_proto = getattr(value, "_vox_provides_contacts", None)
             if rec_proto is not None:
                 proto_func[rec_proto] = value
         if proto_func:
