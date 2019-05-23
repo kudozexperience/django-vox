@@ -14,14 +14,14 @@ inboxes refer to the ideas in that standard.
 Setting up the activities is fairly involved, and also entirely optional
 unless you actually want to use the activity backend. As a result, it’s
 got its own documentation. Note that this backend is somewhat experimental.
-Don’t use it in production unless you’ve tested it really well and know
+Don’t use it in production unless you’ve tested it well and know
 what you’re doing.
 
 
 Settings
 ========
 
-Because we need to generate full uri/iris (including the domain) and
+Because we need to generate full URIs (including the domain) and
 we need to be able to do it without an HTTP request, we need to
 have a way of finding out your domain & scheme. If you're already
 using ``django.contrib.sites`` and you have it set up with a
@@ -41,43 +41,60 @@ alter ``DJANGO_VOX_BACKENDS`` and add
 ``'django_vox.backends.activity.Backend',``. You can see an example on the
 :doc:`backends` page.
 
-Registering actors
-==================
+.. note:: Sometimes you might see a URI called an IRI. They're slightly
+          different, but they're similar enough that you can probably assume
+          they're the same without hastening the return of Zalgo.
 
-Like we had to register channels before, now we have to register actors too.
-It’s mostly accurate to say that actors should be any users that you want to
-be able send/receive activities.
+Registering URIs
+================
 
-Actors all have endpoints, and inboxes (and some unimplemented things). When
-you add an actor you specify the route for his/her endpoint using a regex,
-much like you would make a normal Django 1 url route. The parameters in the
-regex should correspond to the identifying field in the user. Here’s an
-example:
+You've probably noticed the ``regex=None`` argument earlier on when
+registering objects, and wondered what it was all about. Till now we've
+ignored it because it’s only really used with activity stream notifications.
+
+The regex value is used to tell us the canonical location of a given
+model instance. It's sort of like using ``get_absolute_url`` except that
+you can register it on models you didn't write, and we can reverse the
+pattern to look up an object based on its URI.
+
+If you're planning to use the activity streams backend, here's the deal:
+
+* Any model that will be a recipient of notifications must have a regex value.
+* Any model that will be the object, actor, or target type of notifications
+  should have a regex value.
+
+It's recommended that this URI is also a public URL that people can generally
+fetch with HTTP to get details about the object, but that's not strictly
+necessary.
+
+Here's a sample in code that you might implement based on the purchase order
+sample in the :doc:`getting_started` page.
 
 .. code-block:: python
 
-   actors[User].set_regex(r'^users/(?P<username>[0-9]+)/$')
+   class UserVox(VoxRegistration):
 
-Additionally, you’ll also need to return the activity contact from the
-``get_contacts_for_notification`` method for the actors. If you want to
-send them all the possible notification, then add the following code:
+       @provides_contacts("activity")
+       def activity_contact(self, instance, notification):
+           yield self._get_object_address(instance)
 
-.. code-block:: python
+       ...
 
-   def get_contacts_for_notification(self, _notification):
-       yield Contact(self.name, 'activity', self.get_object_address())
+   # add the URIs to the registration
+   objects.add(User, UserVox, regex=r'^users/(?P<username>\w+)/$')
+   objects.add(PurchaseOrder, PurchaseOrderVox, regex=r'^po/(?P<id>[0-9]+)/$')
 
 
-Setting up models
-=================
+Customizing Activity Types
+==========================
 
-Just like we had to add a bunch of properties to the models for the basic
-features in django_vox, there’s a few more to add to get good results for
+Just like we had to add a bunch of properties to the registration for the
+basic features in Django Vox, there’s a few more to add to get good results for
 the activity stream. These aren’t strictly necessary, but your results will
 be pretty plain without them. Code samples of all of these are available in
-the test site the comes with django_vox.
+the test site the comes with Django Vox.
 
-First, the notification parameters take a new parameter ``activity_type``.
+First, the notification parameters take another parameter ``activity_type``.
 It can be set to an ``aspy.Activity`` subclass. If it’s not set, django_vox
 with either match the notification name to an activity type, or use the
 default ‘Create’ type.
@@ -94,10 +111,10 @@ properties.
 
 Finally, there’s a few rare cases where the same model might need to give
 you different objects for different kinds of notifications. If you need to
-do this, you can override ``VoxModel.get_activity_object()``.
+do this, you can override ``VoxRegistration.get_activity_object()``.
 
 .. note:: If your model is registered with ``django_vox.registry.objects``,
-          it’s recommended to use ``VoxModel.get_object_address()``
+          it’s recommended to use ``VoxRegistration.get_object_address()``
           to get the object’s ID, otherwise you can use
           ``django_vox.base.full_iri(self.get_absolute_url())``.
 
@@ -117,6 +134,17 @@ settings.py:
        ...
        'django_vox.middleware.activity_inbox_middleware',
    ]
+
+For security reasons, you'll also need to override ``has_activity_endpoint``
+in the registration for whatever model will own the inbox. Extending the
+previous example, it might look like:
+
+.. code-block:: python
+
+   class UserVox(VoxRegistration):
+
+       def has_activity_endpoint(self, instance):
+           return True
 
 There‘s still a few things that remain to be documented, like reading inbox
 items, and adding the ability to perform actions on data in your models by

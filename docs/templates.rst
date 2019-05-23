@@ -90,8 +90,8 @@ the two at runtime, so that’s why they exist.
 Miscellaneous Notes
 ===================
 
-Escaping
---------
+Escaping and Markdown
+---------------------
 
 Django’s template engine has been primarily designed for outputting HTML.
 The only place in which this really matters is when it comes to escaping

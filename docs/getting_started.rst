@@ -71,14 +71,19 @@ have a registration. It might look something like this:
 .. code-block:: python
 
    from django.db import models
-   from django_vox.registry import (VoxRegistration, Notification,
-                                    Channel, objects, provides_contacts)
+   from django_vox.registry import (VoxRegistration, Notification, Channel,
+                                    Contact, objects, provides_contacts)
 
    class User(models.Model):
 
+       username = models.CharField(max_length=100, unique=True, db_index=True)
        # required email, optional mobile_phone
        email = models.EmailField(blank=False)
        mobile_phone = models.CharField(blank=True, max_length=50)
+
+       def get_full_name(self):
+           ...
+
        ...
 
 
@@ -87,12 +92,18 @@ have a registration. It might look something like this:
 
        @provides_contacts("email")
        def email_contact(self, instance, notification):
+           # you can return just the address
            yield instance.email
 
        @provides_contacts("sms")
        def email_contact(self, instance, notification):
            if instance.mobile_phone:
-               yield instance.mobile_phone
+               # or you can also ret a full contact object
+               # if you want to manually specify the name
+               yield Contact(
+                   instance.get_full_name(),
+                   "email",
+                   instance.mobile_phone)
 
        def get_channels(self):
            return {"": Channel.self(self)}
