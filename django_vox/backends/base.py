@@ -30,6 +30,7 @@ class Backend:
     ESCAPE_HTML = True
     DEPENDS = ()
     EDITOR_TYPE = "basic"
+    ALLOW_MANUAL_SENDING = True
 
     def __init__(self):
         """

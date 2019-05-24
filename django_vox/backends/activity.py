@@ -14,7 +14,7 @@ import django_vox.registry
 
 from . import base
 
-__ALL__ = ("make_contact", "Backend")
+__ALL__ = ("Backend",)
 
 PUBLIC_ADDRESS = "https://www.w3.org/ns/activitystreams#Public"
 
@@ -39,6 +39,7 @@ class Backend(base.Backend):
     VERBOSE_NAME = _("Activity Stream")
     USE_SUBJECT = True
     EDITOR_TYPE = "html-light"
+    ALLOW_MANUAL_SENDING = False
 
     # aspy.Create is the default, don't need to use it
     ACTIVITIES = (

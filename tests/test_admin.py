@@ -2,11 +2,15 @@ from unittest import mock
 
 import django.http
 from django.contrib.admin import AdminSite
+from django.contrib.auth import models as auth_models
+from django.core import mail
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
 import django_vox.admin
 import django_vox.models
+import django_vox.registry
+import django_vox.backends.activity
 
 from . import models
 
@@ -313,9 +317,98 @@ class NotificationAdminTests(TestCase):
         assert b"Hello Why are there so many blog demos" == response.content
 
 
+class NotifyAdminTests(TestCase):
+    """Test notify actoin"""
+
+    fixtures = ["test"]
+
+    def test_subscribers(self):
+        model_admin = django_vox.admin.NotificationAdmin(models.Subscriber, AdminSite())
+        queryset = models.Subscriber.objects.all()
+        get_anon_request = MockAnonRequest("GET")
+        get_request = MockRequest("GET")
+        bad_post_request = MockRequest("POST", {"post": "yes", "action": "notify"})
+        post_data = {
+            "post": "yes",
+            "action": "notify",
+            "backend": "email-html",
+            "_selected_action": 1,
+            "subject": "foo",
+            "content": "bar",
+        }
+        post_request = MockRequest("POST", post_data)
+
+        with self.assertRaises(PermissionDenied):
+            django_vox.admin.notify(model_admin, get_anon_request, queryset)
+
+        result = django_vox.admin.notify(model_admin, get_request, queryset)
+        assert 200 == result.status_code
+
+        # This shouldn't actually send, because it's missing required data
+        assert 0 == len(mail.outbox)
+        django_vox.admin.notify(model_admin, bad_post_request, queryset)
+        assert 0 == len(mail.outbox)
+        # now let's actually try to send this thing
+        django_vox.admin.notify(model_admin, post_request, queryset)
+        assert 1 == len(mail.outbox)
+        assert "bar" == mail.outbox[0].body
+        # test message sending failure
+        with self.settings(EMAIL_BACKEND="Can't import this!"):
+            django_vox.admin.notify(model_admin, post_request, queryset)
+        failed_message = django_vox.models.FailedMessage.objects.all()
+        assert len(failed_message) == 1
+        assert (
+            "Can't import this! doesn't look like a module path"
+            == failed_message[0].error
+        )
+
+    def test_unregistered(self):
+        # this model's not registered
+        model_admin = django_vox.admin.NotificationAdmin(auth_models.Group, AdminSite())
+        queryset = auth_models.Group.objects.all()
+        get_request = MockRequest("GET")
+        result = django_vox.admin.notify(model_admin, get_request, queryset)
+        assert 200 == result.status_code
+        assert (
+            "The group model is not registered or missing contact methods."
+            in result.rendered_content
+        )
+
+    def test_no_enabled_backends(self):
+        model_admin = django_vox.admin.NotificationAdmin(models.Subscriber, AdminSite())
+        queryset = models.Subscriber.objects.all()
+        get_request = MockRequest("GET")
+        # now we'll disable all the backends
+        backends = django_vox.registry.BackendManager([])
+        with mock.patch("django_vox.registry.backends", new=backends):
+            result = django_vox.admin.notify(model_admin, get_request, queryset)
+            assert 200 == result.status_code
+            assert (
+                "The subscriber model has contacts, "
+                "but they don’t have enabled backends." in result.rendered_content
+            )
+
+    def test_no_sendabled_backends(self):
+        model_admin = django_vox.admin.NotificationAdmin(models.Subscriber, AdminSite())
+        queryset = models.Subscriber.objects.all()
+        get_request = MockRequest("GET")
+        # now we'll disable all the backends
+        backends = django_vox.registry.BackendManager(
+            [django_vox.backends.activity.Backend]
+        )
+        with mock.patch("django_vox.registry.backends", new=backends):
+            result = django_vox.admin.notify(model_admin, get_request, queryset)
+            assert 200 == result.status_code
+            assert (
+                "The subscriber model has contacts, "
+                "but they don’t support manual sending." in result.rendered_content
+            )
+
+
 def test_notify_form():
-    protocols = ("email",)
-    form = django_vox.admin.NotifyForm(protocols)
+    form = django_vox.admin.NotifyForm(
+        django_vox.registry.backends.by_protocol("email")
+    )
     backend_ids = {"email-md", "email-html", "postmark-template", "email"}
     preview_url = "/admin/django_vox/notification/preview/__backend__/"
     assert preview_url == form.fields["content"].widget.attrs["data-preview-url"]

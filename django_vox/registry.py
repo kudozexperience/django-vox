@@ -16,7 +16,7 @@ from django.db.models.fields.related_descriptors import ForwardManyToOneDescript
 from django.utils.translation import ugettext_lazy as _
 
 from django_vox import settings, base
-from django_vox.backends.base import AttachmentData
+from django_vox.backends.base import AttachmentData, Backend
 
 PROTOCOLS = {
     "email": _("Email"),
@@ -68,13 +68,13 @@ class BackendManager:
             self.proto_map[cls.PROTOCOL].append(cls)
             self.id_map[cls.ID] = cls
 
-    def by_protocol(self, protocol: str):
+    def by_protocol(self, protocol: str) -> typing.List[Backend]:
         return self.proto_map[protocol]
 
-    def by_id(self, id_val):
+    def by_id(self, id_val) -> Backend:
         return self.id_map[id_val]
 
-    def all(self):
+    def all(self) -> typing.List[Backend]:
         return self.id_map.values()
 
     def protocols(self):

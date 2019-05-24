@@ -405,38 +405,60 @@ class NotifyForm(forms.Form):
     subject = forms.CharField(label=_("Subject"), required=False)
     content = forms.CharField(label=_("Content"), required=True, widget=forms.Textarea)
 
-    def __init__(self, protocols, *args, **kwargs):
+    def __init__(self, backends, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["content"].widget.attrs["data-preview-url"] = reverse(
             "admin:django_vox_preview", args=("__backend__",)
         )
-        backends = [
-            b
-            for bs in (registry.backends.by_protocol(p) for p in protocols)
-            for b in bs
-        ]
         self.fields["backend"].set_backend_choices(backends)
 
 
 def notify(modeladmin, request, queryset):
-
-    model = modeladmin.model
-    opts = getattr(model, "_meta", None)
-    if opts is None:
-        raise RuntimeError("modeladmin must be a django ModelAdmin")
+    if not request.user.is_staff:
+        raise PermissionDenied
 
     notification = models.OneTimeNotification
-    # we don't want to have to evaluate this too many times
-    query_list = list(queryset)
+    model = queryset.model
     protocols = set()
-    for obj in query_list:
-        for contact in obj.get_contacts_for_notification(notification):
-            protocols.add(contact.protocol)
+    opts = modeladmin.model._meta
 
-    if request.POST.get("post"):
-        form = NotifyForm(protocols, request.POST)
+    if model in registry.objects:
+        registration = registry.objects[model].registration
+        # we don't want to have to evaluate this too many times
+        query_list = list(queryset)
+
+        if isinstance(registration, registry._ModelRegistration):
+            for obj in query_list:
+                for contact in obj.get_contacts_for_notification(notification):
+                    protocols.add(contact.protocol)
+        else:
+            protocols = set(registration.get_supported_protocols())
+
+        # now filter protocols to make sure there's an appropriate backend
+        all_backends = tuple(
+            b for p in protocols for b in registry.backends.by_protocol(p)
+        )
+        backends = tuple(b for b in all_backends if b.ALLOW_MANUAL_SENDING)
     else:
-        form = NotifyForm(protocols)
+        all_backends = ()
+        backends = ()
+        protocols = ()
+        query_list = []
+
+    if not backends:
+        form = NotifyForm(backends, {})
+        if all_backends:
+            error = "The {} model has contacts, but they don’t support manual sending."
+        elif protocols:
+            error = "The {} model has contacts, but they don’t have enabled backends."
+        else:
+            error = "The {} model is not registered or missing contact methods."
+        form.full_clean()
+        form.add_error("backend", error.format(model._meta.verbose_name))
+    elif request.POST.get("post"):
+        form = NotifyForm(backends, request.POST)
+    else:
+        form = NotifyForm(backends)
     context = {
         "title": _("Notify"),
         "opts": opts,
@@ -451,16 +473,17 @@ def notify(modeladmin, request, queryset):
     if request.POST.get("post") == "yes":
         if form.is_valid():
             # okay, now we issue the notification
+            backend = registry.backends.by_id(form.cleaned_data["backend"])
             contacts = [
                 c
                 for cs in (
-                    obj.get_contacts_for_notification(notification)
+                    registration.get_contacts(obj, backend.PROTOCOL, notification)
                     for obj in query_list
                 )
                 for c in cs
             ]
             result = notification.send(
-                form.cleaned_data["backend"],
+                backend.ID,
                 contacts,
                 form.cleaned_data["from_address"],
                 form.cleaned_data["subject"],

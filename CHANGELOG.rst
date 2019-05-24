@@ -1,6 +1,26 @@
 CHANGES
 =======
 
+4.0
+---
+
+This version includes a new registration system for models so that you
+don’t have to subclass ``VoxModel`` (which is a problem for 3rd party models).
+The new way of registering the models is described in detail in the
+documentation.
+
+Incompatibilities with Version 3:
+
+* The actor & target arguments on ``Notification.issue`` must be specified
+  by keyword arguments now. This doesn’t affect
+  ``VoxModel.issue_notification``, so it’s only relevant if you were manually
+  loading Notifications and triggering them.
+
+Other changes:
+
+* Notify will use a default address if none is specified
+* Notifications now have a “last updated” field
+
 3.6
 ---
 

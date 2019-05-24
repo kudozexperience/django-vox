@@ -264,3 +264,23 @@ def test_load_aspy_object():
     assert obj["object"]["updated"] == datetime.datetime(
         2018, 11, 14, 6, 47, 34, tzinfo=pytz.utc
     )
+
+
+def test_one_time_notification():
+    """
+    Test random fields on OneTimeNotification
+
+    These don't normally get called, but we want to make sure
+    they have reasonable values
+    """
+    n = django_vox.models.OneTimeNotification
+    assert "<OneTimeNotification>" == str(n)
+    assert None is n.object_type
+    assert None is n.actor_type
+    assert None is n.target_type
+    assert ("", "", "") == n.natural_key()
+    assert None is n.get_object_model()
+    assert None is n.get_actor_type()
+    assert None is n.get_target_type()
+    assert aspy.Create == n.get_activity_type()
+    assert {} == n.get_recipient_variables()

@@ -4,13 +4,13 @@ Django settings for django_vox tests
 # based of django-debug-toolbar
 # https://github.com/jazzband/django-debug-toolbar/blob/master/tests/settings.py
 import os
+from .settings import SECRET_KEY, TEMPLATES, MIDDLEWARE  # noqa: F401
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 # Quick-start development settings - unsuitable for production
 
-from .settings import SECRET_KEY, TEMPLATES, MIDDLEWARE
 
 # Application definition
 
