@@ -71,7 +71,7 @@ it's worth it.
    :target: https://gitlab.com/alantrick/django-vox/
    :alt: Coverage Status
 
-.. |docs-badge| image:: https://img.shields.io/readthedocs/django-vox.svg
+.. |docs-badge| image:: https://img.shields.io/badge/docs-latest-informational.svg
    :target: `the documentation`_
    :alt: Documentation
 
@@ -79,5 +79,5 @@ it's worth it.
    :target: https://pypi.org/project/django-vox/
    :alt: Project on PyPI
 
-.. _the documentation: http://django-vox.readthedocs.io/en/latest/?badge=latest
+.. _the documentation: https://alantrick.gitlab.io/django-vox/
 
