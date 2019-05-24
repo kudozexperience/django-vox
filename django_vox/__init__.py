@@ -1,3 +1,3 @@
 default_app_config = "django_vox.apps.VoxConfig"
 
-__version__ = "4.0.0dev1"
+__version__ = "4.0.0"
