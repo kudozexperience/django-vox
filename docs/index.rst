@@ -12,7 +12,7 @@ Django Vox Documentation
    templates
    activities
    demo
-   extras
+   settings
    comparison
 
 .. toctree::

@@ -30,7 +30,8 @@ BASE_INSTALLED_APPS = [
     "django_vox",
 ]
 
-INSTALLED_APPS = BASE_INSTALLED_APPS + ["tests"]
+INSTALLED_APPS = BASE_INSTALLED_APPS + ["background_task", "tests"]
+
 
 FIXTURE_DIRS = ["fixtures"]
 

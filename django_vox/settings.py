@@ -10,6 +10,7 @@ __all__ = (
     "INBOX_LIMIT",
     "THROW_EXCEPTIONS",
     "ACTIVITY_REGEX",
+    "ISSUE_METHOD",
     "MARKDOWN_EXTRAS",
     "MARKDOWN_LINK_PATTERNS",
     "TWILIO_ACCOUNT_SID",
@@ -30,6 +31,7 @@ BACKENDS = []
 INBOX_LIMIT = 500
 THROW_EXCEPTIONS = getattr(django.conf.settings, "DEBUG", False)
 ACTIVITY_REGEX = r"activity/(?P<id>[0-9a-z\-]+)/$"
+ISSUE_METHOD = "django_vox.models.Notification.issue_now"
 
 # Markdown settings
 URL_PATTERN = re.compile(

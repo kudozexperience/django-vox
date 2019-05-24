@@ -1,6 +1,8 @@
 import abc
+import functools
 import inspect
 import json
+import pydoc
 import random
 import uuid
 import warnings
@@ -11,6 +13,7 @@ import dateutil.parser
 import django.conf
 import django.utils.timezone
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.db.models import NOT_PROVIDED, Q
 from django.template import Context
@@ -47,6 +50,19 @@ __all__ = (
     "FailedMessage",
     "InboxItem",
 )
+
+
+@functools.lru_cache()
+def get_issue_function():
+    method_string = settings.ISSUE_METHOD
+    issue_func = pydoc.locate(method_string)
+    if not callable(issue_func):
+        raise ImproperlyConfigured(
+            "DJANGO_VOX_ISSUE_METHOD does not point to a valid function ({})".format(
+                method_string
+            )
+        )
+    return issue_func
 
 
 def load_aspy_object(json_str):
@@ -435,7 +451,15 @@ class Notification(models.Model):
             for key, channel in channel_data.items():
                 yield key, channel.name
 
-    def issue(self, obj: models.Model, target=None, actor=None):
+    def issue(self, obj: models.Model, *, actor=None, target=None):
+        """
+        Either issue a notification now, or later, depending on the settings.
+
+        See the documentation for ``Notification.issue`` for more details.
+        """
+        return get_issue_function()(self, obj, actor=actor, target=target)
+
+    def issue_now(self, obj: models.Model, *, actor=None, target=None):
         """
         To send a notification to a user, get all the user's active methods.
         Then get the backend for each method and find the relevant template
@@ -447,6 +471,7 @@ class Notification(models.Model):
         :param actor: user who initiated the notification
         :return: None
         """
+
         # check
         parameters = {"content": obj, "object": obj, "notification": self}
         if target is not None:
@@ -932,7 +957,7 @@ class VoxModel(models.Model, metaclass=VoxModelBase):
     def issue_notification(self, codename: str, target=None, actor=None):
         warnings.warn(VoxOptions.DEPRECATION_MESSAGE, DeprecationWarning)
         notification = self.get_notification(codename)
-        notification.issue(self, target, actor)
+        notification.issue(self, actor=actor, target=target)
 
     def get_activity_object(self, codename, actor, target):
         """Return an aspy.Object object for the activity.

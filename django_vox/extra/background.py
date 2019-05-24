@@ -1,3 +1,5 @@
+import warnings
+
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 
@@ -13,6 +15,13 @@ class BackgroundVoxModel(django_vox.models.VoxModel):
         abstract = True
 
     def issue_notification(self, codename: str, target=None, actor=None):
+        warnings.warn(
+            "BackgroundVoxModel is deprecated and will be removed in "
+            "django-vox 5.0. It has been replaced by setting "
+            "DJANGO_VOX_ISSUE_METHOD to "
+            "'django_vox.extra.background_tasks.issue'."
+        )
+
         kwargs = {}
         self_cls_str = str(self.__class__._meta)
         if target is not None:
@@ -49,7 +58,7 @@ def issue_notification(
     notification = django_vox.models.Notification.objects.get(
         codename=codename, object_type=object_ct
     )
-    notification.issue(obj, target, actor)
+    notification.issue(obj, actor=actor, target=target)
 
 
 try:
