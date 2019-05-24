@@ -1,3 +1,6 @@
+import inspect
+import pydoc
+
 import dataclasses
 from typing import List
 
@@ -8,7 +11,24 @@ import django.template
 import django.utils.html
 from django.template import Context
 
-__ALL__ = ("Backend", "template_from_string")
+__ALL__ = ("Backend", "template_from_string", "load_backend")
+
+
+def load_backend(backend_str: str):
+    thing = pydoc.locate(backend_str)
+    if thing is None:
+        raise RuntimeError("Unable to locate backend {}".format(backend_str))
+    if inspect.ismodule(thing):
+        thing = getattr(thing, "Backend", None)
+        if not inspect.isclass(thing):
+            raise RuntimeError(
+                "Backend module {} must have class 'Backend'".format(backend_str)
+            )
+        else:
+            return thing
+    if inspect.isclass(thing):
+        return thing
+    raise RuntimeError("Backend {} must be a class or module".format(backend_str))
 
 
 def html_format(text: str):

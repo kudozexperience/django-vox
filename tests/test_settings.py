@@ -11,21 +11,17 @@ import django_vox.registry
 from . import models
 
 
-def test_backends():
+def test_backend_defaults():
     with override_settings(DJANGO_VOX_BACKENDS=None):
         backends = django_vox.settings.BACKENDS
         # we should have all the backend dependencies installed for
         # testing purposes
         expected = [
-            "django_vox.backends.html_email.Backend",
-            "django_vox.backends.markdown_email.Backend",
-            "django_vox.backends.postmark_email.Backend",
-            "django_vox.backends.template_email.Backend",
-            "django_vox.backends.twilio.Backend",
-            "django_vox.backends.twitter.Backend",
-            "django_vox.backends.slack.Backend",
-            "django_vox.backends.json_webhook.Backend",
-            "django_vox.backends.xmpp.Backend",
+            "django_vox.backends.markdown_email",
+            "django_vox.backends.template_email",
+            "django_vox.backends.twilio",
+            "django_vox.backends.twitter",
+            "django_vox.backends.xmpp",
         ]
         assert expected == backends
 

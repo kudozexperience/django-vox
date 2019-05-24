@@ -11,7 +11,7 @@ Getting the code
 The recommended way to install django-vox is via pip_ (on Windows,
 replace ``pip3`` with ``pip``) ::
 
-    $ pip3 install django-vox[markdown,twilio,html]
+    $ pip3 install django-vox[markdown,twilio]
 
 .. _pip: https://pip.pypa.io/
 

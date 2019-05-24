@@ -16,7 +16,7 @@ from django.db.models.fields.related_descriptors import ForwardManyToOneDescript
 from django.utils.translation import ugettext_lazy as _
 
 from django_vox import settings, base
-from django_vox.backends.base import AttachmentData, Backend
+from django_vox.backends.base import AttachmentData, Backend, load_backend
 
 PROTOCOLS = {
     "email": _("Email"),
@@ -561,7 +561,7 @@ class ObjectManager(dict):
         raise ObjectNotFound(msg)
 
 
-backends = BackendManager(pydoc.locate(name) for name in settings.BACKENDS)
+backends = BackendManager(load_backend(name) for name in settings.BACKENDS)
 
 objects = ObjectManager()
 

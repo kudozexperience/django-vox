@@ -86,16 +86,17 @@ DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3"}}
 AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)
 
 DJANGO_VOX_BACKENDS = [
+    # we can specify class or module
     "django_vox.backends.activity.Backend",
-    "django_vox.backends.html_email.Backend",
-    "django_vox.backends.markdown_email.Backend",
-    "django_vox.backends.postmark_email.Backend",
-    "django_vox.backends.template_email.Backend",
-    "django_vox.backends.twilio.Backend",
-    # 'django_vox.backends.twitter.Backend',
-    # 'django_vox.backends.slack.Backend',
-    "django_vox.backends.json_webhook.Backend",
-    # 'django_vox.backends.xmpp.Backend',
+    "django_vox.backends.html_email",
+    "django_vox.backends.markdown_email",
+    "django_vox.backends.postmark_email",
+    "django_vox.backends.template_email",
+    "django_vox.backends.twilio",
+    # "django_vox.backends.twitter",
+    # "django_vox.backends.slack",
+    "django_vox.backends.json_webhook",
+    # "django_vox.backends.xmpp",
 ]
 DJANGO_VOX_VIEW_INBOX = False
 DEFAULT_FROM_EMAIL = "admin@example.test"

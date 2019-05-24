@@ -1,9 +1,10 @@
 import importlib.util
-import pydoc
 import re
 import sys
 
 import django.conf
+
+from django_vox.backends.base import load_backend
 
 __all__ = (
     "BACKENDS",
@@ -92,20 +93,22 @@ class _Sneaky:
         result = []
         # Automatically set based on libraries available
         default_backends = [
-            # activity backend intentionally left out because
-            # it requires lot of setup
-            "django_vox.backends.html_email.Backend",
-            "django_vox.backends.markdown_email.Backend",
-            "django_vox.backends.postmark_email.Backend",
-            "django_vox.backends.template_email.Backend",
-            "django_vox.backends.twilio.Backend",
-            "django_vox.backends.twitter.Backend",
-            "django_vox.backends.slack.Backend",
-            "django_vox.backends.json_webhook.Backend",
-            "django_vox.backends.xmpp.Backend",
+            "django_vox.backends.markdown_email",
+            "django_vox.backends.template_email",
+            "django_vox.backends.twilio",
+            "django_vox.backends.twitter",
+            "django_vox.backends.xmpp",
+            # This backend requires lot of setup
+            # "django_vox.backends.activity",
+            # this backend is not very user-friendly
+            # "django_vox.backends.html_email",
+            # disabled because they're proprietary or not commonly used
+            # "django_vox.backends.postmark_email",
+            # "django_vox.backends.slack",
+            # "django_vox.backends.json_webhook",
         ]
         for cls_str in default_backends:
-            cls = pydoc.locate(cls_str)
+            cls = load_backend(cls_str)
             for dep in cls.DEPENDS:
                 if importlib.util.find_spec(dep) is None:
                     continue
