@@ -365,6 +365,8 @@ class Notification(models.Model):
         ),
     )
 
+    last_updated = models.DateTimeField(_("last updated"), auto_now=True)
+
     objects = NotificationManager()
 
     @classmethod

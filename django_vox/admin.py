@@ -206,7 +206,13 @@ class TemplateInline(admin.StackedInline):
 
 class NotificationAdmin(admin.ModelAdmin):
     change_form_template = "django_vox/change_form.html"
-    list_display = ("__str__", "description", "required", "template_count")
+    list_display = (
+        "__str__",
+        "description",
+        "required",
+        "template_count",
+        "last_updated",
+    )
     list_filter = ("object_type",)
     inlines = [TemplateInline]
     form = NotificationForm

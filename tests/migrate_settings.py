@@ -10,7 +10,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # Quick-start development settings - unsuitable for production
 
-SECRET_KEY = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+from .settings import SECRET_KEY, TEMPLATES, MIDDLEWARE
 
 # Application definition
 

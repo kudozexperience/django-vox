@@ -14,18 +14,21 @@
     codename: created
     object_type: [auth, user]
     from_code: true
+    last_updated: 2001-1-1
 - model: django_vox.notification
   pk: 2
   fields:
     codename: updated
     object_type: [auth, user]
     from_code: true
+    last_updated: 2001-1-1
 - model: django_vox.notification
   pk: 3
   fields:
     codename: deleted
     object_type: [auth, user]
     from_code: true
+    last_updated: 2001-1-1
 # subscriber
 - model: django_vox.notification
   pk: 4
@@ -33,18 +36,21 @@
     codename: created
     object_type: [tests, subscriber]
     from_code: true
+    last_updated: 2001-1-1
 - model: django_vox.notification
   pk: 5
   fields:
     codename: updated
     object_type: [tests, subscriber]
     from_code: true
+    last_updated: 2001-1-1
 - model: django_vox.notification
   pk: 6
   fields:
     codename: deleted
     object_type: [tests, subscriber]
     from_code: true
+    last_updated: 2001-1-1
 # article
 - model: django_vox.notification
   pk: 7
@@ -55,6 +61,7 @@
     target_type: [tests, article]
     description: Notification that a new article was created
     from_code: true
+    last_updated: 2001-1-1
     activity_type: Create
 # comment
 - model: django_vox.notification
@@ -65,6 +72,7 @@
     actor_type: [tests, subscriber]
     description: Notification from subscriber to author that a comment was posted
     from_code: true
+    last_updated: 2001-1-1
 ## user entries
 - model: auth.user
   pk: 1
