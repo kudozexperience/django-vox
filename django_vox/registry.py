@@ -1,6 +1,5 @@
 import collections
 import inspect
-import pydoc
 import typing
 
 import dataclasses

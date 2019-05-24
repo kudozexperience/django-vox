@@ -18,22 +18,24 @@ and you can mix/match them. For example::
 
 In order to add or remove backends, you need to set the
 ``DJANGO_VOX_BACKENDS`` setting in your projects ``settings.py``
-file. The setting is a list of class names for backends that are
+file. The setting is a list of module names for backends that are
 in-use/enabled. If not set, the default is (assuming you have the
 required dependencies)::
 
     DJANGO_VOX_BACKENDS = (
-        # disabled by default
-        # 'django_vox.backends.activity.Backend',
-        'django_vox.backends.html_email.Backend',
-        'django_vox.backends.markdown_email.Backend',
-        'django_vox.backends.postmark_email.Backend',
-        'django_vox.backends.template_email.Backend',
-        'django_vox.backends.twilio.Backend',
-        'django_vox.backends.twitter.Backend',
-        'django_vox.backends.slack.Backend',
-        'django_vox.backends.json_webhook.Backend',
-        'django_vox.backends.xmpp.Backend',
+        "django_vox.backends.markdown_email",
+        "django_vox.backends.template_email",
+        "django_vox.backends.twilio",
+        "django_vox.backends.twitter",
+        "django_vox.backends.xmpp",
+        # This backend requires lot of setup
+        # "django_vox.backends.activity",
+        # this backend is not very user-friendly
+        # "django_vox.backends.html_email",
+        # disabled because they're proprietary or not commonly used
+        # "django_vox.backends.postmark_email",
+        # "django_vox.backends.slack",
+        # "django_vox.backends.json_webhook",
     )
 
 Django-vox provides a few built-in backends. Here's how to
@@ -44,8 +46,8 @@ Activity Backend
 
 Protocol
   ``activity``
-Class
-    ``django_vox.backends.activity.Backend``
+Module
+    ``django_vox.backends.activity``
 
 This is the backend for Activity Streams support. Setup is covered on
 the :doc:`activities` page.
@@ -71,8 +73,8 @@ There are 3 backends included:
 HTML Email Backend
 ~~~~~~~~~~~~~~~~~~
 
-Class
-    ``django_vox.backends.html_email.Backend``
+Module
+    ``django_vox.backends.html_email``
 
 When using this, the content of your template will have to be HTML. If
 you don't, it will be HTML anyways, but it will look real bad, and the
@@ -85,8 +87,8 @@ Incidentally, the subject field is not HTML formatted.
 Markdown Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Class
-    ``django_vox.backends.markdown_email.Backend``
+Module
+    ``django_vox.backends.markdown_email``
 Extra
  ``[markdown]``
 
@@ -97,8 +99,8 @@ more intuitive.
 Template-based Email Backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Class
-    ``django_vox.backends.template_email.Backend``
+Module
+    ``django_vox.backends.template_email``
 
 This backend isn't recommended because it's probably too confusing to be
 wroth it. However, if you really need to tailor-make your emails, it's
@@ -115,8 +117,8 @@ parts to them (subject, text, and html). The basic form looks like this::
 Postmark Templates
 ------------------
 
-Class
-    ``django_vox.backends.postmark_email.Backend``
+Module
+    ``django_vox.backends.postmark_email``
 
 This backend requires one config setting: ``DJANGO_VOX_POSTMARK_TOKEN``. It
 should be, unsurprisingly, your token for interacting with the postmark API.
@@ -131,8 +133,8 @@ Twilio
 
 Protocol
   ``sms``
-Class
-    ``django_vox.backends.twilio.Backend``
+Module
+    ``django_vox.backends.twilio``
 Extra
   ``[twilio]``
 
@@ -150,8 +152,8 @@ Twitter
 
 Protocol
   ``twitter``
-Class
-    ``django_vox.backends.twitter.Backend``
+Module
+    ``django_vox.backends.twitter``
 Extra
   ``[twitter]``
 
@@ -187,8 +189,8 @@ Webhook (JSON)
 
 Protocol
   ``json-webhook``
-Class
-    ``django_vox.backends.json_webhook.Backend``
+Module
+    ``django_vox.backends.json_webhook``
 
 This backend post JSON-formatted data to webhook. It's useful for
 implementing generic webhooks or integrating with systems like
@@ -208,8 +210,8 @@ Webhook (Slack)
 
 Protocol
   ``slack-webhook``
-Class
-    ``django_vox.backends.slack.Backend``
+Module
+    ``django_vox.backends.slack``
 
 This backend requires no configuration in django, all of the configuration
 is essentially part of the addresses used in the protocol. For setting up
@@ -221,8 +223,8 @@ XMPP
 
 Protocol
   ``xmpp``
-Class
-    ``django_vox.backends.xmpp.Backend``
+Module
+    ``django_vox.backends.xmpp``
 Extra
   ``[xmpp]``
 

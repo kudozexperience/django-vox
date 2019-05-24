@@ -15,9 +15,11 @@ Incompatibilities with Version 3:
   by keyword arguments now. This doesn’t affect
   ``VoxModel.issue_notification``, so it’s only relevant if you were manually
   loading Notifications and triggering them.
+* A few default backends were are no longer defaults
 
 Other changes:
 
+* Backend settings can just reference the class, and not the module
 * Notify will use a default address if none is specified
 * Notifications now have a “last updated” field
 
