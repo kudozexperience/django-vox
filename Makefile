@@ -1,4 +1,4 @@
-.PHONY: flake8 test coverage
+.PHONY: flake8 test coverage docs
 
 flake8:
 	flake8 django_vox tests
@@ -19,3 +19,7 @@ demo:
 
 coverage:
 	pytest --cov=django_vox tests/
+
+docs:
+	sphinx-apidoc -f -o docs/api django_vox
+	sphinx-build -a docs build/sphinx

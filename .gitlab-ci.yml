@@ -23,7 +23,7 @@ pages:
   script:
   - pip install -U pip setuptools
   - pip install -e .[docs]
-  - python setup.py build_sphinx
+  - make docs
   - mv build/sphinx/html/ public/
   artifacts:
     paths:
