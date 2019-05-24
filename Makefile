@@ -22,4 +22,4 @@ coverage:
 
 docs:
 	sphinx-apidoc -f -o docs/api django_vox
-	sphinx-build -a docs build/sphinx
+	sphinx-build -a docs build/sphinx/html
