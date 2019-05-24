@@ -72,7 +72,7 @@ sample in the :doc:`getting_started` page.
 
 .. code-block:: python
 
-   class UserVox(VoxRegistration):
+   class UserRegistration(Registration):
 
        @provides_contacts("activity")
        def activity_contact(self, instance, notification):
@@ -81,8 +81,10 @@ sample in the :doc:`getting_started` page.
        ...
 
    # add the URIs to the registration
-   objects.add(User, UserVox, regex=r'^users/(?P<username>\w+)/$')
-   objects.add(PurchaseOrder, PurchaseOrderVox, regex=r'^po/(?P<id>[0-9]+)/$')
+   objects.add(User, UserRegistration, regex=r'^users/(?P<username>\w+)/$')
+   objects.add(
+       PurchaseOrder, PurchaseOrderRegistration, regex=r'^po/(?P<id>[0-9]+)/$'
+   )
 
 
 Customizing Activity Types
@@ -111,10 +113,10 @@ properties.
 
 Finally, there’s a few rare cases where the same model might need to give
 you different objects for different kinds of notifications. If you need to
-do this, you can override ``VoxRegistration.get_activity_object()``.
+do this, you can override ``Registration.get_activity_object()``.
 
 .. note:: If your model is registered with ``django_vox.registry.objects``,
-          it’s recommended to use ``VoxRegistration.get_object_address()``
+          it’s recommended to use ``Registration.get_object_address()``
           to get the object’s ID, otherwise you can use
           ``django_vox.base.full_iri(self.get_absolute_url())``.
 
@@ -141,7 +143,7 @@ previous example, it might look like:
 
 .. code-block:: python
 
-   class UserVox(VoxRegistration):
+   class UserRegistration(Registration):
 
        def has_activity_endpoint(self, instance):
            return True

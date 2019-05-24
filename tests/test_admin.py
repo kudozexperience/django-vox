@@ -60,7 +60,9 @@ class VariableTests(TestCase):
 
     @staticmethod
     def test_variables():
-        notification = models.ArticleVox.created.get_notification(models.Article)
+        notification = models.ArticleRegistration.created.get_notification(
+            models.Article
+        )
         variables = notification.get_recipient_variables()
         assert {
             "si",

@@ -244,7 +244,7 @@ class VoxOptions(object):
 
     DEPRECATION_MESSAGE = (
         "Use of VoxMeta has been deprecated and replaced by "
-        "django_vox.registry.VoxRegistration, "
+        "django_vox.registry.Registration, "
         "it will be removed in django-vox 5.0"
     )
 

@@ -15,12 +15,12 @@ from django_vox.registry import (
     Channel,
     Notification,
     Attachment,
-    VoxRegistration,
-    SignalVoxRegistration,
+    Registration,
+    SignalRegistration,
 )
 
 
-class UserVox(SignalVoxRegistration):
+class UserRegistration(SignalRegistration):
 
     vcard = Attachment(
         attr="make_vcard", mime_string="text/vcard", label=_("Contact Info")
@@ -84,13 +84,13 @@ class Article(models.Model):
         new = self.created_at is None
         super().save(*args, **kwargs)
         if new:
-            ArticleVox.created.issue(self, actor=self.author, target=self)
+            ArticleRegistration.created.issue(self, actor=self.author, target=self)
 
     def get_subscribers(self):
         return Subscriber.objects.filter(Q(author=self.author) | Q(author=None))
 
 
-class ArticleVox(VoxRegistration):
+class ArticleRegistration(Registration):
     # we're going to use auto generated activity entries here
 
     created = Notification(
@@ -182,7 +182,7 @@ class Subscriber(models.Model):
         return reverse("tests:subscriber", args=[str(self.id)])
 
 
-class SubscriberVox(SignalVoxRegistration):
+class SubscriberVox(SignalRegistration):
     @provides_contacts("email")
     def email_contact(self, obj, _notification):
         yield Contact(obj.name, "email", obj.email)
@@ -233,11 +233,11 @@ class Comment(VoxModel):
 
 
 # adding channels & registrations the new way
-objects.add(auth_models.User, UserVox, regex=r"^~(?P<id>[0-9]+)/$")
+objects.add(auth_models.User, UserRegistration, regex=r"^~(?P<id>[0-9]+)/$")
 
 objects.add(Subscriber, SubscriberVox, regex=r"^\.(?P<id>[0-9]+)/$")
 
-objects.add(Article, ArticleVox, regex=None)
+objects.add(Article, ArticleRegistration, regex=None)
 
 # the old way
 

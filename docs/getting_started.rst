@@ -71,7 +71,7 @@ have a registration. It might look something like this:
 .. code-block:: python
 
    from django.db import models
-   from django_vox.registry import (VoxRegistration, Notification, Channel,
+   from django_vox.registry import (Registration, Notification, Channel,
                                     Contact, objects, provides_contacts)
 
    class User(models.Model):
@@ -87,7 +87,7 @@ have a registration. It might look something like this:
        ...
 
 
-   class UserVox(VoxRegistration):
+   class UserRegistration(Registration):
 
 
        @provides_contacts("email")
@@ -123,7 +123,7 @@ have a registration. It might look something like this:
                created, old, self)
 
 
-   class PurchaseOrderVox(VoxRegistration):
+   class PurchaseOrderRegistration(Registration):
 
        received = Notification(
            _("Notification that order was received."))
@@ -140,8 +140,8 @@ have a registration. It might look something like this:
            return {"cust": Channel.field(PurchaseOrder.customer)}
 
    # the actual registration
-   objects.add(User, UserVox, regex=None)
-   objects.add(PurchaseOrder, PurchaseOrderVox, regex=None)
+   objects.add(User, UserRegistration, regex=None)
+   objects.add(PurchaseOrder, PurchaseOrderRegistration, regex=None)
 
 In the above example, you have a User model, which can receive emails, and
 optionally an SMS message. You also have purchase orders that have two

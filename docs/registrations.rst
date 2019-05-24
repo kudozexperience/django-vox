@@ -27,7 +27,7 @@ built-in users. You might end up with code like this
    class Page(models.Model):
        content = models.TextField()
 
-   class PageVox(VoxRegistration):
+   class PageRegistration(Registration):
 
        edited = Notification(
            _("Notification that the page was edited"),
@@ -42,7 +42,7 @@ built-in users. You might end up with code like this
        form = PageForm(request.POST, instance=page)
        if form.is_valid():
            form.save()
-           PageVox.edited.issue(page, actor=request.user, target=page)
+           PageRegistration.edited.issue(page, actor=request.user, target=page)
 
 Note that now ``actor`` and ``target`` are specified when issuing the
 notification. These arguments are used if and only if there ``actor_type`` and
@@ -84,12 +84,12 @@ making a registration class.
 .. code-block:: python
 
    import pdfkit
-   from django_vox.registry import Attachment, VoxRegistration
+   from django_vox.registry import Attachment, Registration
 
    class Page(models.Model):
        html_content = models.TextField()
 
-   class PageVox(VoxRegistration):
+   class PageRegistration(Registration):
 
        pdf = Attachment(
            # attr is an instance method, or a callable on either
@@ -136,7 +136,7 @@ a ``django_vox.registry.Channel`` object. There’s current 3 ways to make
 
    from django.utils import timezone
    from django.db import models
-   from django_vox.registry import Channel, VoxRegistration, provides_contacts
+   from django_vox.registry import Channel, Registration, provides_contacts
 
    def youth_members(org):
        # 18 years ago
@@ -153,7 +153,7 @@ a ``django_vox.registry.Channel`` object. There’s current 3 ways to make
        def email_contact(self, instance, notification):
            yield instance.org_email
 
-   class OrganisationVox(VoxRegistration):
+   class OrganisationRegistration(Registration):
 
        def get_channels(self):
            return {
@@ -168,8 +168,8 @@ a ``django_vox.registry.Channel`` object. There’s current 3 ways to make
 Builtin Registration Classes
 ============================
 
-You’ve already seen the ``VoxRegistration`` class already. There’s another
-built-in registration class called ``SignalVoxRegistration``. It uses
+You’ve already seen the ``Registration`` class already. There’s another
+built-in registration class called ``SignalRegistration``. It uses
 Django’s built-in model signals and provides three notifications (created,
 updated, and deleted) that automatically work. You can use this registration
 class directly, but if you want to contact anything besides site contacts,

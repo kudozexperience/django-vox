@@ -294,7 +294,7 @@ def provides_contacts(protocol_id):
     return inner
 
 
-class VoxRegistrationBase(type):
+class RegistrationBase(type):
     """
     Metaclass for Vox extensions.
     """
@@ -318,18 +318,18 @@ class VoxRegistrationBase(type):
             if rec_proto is not None:
                 proto_func[rec_proto] = value
         if proto_func:
-            new._vox_protocol_functions = new._vox_protocol_functions.copy()
-            new._vox_protocol_functions.update(proto_func)
+            new._protocol_functions = new._protocol_functions.copy()
+            new._protocol_functions.update(proto_func)
         if attachment_dict:
-            new._vox_attachments = new._vox_attachments.copy()
-            new._vox_attachments.update(attachment_dict)
+            new._attachments = new._attachments.copy()
+            new._attachments.update(attachment_dict)
         if notification_dict:
-            new._vox_notifications = new._vox_notifications.copy()
-            new._vox_notifications.update(notification_dict)
+            new._notifications = new._notifications.copy()
+            new._notifications.update(notification_dict)
         return new
 
 
-class VoxRegistration(metaclass=VoxRegistrationBase):
+class Registration(metaclass=RegistrationBase):
     """
     A base class for Vox definitions
 
@@ -340,24 +340,24 @@ class VoxRegistration(metaclass=VoxRegistrationBase):
 
     """
 
-    _vox_protocol_functions = {}
-    _vox_attachments = {}
-    _vox_notifications = {}
+    _protocol_functions = {}
+    _attachments = {}
+    _notifications = {}
 
     def __init__(self, model):
         self.model = model
 
     def get_attachments(self) -> typing.List[Attachment]:
-        return self._vox_attachments.values()
+        return self._attachments.values()
 
     def get_attachment(self, key) -> Attachment:
-        return self._vox_attachments.get(key)
+        return self._attachments.get(key)
 
     def get_notifications(self) -> typing.List[Notification]:
-        return self._vox_notifications.values()
+        return self._notifications.values()
 
     def get_notification(self, key) -> Notification:
-        return self._vox_notifications.get(key)
+        return self._notifications.get(key)
 
     def get_channels(self) -> typing.Mapping[str, Channel]:
         return {}
@@ -366,10 +366,10 @@ class VoxRegistration(metaclass=VoxRegistrationBase):
         return bool(self.get_channels())
 
     def get_supported_protocols(self):
-        return self._vox_protocol_functions.keys()
+        return self._protocol_functions.keys()
 
     def get_contacts(self, instance, protocol, notification):
-        func = self._vox_protocol_functions.get(protocol, None)
+        func = self._protocol_functions.get(protocol, None)
         if func is None:
             return ()
         name = str(instance)
@@ -404,18 +404,18 @@ class VoxRegistration(metaclass=VoxRegistrationBase):
             return base.full_iri(url)
 
 
-class _VoxModelRegistration(VoxRegistration):
+class _ModelRegistration(Registration):
     def __init__(self, model):
         super().__init__(model)
         meta = model._vox_meta
-        notification_dict = self._vox_notifications.copy()
+        notification_dict = self._notifications.copy()
 
         for notification in meta.notifications:
             notification_dict[notification.codename] = notification
-        self._vox_notifications = notification_dict
+        self._notifications = notification_dict
 
 
-class SignalVoxRegistration(VoxRegistration):
+class SignalRegistration(Registration):
     """
     A Notification registration that automatically connects model signals
     """
@@ -441,7 +441,7 @@ class SignalVoxRegistration(VoxRegistration):
 
 
 class ObjectManagerItem:
-    def __init__(self, cls, registration: VoxRegistration):
+    def __init__(self, cls, registration: Registration):
         self.cls = cls
         self.registration = registration
         self.pattern = None
@@ -504,7 +504,7 @@ class ObjectManagerItem:
 
 class ObjectManager(dict):
     def __missing__(self, key):
-        item = ObjectManagerItem(key, VoxRegistration(key))
+        item = ObjectManagerItem(key, Registration(key))
         self[key] = item
         return item
 
@@ -514,7 +514,7 @@ class ObjectManager(dict):
     def __getitem__(self, key) -> ObjectManagerItem:
         return super().__getitem__(key)
 
-    def add(self, cls, registration_cls=VoxRegistration, *, regex=...):
+    def add(self, cls, registration_cls=Registration, *, regex=...):
         if regex is ...:
             raise RuntimeError(
                 "Must set regex keyword argument, use None if object has no URL"
@@ -522,8 +522,8 @@ class ObjectManager(dict):
         # a little hacky code for backwards compatibility
         from .models import VoxModel
 
-        if registration_cls is VoxRegistration and issubclass(cls, VoxModel):
-            registration_cls = _VoxModelRegistration
+        if registration_cls is Registration and issubclass(cls, VoxModel):
+            registration_cls = _ModelRegistration
         # en hacky code
         item = ObjectManagerItem(cls, registration_cls(cls))
         if regex is not None:
