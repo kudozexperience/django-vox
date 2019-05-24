@@ -24,7 +24,7 @@ master_doc = "index"
 
 language = None
 
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "api/modules.rst", "api/django_vox.migrations"]
 
 pygments_style = "sphinx"
 

@@ -1,5 +1,7 @@
 """
-URL patterns for activitypub, some of them aren't implemented
+URL patterns for ActivityPub
+
+Note: some of them aren't implemented, and just return empty collections
 """
 from django.conf.urls import include, url
 

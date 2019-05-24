@@ -21,5 +21,6 @@ coverage:
 	pytest --cov=django_vox tests/
 
 docs:
-	sphinx-apidoc -f -o docs/api django_vox
+	rm docs/api -r
+	sphinx-apidoc -fMT -o docs/api django_vox
 	sphinx-build -a docs build/sphinx/html

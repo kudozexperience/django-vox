@@ -14,15 +14,10 @@ Django Vox Documentation
    demo
    settings
    comparison
-
-.. toctree::
-   :hidden:
-
-   api/modules
+   api
 
 Indices and tables
 ------------------
 
-* :doc:`api/modules`
 * :ref:`genindex`
 * :ref:`search`
