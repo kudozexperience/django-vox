@@ -119,7 +119,7 @@ have a registration. It might look something like this:
            else:
                old = None
            super().save(*args, **kwargs)
-           objects[type(self)].registration.post_save(
+           objects[self.__class__].registration.post_save(
                created, old, self)
 
 

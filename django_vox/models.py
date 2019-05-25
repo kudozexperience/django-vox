@@ -123,13 +123,13 @@ def resolve_parameter(key: str, parameters: dict):
         else:
             return None
     # check if there's a VoxMeta
-    cls = type(parameters)
+    cls = parameters.__class__
     vox_meta = getattr(cls, "_vox_meta", None)
     if vox_meta is not None:
         warnings.warn(VoxOptions.DEPRECATION_MESSAGE)
         if last in vox_meta.attachments:
             return vox_meta.attachments[last].get_data(parameters)
-    registration = registry.objects[type(parameters)].registration
+    registration = registry.objects[parameters.__class__].registration
     attachment = registration.get_attachment(last)
     if attachment is not None:
         return attachment.get_data(parameters)
@@ -288,7 +288,7 @@ class ChannelContactSet:
                             yield contact.address, contactable
 
                 else:
-                    registration = registry.objects[type(contactable)].registration
+                    registration = registry.objects[contactable.__class__].registration
                     contacts = registration.get_contacts(
                         contactable, protocol, self.notification
                     )
@@ -444,7 +444,9 @@ class Notification(models.Model):
         result = {}
         for recip_key, model in instances.items():
             channels = (
-                registry.objects[type(model)].channels_by_prefix(recip_key).bind(model)
+                registry.objects[model.__class__]
+                .channels_by_prefix(recip_key)
+                .bind(model)
             )
             for key, channel in channels.items():
                 result[key] = channel
@@ -489,7 +491,7 @@ class Notification(models.Model):
             # backwards compatibility
             parameters["source"] = actor
 
-        reg = registry.objects[type(obj)].registration
+        reg = registry.objects[obj.__class__].registration
         parameters["activity_object"] = reg.get_activity_object(
             obj, codename=self.codename, actor=actor, target=target
         )

@@ -9,12 +9,12 @@ from background_task import background
 def issue(notification, obj, *, actor=None, target=None):
 
     kwargs = {}
-    self_cls_str = str(type(obj)._meta)
+    self_cls_str = str(obj.__class__._meta)
     if actor is not None:
-        kwargs["actor_cls_str"] = str(type(actor)._meta)
+        kwargs["actor_cls_str"] = str(actor.__class__._meta)
         kwargs["actor_id"] = actor.pk
     if target is not None:
-        kwargs["target_cls_str"] = str(type(target)._meta)
+        kwargs["target_cls_str"] = str(target.__class__._meta)
         kwargs["target_id"] = target.pk
     delayed_issue(notification.codename, self_cls_str, obj.pk, **kwargs)
 

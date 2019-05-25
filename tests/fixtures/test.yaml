@@ -10,6 +10,7 @@
   fields: {app_label: tests, model: comment}
 ## notification definitions
 # user
+
 - model: django_vox.notification
   pk: 1
   fields:
@@ -17,6 +18,7 @@
     object_type: [auth, user]
     from_code: true
     last_updated: 2001-1-1
+
 - model: django_vox.notification
   pk: 2
   fields:

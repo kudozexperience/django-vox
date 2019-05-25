@@ -31,7 +31,7 @@ def endpoint(_request, path):
         actor = registry.objects.get_local_object(path)
     except registry.ObjectNotFound:
         return django.http.HttpResponseNotFound()
-    registration = registry.objects[type(actor)].registration
+    registration = registry.objects[actor.__class__].registration
     if registration is not None and registration.has_activity_endpoint(actor):
         obj = registration.get_activity_object(actor)
         obj_id = obj["id"]
@@ -55,7 +55,7 @@ def outbox(request, path):
     if request.method != "POST":
         return django.http.HttpResponseNotAllowed(permitted_methods=("POST",))
     else:
-        registration = registry.objects[type(owner)].registration
+        registration = registry.objects[owner.__class__].registration
         if registration is not None and registration.has_activity_endpoint(owner):
             if request.user != owner:
                 return django.http.HttpResponseForbidden()
@@ -74,7 +74,7 @@ def inbox(request, path):
     if request.method != "GET":
         return django.http.HttpResponseNotAllowed(permitted_methods=("GET",))
     else:
-        registration = registry.objects[type(owner)].registration
+        registration = registry.objects[owner.__class__].registration
         if registration is not None and registration.has_activity_endpoint(owner):
             if request.user != owner:
                 return django.http.HttpResponseForbidden()

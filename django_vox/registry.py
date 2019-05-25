@@ -52,7 +52,7 @@ def make_activity_object(obj):
         if hasattr(obj, "get_absolute_url"):
             part_iri = obj.get_absolute_url()
         else:
-            part_iri = objects[type(obj)].reverse(obj)
+            part_iri = objects[obj.__class__].reverse(obj)
         if part_iri is not None:
             iri = base.full_iri(part_iri)
     name = str(obj)
@@ -219,7 +219,7 @@ class Attachment:
         if hasattr(model_instance, field_name):
             result = getattr(model_instance, field_name)
         else:
-            registration = objects[type(model_instance)].registration
+            registration = objects[model_instance.__class__].registration
             result = getattr(registration, field_name)
         return result(model_instance) if callable(result) else result
 
@@ -304,8 +304,7 @@ class Notification:
         return Notification.objects.get(codename=self.codename, object_type=ct)
 
     def issue(self, object_, *, actor=None, target=None):
-        model = type(object_)
-        notification = self.get_notification(model)
+        notification = self.get_notification(object_)
         notification.issue(object_, actor=actor, target=target)
 
 
@@ -434,7 +433,7 @@ class Registration(metaclass=RegistrationBase):
 
     @staticmethod
     def _get_object_address(obj):
-        url = objects[type(obj)].reverse(obj)
+        url = objects[obj.__class__].reverse(obj)
         if url is None:
             return None
         else:

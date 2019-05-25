@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+4.0.2
+-----
+
+* Fix a bug when Notification.issue is passed SimpleLazyObject
+
 4.0.1
 -----
 
