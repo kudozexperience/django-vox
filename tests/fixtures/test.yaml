@@ -1,6 +1,8 @@
 - model: contenttypes.contenttype
   fields: {app_label: auth, model: user}
 - model: contenttypes.contenttype
+  fields: {app_label: auth, model: group}
+- model: contenttypes.contenttype
   fields: {app_label: tests, model: article}
 - model: contenttypes.contenttype
   fields: {app_label: tests, model: subscriber}
@@ -73,6 +75,11 @@
     description: Notification from subscriber to author that a comment was posted
     from_code: true
     last_updated: 2001-1-1
+## group entries
+- model: auth.group
+  pk: 1
+  fields:
+    name: Group
 ## user entries
 - model: auth.user
   pk: 1
@@ -84,6 +91,7 @@
     is_superuser: true
     is_staff: true
     is_active: true
+    groups: [1]
 - model: auth.user
   pk: 2
   fields:

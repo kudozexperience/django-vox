@@ -232,6 +232,80 @@ class Comment(VoxModel):
         return aspy.Note(id=obj["id"], name="Note", content=self.content)
 
 
+class GroupRegistration(Registration):
+    def get_channels(self):
+        return {"users": Channel.field(auth_models.Group.user_set)}
+
+
+# stuff for testing relationships
+
+
+class Thing1(models.Model):
+
+    email = models.EmailField()
+
+
+class Thing2(models.Model):
+
+    email = models.EmailField()
+
+
+class Thing3(models.Model):
+
+    email = models.EmailField()
+
+
+class Thing(models.Model):
+
+    thing1 = models.OneToOneField(
+        to=Thing1, related_name="thing", on_delete=models.CASCADE
+    )
+
+    thing2 = models.ForeignKey(
+        to=Thing2, related_name="thing", on_delete=models.CASCADE
+    )
+
+    thing3 = models.ManyToManyField(to=Thing3, related_name="thing")
+
+
+class Thing4(models.Model):
+    email = models.EmailField()
+
+    thing = models.OneToOneField(
+        to=Thing, related_name="thing4", on_delete=models.CASCADE
+    )
+
+
+class Thing5(models.Model):
+    email = models.EmailField()
+
+    thing = models.ForeignKey(to=Thing, related_name="thing5", on_delete=models.CASCADE)
+
+
+class Thing6(models.Model):
+    email = models.EmailField()
+
+    thing = models.ManyToManyField(to=Thing, related_name="thing6")
+
+
+class ThingThingRegistration(Registration):
+    @provides_contacts("email")
+    def email_contacts(self, obj, notification):
+        return obj.email
+
+
+class ThingRegistration(Registration):
+    def get_channels(self):
+        return {
+            "thing1": Channel.field(Thing.thing1),
+            "thing2": Channel.field(Thing.thing2),
+            "thing3": Channel.field(Thing.thing3),
+            "thing4": Channel.field(Thing.thing4),
+            "thing5": Channel.field(Thing.thing5),
+            "thing6": Channel.field(Thing.thing6),
+        }
+
+
 # adding channels & registrations the new way
 objects.add(auth_models.User, UserRegistration, regex=r"^~(?P<id>[0-9]+)/$")
 
@@ -246,3 +320,14 @@ objects[Comment].channels.add("poster", _("Poster"), Subscriber, Comment.get_pos
 objects[Comment].channels.add(
     "author", _("Article author"), auth_models.User, Comment.get_article_authors
 )
+
+# here to test the ManyToMany channel
+objects.add(auth_models.Group, GroupRegistration, regex=None)
+
+objects.add(Thing1, ThingThingRegistration, regex=None)
+objects.add(Thing2, ThingThingRegistration, regex=None)
+objects.add(Thing3, ThingThingRegistration, regex=None)
+objects.add(Thing4, ThingThingRegistration, regex=None)
+objects.add(Thing5, ThingThingRegistration, regex=None)
+objects.add(Thing6, ThingThingRegistration, regex=None)
+objects.add(Thing, ThingRegistration, regex=None)

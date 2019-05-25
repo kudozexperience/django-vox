@@ -126,7 +126,7 @@ a ``django_vox.registry.Channel`` object. There’s current 3 ways to make
 1. ``Channel.self(self)``: this means you can send notifications directly to
    the model itself.
 2. ``Channel.field(Model.field)``: You can use this if “Model.field” is a
-   ForeignKey, or a ManytoManyField.
+   ForeignKey, or a ManyToManyField.
 3. ``Channel(label, model class, function)``: You can also create your channel
    manually. In this case, label is a string, function is a callable that
    takes one argument (a model instance of the model that this registry is for)

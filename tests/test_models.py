@@ -201,8 +201,10 @@ class DemoTests(TestCase):
             models.Article,
             models.Subscriber,
             auth_models.User,
+            auth_models.Group,
             models.Comment,
             django_vox.models.SiteContact,
+            models.Thing,
         ):
             ct = ContentType.objects.get_for_model(model)
             expected_ids.add(ct.id)
@@ -245,6 +247,43 @@ class TestTemplate(TestCase):
     def test_str(self):
         template = django_vox.models.Template.objects.get(pk=1)
         assert "Email (HTML) for Subscribers" == str(template)
+
+
+class TestDescriptorChannels(TestCase):
+
+    fixtures = ["test"]
+
+    def test_descriptor_channels(self):
+        """
+        There are 6 different ways that relations can work, tests there all here
+        """
+        thingthing_names = ("thing1", "thing2", "thing3", "thing4", "thing5", "thing6")
+        # create_one to one channels
+        thing1 = models.Thing1.objects.create(email="thing1@test")
+        thing2 = models.Thing2.objects.create(email="thing2@test")
+        thing3 = models.Thing3.objects.create(email="thing3@test")
+        thing = models.Thing.objects.create(thing1=thing1, thing2=thing2)
+        thing.thing3.add(thing3)
+        models.Thing4.objects.create(thing=thing, email="thing4@test")
+        models.Thing5.objects.create(thing=thing, email="thing5@test")
+        thing6 = models.Thing6.objects.create(email="thing6@test")
+        thing6.thing.add(thing)
+
+        ct = ContentType.objects.get_for_model(thing)
+        notification = django_vox.models.Notification.objects.create(
+            codename="one_to_one", object_type=ct, description="foo", from_code=False
+        )
+        for name in thingthing_names:
+            django_vox.models.Template.objects.create(
+                notification=notification,
+                backend="email-html",
+                subject=name,
+                recipients="c:{}".format(name),
+            )
+
+        assert 0 == len(mail.outbox)
+        notification.issue(thing)
+        assert 6 == len(mail.outbox)
 
 
 def test_load_aspy_object():

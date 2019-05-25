@@ -436,15 +436,19 @@ class Notification(models.Model):
     def get_recipient_channels(
         self, obj, target, actor
     ) -> Mapping[str, registry.BoundChannel]:
+        """
+        Get Recipient Channels for this notification
+        """
         instances = self.get_recipient_instances(obj, target, actor)
-        return dict(
-            (key, channel)
-            for recip_key, model in instances.items()
-            for key, channel in registry.objects[model.__class__]
-            .channels.prefix(recip_key)
-            .bind(model)
-            .items()
-        )
+
+        result = {}
+        for recip_key, model in instances.items():
+            channels = (
+                registry.objects[type(model)].channels_by_prefix(recip_key).bind(model)
+            )
+            for key, channel in channels.items():
+                result[key] = channel
+        return result
 
     def get_recipient_choices(self):
         recipient_models = self.get_recipient_models()
@@ -474,7 +478,9 @@ class Notification(models.Model):
         :return: None
         """
 
-        # check
+        # check type
+        assert isinstance(obj, self.get_object_model())
+        # build parameters
         parameters = {"content": obj, "object": obj, "notification": self}
         if target is not None:
             parameters["target"] = target
@@ -483,7 +489,7 @@ class Notification(models.Model):
             # backwards compatibility
             parameters["source"] = actor
 
-        reg = registry.objects[type(self)].registration
+        reg = registry.objects[type(obj)].registration
         parameters["activity_object"] = reg.get_activity_object(
             obj, codename=self.codename, actor=actor, target=target
         )

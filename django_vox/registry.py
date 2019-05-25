@@ -10,8 +10,13 @@ import django.utils.encoding
 import django.utils.regex_helper
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import signals, Model, ManyToManyField
-from django.db.models.fields.related_descriptors import ForwardManyToOneDescriptor
+from django.db.models import signals, Model
+from django.db.models.fields.related_descriptors import (
+    ForwardManyToOneDescriptor,
+    ReverseManyToOneDescriptor,
+    ManyToManyDescriptor,
+    ReverseOneToOneDescriptor,
+)
 from django.utils.translation import ugettext_lazy as _
 
 from django_vox import settings, base
@@ -48,9 +53,13 @@ def make_activity_object(obj):
             part_iri = obj.get_absolute_url()
         else:
             part_iri = objects[type(obj)].reverse(obj)
-        iri = base.full_iri(part_iri)
+        if part_iri is not None:
+            iri = base.full_iri(part_iri)
     name = str(obj)
-    return aspy.Object(name=name, id=iri)
+    if iri is None:
+        return aspy.Object(name=name)
+    else:
+        return aspy.Object(name=name, id=iri)
 
 
 class ObjectNotFound(Exception):
@@ -97,16 +106,42 @@ class Channel:
 
     @classmethod
     def field(cls, field):
+        # many → 1 & 1 → 1
         if isinstance(field, ForwardManyToOneDescriptor):
-            field = field.field
+            field_name = field.field.name
+            field_model = field.field.model
+            field_label = field.field.verbose_name.title()
+        # 1 ← 1
+        elif isinstance(field, ReverseOneToOneDescriptor):
+            field_name = field.related.related_name
+            field_model = field.related.related_model
+            field_label = field_name.replace("_", " ").title()
+        # many → many & many ← many
+        elif isinstance(field, ManyToManyDescriptor):
+            if field.reverse:
+                field_name = field.rel.related_name
+                field_model = field.rel.related_model
+                field_label = field_name.replace("_", " ").title()
+            else:
+                field_name = field.field.name
+                field_model = field.field.model
+                field_label = field.field.verbose_name.title()
+        # many ← 1
+        else:
+            assert isinstance(field, ReverseManyToOneDescriptor)
+            field_name = field.rel.related_name
+            field_model = field.rel.related_model
+            field_label = field_name.replace("_", " ").title()
 
         def func(model):
-            if isinstance(field, ManyToManyField):
-                return getattr(model, field.name)
+            if isinstance(field, ReverseManyToOneDescriptor):
+                # many ← 1 & many → many & many ← many
+                return getattr(model, field_name).all()
             else:
-                return (getattr(model, field.name),)
+                # many → 1 & 1 → 1 & 1 ← 1
+                return (getattr(model, field_name),)
 
-        return Channel(field.verbose_name.title(), field.model, func)
+        return Channel(field_label, field_model, func)
 
 
 class BoundChannel:
@@ -280,7 +315,10 @@ def provides_contacts(protocol_id):
         assert len(sig.parameters) == 3 or (
             len(sig.parameters) < 3
             and any(
-                (p.kind == inspect.Parameter.VAR_POSITIONAL for p in sig.parameters)
+                (
+                    p.kind == inspect.Parameter.VAR_POSITIONAL
+                    for p in sig.parameters.values()
+                )
             )
         ), (
             "Function decorated by provides_contacts must take 3 arguments (self, "

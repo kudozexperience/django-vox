@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+4.0.1
+-----
+
+* Fix a bug with ``Channel.field``
+
 4.0
 ---
 
