@@ -455,7 +455,7 @@ class Notification(models.Model):
     def get_recipient_choices(self):
         recipient_models = self.get_recipient_models()
         for recipient_key, model in recipient_models.items():
-            channel_data = registry.objects[model].channels.prefix(recipient_key)
+            channel_data = registry.objects[model].channels_by_prefix(recipient_key)
             for key, channel in channel_data.items():
                 yield key, channel.name
 

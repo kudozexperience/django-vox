@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+4.0.3
+-----
+
+* Fix a bug with get_recipient_choices ignoring the registered channels
+
 4.0.2
 -----
 
