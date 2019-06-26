@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+4.0.4
+-----
+
+* Fix a potential circular import dependency issue
+
 4.0.3
 -----
 

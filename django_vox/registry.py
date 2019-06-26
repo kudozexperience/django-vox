@@ -597,11 +597,6 @@ class ObjectManager(dict):
         raise ObjectNotFound(msg)
 
 
-backends = BackendManager(load_backend(name) for name in settings.BACKENDS)
-
-objects = ObjectManager()
-
-
 def get_protocol_choices():
     for protocol in backends.protocols():
         yield (protocol, PROTOCOLS.get(protocol, protocol))
@@ -621,6 +616,13 @@ def channel_type_limit():
     if _CHANNEL_TYPE_IDS is None:
         _CHANNEL_TYPE_IDS = tuple(_channel_type_ids())
     return {"id__in": _CHANNEL_TYPE_IDS}
+
+
+# note, these should come at the end to avoid backend import problems
+
+backends = BackendManager(load_backend(name) for name in settings.BACKENDS)
+
+objects = ObjectManager()
 
 
 # Deprecated
