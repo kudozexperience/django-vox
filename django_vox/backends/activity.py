@@ -9,8 +9,6 @@ from django.template import Context
 from django.utils.translation import ugettext_lazy as _
 
 import django_vox.base
-import django_vox.models
-import django_vox.registry
 
 from . import base
 
@@ -20,6 +18,8 @@ PUBLIC_ADDRESS = "https://www.w3.org/ns/activitystreams#Public"
 
 
 def id_to_user(ids: List[str]):
+    import django_vox.registry
+
     for identifier in ids:
         url = django.utils.encoding.iri_to_uri(identifier)
         # I'm pretty sure we're only path matching, but this might change
@@ -137,6 +137,8 @@ class Backend(base.Backend):
         return "<div><strong>{}</strong></div>" "<div>{}</div".format(subject, summary)
 
     def send_message(self, _from_address: str, to_addresses: List[str], message: str):
+        import django_vox.models
+
         address_set = set(to_addresses)
         # note: we don't support public addressing yet, just strip them
         if PUBLIC_ADDRESS in address_set:
