@@ -205,6 +205,7 @@ class DemoTests(TestCase):
             models.Comment,
             django_vox.models.SiteContact,
             models.Thing,
+            models.Film,
         ):
             ct = ContentType.objects.get_for_model(model)
             expected_ids.add(ct.id)
@@ -323,3 +324,39 @@ def test_one_time_notification():
     assert None is n.get_target_type()
     assert aspy.Create == n.get_activity_type()
     assert {} == n.get_recipient_variables()
+
+
+class DuplicateContactablesTests(TestCase):
+    """Test notifications are not duplicated when recipients have the same contactables"""
+
+    fixtures = ["test"]
+
+    @staticmethod
+    def test_notification_to_different_contactables():
+        assert len(mail.outbox) == 0
+        steven_spielberg = auth_models.User.objects.get(
+            email="steven.spielberg@example.org"
+        )
+        michael_crichton = auth_models.User.objects.get(
+            email="michael.crichton@example.org"
+        )
+        models.Film.objects.create(
+            director=steven_spielberg,
+            screenwriter=michael_crichton,
+            title="Jurassic Park",
+        )
+        assert len(mail.outbox) == 2
+
+    @staticmethod
+    def test_notification_with_duplicate_contactables():
+        assert len(mail.outbox) == 0
+        # director and screenwriter are the same user
+        steven_spielberg = auth_models.User.objects.get(
+            email="steven.spielberg@example.org"
+        )
+        models.Film.objects.create(
+            director=steven_spielberg,
+            screenwriter=steven_spielberg,
+            title="Jurassic Park",
+        )
+        assert len(mail.outbox) == 1
