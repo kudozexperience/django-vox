@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+4.0.6
+-----
+
+* Fix a bug where a contact could get the same notification twice
+
 4.0.5
 -----
 
