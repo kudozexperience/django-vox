@@ -77,6 +77,16 @@
     description: Notification from subscriber to author that a comment was posted
     from_code: true
     last_updated: 2001-1-1
+# film
+- model: django_vox.notification
+  pk: 9
+  fields:
+    codename: created
+    object_type: [tests, film]
+    description: Notification that a new film was created
+    from_code: true
+    last_updated: 2001-1-1
+    activity_type: Create
 ## group entries
 - model: auth.group
   pk: 1
@@ -103,6 +113,26 @@
     password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
     is_superuser: false
     is_staff: true
+    is_active: true
+- model: auth.user
+  pk: 3
+  fields:
+    username: steven.spielberg@example.org
+    first_name: Steven
+    email: steven.spielberg@example.org
+    password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
+    is_superuser: false
+    is_staff: false
+    is_active: true
+- model: auth.user
+  pk: 4
+  fields:
+    username: michael.crichton@example.org
+    first_name: Michael
+    email: michael.crichton@example.org
+    password: pbkdf2_sha256$36000$ecPczOo2GtrM$nzTODWfJmSJJixZC9dByTueTEkjm89MJq0So36Wbl9U=
+    is_superuser: false
+    is_staff: false
     is_active: true
 - model: tests.article
   pk: too_many
@@ -177,6 +207,19 @@
     content: "{{ object.poster.name }} has added a new comment to
       {{ object.title }}"
     recipients: c:author
+    enabled: true
+    bulk: false
+- model: django_vox.template
+  pk: 6
+  fields:
+    notification: [tests, film, created]
+    backend: "email-html"
+    subject: "Your film was published!"
+    content: "<p>Hi {{ contact.name }},</p>
+      <p>Your film, <a href='http://127.0.0.1:8000/{{ object.pk }}/?token={{
+      recipient.get_token | urlencode }}'>{{ object }}</a>, has been
+      published!</p>"
+    recipients: c:director,c:screenwriter
     enabled: true
     bulk: false
 - model: django_vox.templateattachment

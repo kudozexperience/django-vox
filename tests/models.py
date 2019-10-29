@@ -306,12 +306,44 @@ class ThingRegistration(Registration):
         }
 
 
+class Film(models.Model):
+    director = models.ForeignKey(
+        to=auth_models.User, on_delete=models.CASCADE, related_name="+"
+    )
+    screenwriter = models.ForeignKey(
+        to=auth_models.User, on_delete=models.CASCADE, related_name="+"
+    )
+    title = models.CharField(_("title"), max_length=254)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        new = self.created_at is None
+        super().save(*args, **kwargs)
+        if new:
+            FilmRegistration.created.issue(self)
+
+
+class FilmRegistration(Registration):
+    created = Notification(_("Notification that a new film was created."))
+
+    def get_channels(self):
+        return {
+            "director": Channel.field(Film.director),
+            "screenwriter": Channel.field(Film.screenwriter),
+        }
+
+
 # adding channels & registrations the new way
 objects.add(auth_models.User, UserRegistration, regex=r"^~(?P<id>[0-9]+)/$")
 
 objects.add(Subscriber, SubscriberVox, regex=r"^\.(?P<id>[0-9]+)/$")
 
 objects.add(Article, ArticleRegistration, regex=None)
+
+objects.add(Film, FilmRegistration, regex=None)
 
 # the old way
 

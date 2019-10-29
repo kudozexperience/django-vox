@@ -6,6 +6,8 @@ import tests.models
 from django_vox.management.commands import make_notifications
 from django_vox.models import Notification, Template
 
+TOTAL_NOTIFICATIONS = 9
+
 
 class MakeNotificationTests(TestCase):
     @staticmethod
@@ -14,19 +16,19 @@ class MakeNotificationTests(TestCase):
         its notification should get deleted."""
         cmd = make_notifications.Command()
         cmd.handle(verbosity=0)
-        assert 8 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS == Notification.objects.all().count()
         # simulate a deleted class
         fake_ct = ContentType.objects.create(app_label="blarg", model="deleted")
         Notification.objects.create(codename="foo", object_type=fake_ct, from_code=True)
-        assert 9 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS + 1 == Notification.objects.all().count()
         cmd.handle(verbosity=0)
-        assert 8 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS == Notification.objects.all().count()
 
     @staticmethod
     def test_keep_orphans_with_templates():
         cmd = make_notifications.Command()
         cmd.handle(verbosity=0)
-        assert 8 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS == Notification.objects.all().count()
         # simulate a deleted class
         fake_ct = ContentType.objects.create(app_label="django_vox", model="deleted")
         notification = Notification.objects.create(
@@ -44,7 +46,7 @@ class MakeNotificationTests(TestCase):
         cmd = make_notifications.Command()
         cmd.handle(verbosity=0)
         ids = set(v["id"] for v in Notification.objects.values("id"))
-        assert 8 == len(ids)
+        assert TOTAL_NOTIFICATIONS == len(ids)
         notification = Notification.objects.all()[0]
         Template.objects.filter(notification=notification).delete()
         cmd.handle(verbosity=0)
@@ -62,7 +64,7 @@ class MakeNotificationTests(TestCase):
         cmd.handle(verbosity=0)
         # now we should have the 3 signal notifications on user & subscriber
         # and the article created and comment created notifications
-        assert 8 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS == Notification.objects.all().count()
         # gather some general things
         article_ct = ContentType.objects.get_for_model(tests.models.Article)
         user_ct = ContentType.objects.get_for_model(auth_models.User)
@@ -71,16 +73,16 @@ class MakeNotificationTests(TestCase):
         Notification.objects.create(
             codename="foo", object_type=article_ct, from_code=True
         )
-        assert 9 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS + 1 == Notification.objects.all().count()
         cmd.handle()
-        assert 8 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS == Notification.objects.all().count()
         # here's one that shouldn't get deleted
         Notification.objects.create(
             codename="foo", object_type=article_ct, from_code=False
         )
-        assert 9 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS + 1 == Notification.objects.all().count()
         cmd.handle()
-        assert 9 == Notification.objects.all().count()
+        assert TOTAL_NOTIFICATIONS + 1 == Notification.objects.all().count()
         # now we'll change one and it should get reverted
         acn = Notification.objects.get_by_natural_key("tests", "article", "created")
         acn.object_model = user_ct

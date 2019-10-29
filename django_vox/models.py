@@ -276,8 +276,12 @@ class ChannelContactSet:
             yield address
 
     def get_address_items(self, protocol: str, recipients: List[str]):
+        contactables = []
         for recipient in recipients:
             for contactable in self.channels[recipient].contactables():
+                if contactable in contactables:
+                    continue
+                contactables.append(contactable)
                 if hasattr(contactable, "get_contacts_for_notification"):
                     # backwards compatibility
                     contacts = contactable.get_contacts_for_notification(
